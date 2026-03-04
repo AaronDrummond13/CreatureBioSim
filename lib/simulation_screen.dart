@@ -3,8 +3,9 @@ import 'dart:math' show cos, pi, sin, sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 
+import 'creature.dart';
+import 'simulation/spine.dart';
 import 'simulation/vector.dart';
-import 'simulation/world.dart';
 
 /// Screen that runs the spine simulation. Hold and drag on the screen:
 /// the head moves toward the touch point; drag to change direction.
@@ -17,7 +18,8 @@ class SimulationScreen extends StatefulWidget {
 
 class _SimulationScreenState extends State<SimulationScreen>
     with SingleTickerProviderStateMixin {
-  final SimulationWorld _world = SimulationWorld();
+  final Creature _creature = const Creature(segmentCount: 20, color: 0xFF2E7D32);
+  late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
   double _touchX = 120;
   double _touchY = 0;
   bool _tickerActive = false;
@@ -34,7 +36,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   @override
   void initState() {
     super.initState();
-    _touchX = _world.segmentCount * 40.0;
+    _touchX = _spine.segmentCount * 40.0;
     _ticker = createTicker(_onTick);
   }
 
@@ -45,19 +47,19 @@ class _SimulationScreenState extends State<SimulationScreen>
   }
 
   void _onTick(Duration elapsed) {
-    final positions = _world.positions;
+    final positions = _spine.positions;
     if (positions.isEmpty) return;
     final head = positions.last;
     final dx = _touchX - head.x;
     final dy = _touchY - head.y;
     final len = sqrt(dx * dx + dy * dy);
     if (len <= _arrivalThreshold) {
-      _world.resolve(head.x, head.y);
+      _spine.resolve(head.x, head.y);
     } else {
       final step = _headMoveSpeed / len;
       final nx = head.x + dx * step;
       final ny = head.y + dy * step;
-      _world.resolve(nx, ny);
+      _spine.resolve(nx, ny);
     }
     if (mounted) setState(() {});
   }
@@ -79,10 +81,11 @@ class _SimulationScreenState extends State<SimulationScreen>
         Positioned.fill(
           child: CustomPaint(
             painter: _SpinePainter(
-              positions: _world.positions,
-              segmentAngles: _world.segmentAngles,
+              positions: _spine.positions,
+              segmentAngles: _spine.segmentAngles,
               vertexWidths: null,
               zoom: _viewZoom,
+              fillColor: Color(_creature.color),
             ),
           ),
         ),
@@ -96,7 +99,7 @@ class _SimulationScreenState extends State<SimulationScreen>
               return Listener(
                 behavior: HitTestBehavior.opaque,
                 onPointerDown: (e) {
-                  final pos = _world.positions;
+                  final pos = _spine.positions;
                   if (pos.isNotEmpty) {
                     final mid = pos[(pos.length - 1) ~/ 2];
                     _updateTouchFromLocal(size, e.localPosition, mid.x, mid.y);
@@ -108,7 +111,7 @@ class _SimulationScreenState extends State<SimulationScreen>
                   setState(() {});
                 },
                 onPointerMove: (e) {
-                  final pos = _world.positions;
+                  final pos = _spine.positions;
                   if (pos.isNotEmpty) {
                     final mid = pos[(pos.length - 1) ~/ 2];
                     _updateTouchFromLocal(size, e.localPosition, mid.x, mid.y);
@@ -142,6 +145,9 @@ class _SpinePainter extends CustomPainter {
   /// View zoom: world units scale by this when drawing. 1 = 1:1, < 1 = zoom out.
   final double zoom;
 
+  /// Fill colour for the creature body (from creature.color).
+  final Color fillColor;
+
   static const double _defaultWidth = 40.0;
 
   _SpinePainter({
@@ -149,6 +155,7 @@ class _SpinePainter extends CustomPainter {
     required this.segmentAngles,
     this.vertexWidths,
     this.zoom = 1.0,
+    this.fillColor = const Color(0xFF2E7D32),
   });
 
   double _widthAt(int i) {
@@ -275,7 +282,7 @@ class _SpinePainter extends CustomPainter {
     path.close();
 
     final fillPaint = Paint()
-      ..color = const Color(0xFF2E7D32)
+      ..color = fillColor
       ..style = PaintingStyle.fill;
     final strokePaint = Paint()
       ..color = Colors.white
@@ -308,5 +315,5 @@ class _SpinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SpinePainter oldDelegate) =>
-      oldDelegate.zoom != zoom || true;
+      oldDelegate.zoom != zoom || oldDelegate.fillColor != fillColor || true;
 }
