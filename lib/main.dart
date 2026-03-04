@@ -14,7 +14,7 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       home: Scaffold(
         body: Container(
-          color: const Color(0xFFE8F5E9),
+          color: const Color(0xFF333333),
           child: const SimulationScreen(),
         ),
       ),

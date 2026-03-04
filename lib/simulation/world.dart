@@ -9,11 +9,11 @@ import 'vector.dart';
 /// no impulses), so bend distributes along the chain and there's no explosion.
 class SimulationWorld {
   // --- Spine tuning (adjust here) ---
-  static const int _segmentCount = 10;
-  static const double _segmentLength = 40.0;
+  static const int _segmentCount = 100;
+  static const double _segmentLength = 10.0;
 
   /// Max bend per joint (radians). Larger = looser; smaller = stiffer. ~1.2 ≈ 69°, ~1.6 ≈ 92°.
-  static const double _maxJointAngleRad = 1.0;
+  static const double _maxJointAngleRad = 0.4;
   // ----------------------------------
 
   final List<Particle> particles = [];

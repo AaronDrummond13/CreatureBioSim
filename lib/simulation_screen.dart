@@ -23,7 +23,6 @@ class _SimulationScreenState extends State<SimulationScreen>
   bool _tickerActive = false;
   late Ticker _ticker;
 
-  static const double _worldCenterX = 60.0;
   static const double _headMoveSpeed = 4.0;
 
   /// Dead zone: if head is within this distance of target, do not move (stops spasms).
@@ -60,9 +59,9 @@ class _SimulationScreenState extends State<SimulationScreen>
     if (mounted) setState(() {});
   }
 
-  void _updateTouchFromLocal(Size screenSize, Offset local) {
-    _touchX = local.dx - screenSize.width / 2 + _worldCenterX;
-    _touchY = local.dy - screenSize.height / 2;
+  void _updateTouchFromLocal(Size screenSize, Offset local, double worldCenterX, double worldCenterY) {
+    _touchX = local.dx - screenSize.width / 2 + worldCenterX;
+    _touchY = local.dy - screenSize.height / 2 + worldCenterY;
   }
 
   @override
@@ -88,7 +87,11 @@ class _SimulationScreenState extends State<SimulationScreen>
               return Listener(
                 behavior: HitTestBehavior.opaque,
                 onPointerDown: (e) {
-                  _updateTouchFromLocal(size, e.localPosition);
+                  final pos = _world.positions;
+                  if (pos.isNotEmpty) {
+                    final mid = pos[(pos.length - 1) ~/ 2];
+                    _updateTouchFromLocal(size, e.localPosition, mid.x, mid.y);
+                  }
                   if (!_tickerActive) {
                     _tickerActive = true;
                     _ticker.start();
@@ -96,7 +99,11 @@ class _SimulationScreenState extends State<SimulationScreen>
                   setState(() {});
                 },
                 onPointerMove: (e) {
-                  _updateTouchFromLocal(size, e.localPosition);
+                  final pos = _world.positions;
+                  if (pos.isNotEmpty) {
+                    final mid = pos[(pos.length - 1) ~/ 2];
+                    _updateTouchFromLocal(size, e.localPosition, mid.x, mid.y);
+                  }
                 },
                 onPointerUp: (_) {
                   _tickerActive = false;
@@ -124,7 +131,6 @@ class _SpinePainter extends CustomPainter {
   final List<double>? vertexWidths;
 
   static const double _defaultWidth = 40.0;
-  static const double _worldCenterX = 60.0;
 
   _SpinePainter({
     required this.positions,
@@ -144,21 +150,30 @@ class _SpinePainter extends CustomPainter {
 
     final centerX = size.width / 2;
     final centerY = size.height / 2;
-    final offsetX = centerX - _worldCenterX;
-    final offsetY = centerY;
+    final midIndex = (positions.length - 1) ~/ 2;
+    final mid = positions[midIndex];
+    final offsetX = centerX - mid.x;
+    final offsetY = centerY - mid.y;
     final n = positions.length - 1;
 
     // Parametric: vertex i → angle a, width w. Right = pos - (sin a)*w, Left = pos + (sin a)*w.
     Offset rightAt(int i) {
-      final a = segmentAngles[i < segmentAngles.length ? i : segmentAngles.length - 1];
+      final a =
+          segmentAngles[i < segmentAngles.length
+              ? i
+              : segmentAngles.length - 1];
       final w = _widthAt(i);
       return Offset(
         positions[i].x + offsetX - sin(a) * w,
         positions[i].y + offsetY + cos(a) * w,
       );
     }
+
     Offset leftAt(int i) {
-      final a = segmentAngles[i < segmentAngles.length ? i : segmentAngles.length - 1];
+      final a =
+          segmentAngles[i < segmentAngles.length
+              ? i
+              : segmentAngles.length - 1];
       final w = _widthAt(i);
       return Offset(
         positions[i].x + offsetX + sin(a) * w,
@@ -173,15 +188,19 @@ class _SpinePainter extends CustomPainter {
 
     // Single list of curve vertices: tail tip (1 extra) → right side → head tip (1 extra) → left side → close.
     final curve = <Offset>[];
-    curve.add(Offset(
-      positions[0].x + offsetX - cos(tailA) * tailW,
-      positions[0].y + offsetY - sin(tailA) * tailW,
-    ));
+    curve.add(
+      Offset(
+        positions[0].x + offsetX - cos(tailA) * tailW,
+        positions[0].y + offsetY - sin(tailA) * tailW,
+      ),
+    );
     for (var i = 0; i <= n; i++) curve.add(rightAt(i));
-    curve.add(Offset(
-      positions[n].x + offsetX + cos(headA) * headW,
-      positions[n].y + offsetY + sin(headA) * headW,
-    ));
+    curve.add(
+      Offset(
+        positions[n].x + offsetX + cos(headA) * headW,
+        positions[n].y + offsetY + sin(headA) * headW,
+      ),
+    );
     for (var i = n; i >= 0; i--) curve.add(leftAt(i));
 
     // Connect all points with one smooth curve (Catmull-Rom style cubic between consecutive points).
@@ -210,12 +229,29 @@ class _SpinePainter extends CustomPainter {
       ..color = const Color(0xFF2E7D32)
       ..style = PaintingStyle.fill;
     final strokePaint = Paint()
-      ..color = const Color(0xFF1B5E20)
+      ..color = Colors.white
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
 
     canvas.drawPath(path, fillPaint);
     canvas.drawPath(path, strokePaint);
+
+    // Eyes at head: left and right vertex, slightly inward.
+    const eyeInset = 0.55;
+    final headCx = positions[n].x + offsetX;
+    final headCy = positions[n].y + offsetY;
+    final rightEye = Offset(
+      headCx - sin(headA) * headW * eyeInset,
+      headCy + cos(headA) * headW * eyeInset,
+    );
+    final leftEye = Offset(
+      headCx + sin(headA) * headW * eyeInset,
+      headCy - cos(headA) * headW * eyeInset,
+    );
+    final eyeRadius = headW * 0.24;
+    final eyePaint = Paint()..color = Colors.white..style = PaintingStyle.fill;
+    canvas.drawCircle(rightEye, eyeRadius, eyePaint);
+    canvas.drawCircle(leftEye, eyeRadius, eyePaint);
   }
 
   @override
