@@ -23,3 +23,9 @@ double constrainAngle(double angle, double anchor, double constraint) {
   if (diff > constraint) return simplifyAngle(anchor - constraint);
   return simplifyAngle(anchor + constraint);
 }
+
+/// Interpolate from a toward b by factor t (0..1), short way.
+double angleLerp(double a, double b, double t) {
+  final d = relativeAngleDiff(b, a);
+  return simplifyAngle(a + d * t);
+}

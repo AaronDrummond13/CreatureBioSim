@@ -53,16 +53,44 @@ class SimulationWorld {
           next.position.y - math.sin(newAngle) * _segmentLength;
     }
 
-    // Clamp pass: ensure each joint bend is truly <= max (fixes drift from
-    // using previous-frame anchor). Propagate base→head then rebuild positions.
-    for (var j = 0; j < n - 1; j++) {
-      final bend = relativeAngleDiff(_segmentAngles[j + 1], _segmentAngles[j]);
+    // Clamp pass: follow the leader — adjust tail-side segment to head-side when over limit.
+    for (var j = n - 2; j >= 0; j--) {
+      final leader = _segmentAngles[j + 1];
+      final bend = relativeAngleDiff(leader, _segmentAngles[j]);
       if (bend.abs() > _maxJointAngleRad) {
-        _segmentAngles[j + 1] = constrainAngle(
-          _segmentAngles[j + 1],
+        _segmentAngles[j] = constrainAngle(
           _segmentAngles[j],
+          leader,
           _maxJointAngleRad,
         );
+      }
+    }
+    // Curve spread: when at the limit, ease toward midpoint of neighbors (blend per pass)
+    // so the change is smooth; trigger only when really at limit; re-clamp after each pass.
+    const double atLimitThreshold = 0.75;
+    const int spreadPasses = 2;
+    const double spreadStep =
+        0.1; // blend this much toward midpoint per pass (smoother)
+    for (var pass = 0; pass < spreadPasses; pass++) {
+      for (var j = 1; j < n - 1; j++) {
+        final aPrev = _segmentAngles[j - 1];
+        final aNext = _segmentAngles[j + 1];
+        final aJ = _segmentAngles[j];
+        final bendAtJ = relativeAngleDiff(aNext, aJ);
+        if (bendAtJ.abs() < _maxJointAngleRad * atLimitThreshold) continue;
+        final mid = angleLerp(aPrev, aNext, 0.5);
+        _segmentAngles[j] = angleLerp(aJ, mid, spreadStep);
+      }
+      for (var j = n - 2; j >= 0; j--) {
+        final leader = _segmentAngles[j + 1];
+        final bend = relativeAngleDiff(leader, _segmentAngles[j]);
+        if (bend.abs() > _maxJointAngleRad) {
+          _segmentAngles[j] = constrainAngle(
+            _segmentAngles[j],
+            leader,
+            _maxJointAngleRad,
+          );
+        }
       }
     }
     // Rebuild positions from clamped angles (head fixed at target).
