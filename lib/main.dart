@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'simulation_screen.dart';
+
 void main() {
   runApp(const MainApp());
 }
@@ -9,10 +11,11 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
+        body: Container(
+          color: const Color(0xFFE8F5E9),
+          child: const SimulationScreen(),
         ),
       ),
     );
