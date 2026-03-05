@@ -3,6 +3,7 @@ import 'dart:math' show sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 
+import 'controller/bot_controller.dart';
 import 'creature.dart';
 import 'render/spine_painter.dart';
 import 'render/view.dart' show CameraView;
@@ -52,13 +53,26 @@ class _SimulationScreenState extends State<SimulationScreen>
     finColor: 0xFF5EAD62,
   );
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
+
+  /// Second creature: bot-driven, wanders randomly in same view.
+  final Creature _botCreature = Creature.withSegments(
+    12,
+    color: 0xFF1565C0,
+    width: 18.0,
+  );
+  late final Spine _botSpine = Spine(segmentCount: _botCreature.segmentCount);
+  late final BotController _botController = BotController(
+    spine: _botSpine,
+    wanderRadius: 2000.0,
+    ticksPerNewTarget: 135,
+  );
+
   double _touchX = 120;
   double _touchY = 0;
 
   /// Camera: world position at screen center. Does not affect creature positions; only the view.
   double _cameraX = 0;
   double _cameraY = 0;
-  bool _tickerActive = false;
   late Ticker _ticker;
 
   static const double _headMoveSpeed = 4.0;
@@ -84,7 +98,13 @@ class _SimulationScreenState extends State<SimulationScreen>
       _cameraX = _touchX;
       _cameraY = _touchY;
     }
+    // Offset bot so it doesn't start on top of the player.
+    const botOffsetX = 180.0;
+    for (final p in _botSpine.particles) {
+      p.position.x += botOffsetX;
+    }
     _ticker = createTicker(_onTick);
+    _ticker.start();
   }
 
   @override
@@ -94,33 +114,35 @@ class _SimulationScreenState extends State<SimulationScreen>
   }
 
   void _onTick(Duration elapsed) {
+    // User creature: head toward touch target.
     final positions = _spine.positions;
-    if (positions.isEmpty) return;
-    final head = positions.last;
-    final dx = _touchX - head.x;
-    final dy = _touchY - head.y;
-    final len = sqrt(dx * dx + dy * dy);
-    if (len <= _arrivalThreshold) {
-      _spine.resolve(
-        head.x,
-        head.y,
-        intendedTargetX: _touchX,
-        intendedTargetY: _touchY,
-      );
-    } else {
-      final step = _headMoveSpeed / len;
-      final nx = head.x + dx * step;
-      final ny = head.y + dy * step;
-      _spine.resolve(
-        nx,
-        ny,
-        intendedTargetX: _touchX,
-        intendedTargetY: _touchY,
-      );
+    if (positions.isNotEmpty) {
+      final head = positions.last;
+      final dx = _touchX - head.x;
+      final dy = _touchY - head.y;
+      final len = sqrt(dx * dx + dy * dy);
+      if (len <= _arrivalThreshold) {
+        _spine.resolve(
+          head.x,
+          head.y,
+          intendedTargetX: _touchX,
+          intendedTargetY: _touchY,
+        );
+      } else {
+        final step = _headMoveSpeed / len;
+        final nx = head.x + dx * step;
+        final ny = head.y + dy * step;
+        _spine.resolve(
+          nx,
+          ny,
+          intendedTargetX: _touchX,
+          intendedTargetY: _touchY,
+        );
+      }
+      _cameraX = head.x;
+      _cameraY = head.y;
     }
-    // Camera follows head (world position unchanged; only view target).
-    _cameraX = head.x;
-    _cameraY = head.y;
+    _botController.tick();
     if (mounted) setState(() {});
   }
 
@@ -139,6 +161,19 @@ class _SimulationScreenState extends State<SimulationScreen>
   Widget build(BuildContext context) {
     return Stack(
       children: [
+        Positioned.fill(
+          child: CustomPaint(
+            painter: CreaturePainter(
+              creature: _botCreature,
+              spine: _botSpine,
+              view: CameraView(
+                cameraX: _cameraX,
+                cameraY: _cameraY,
+                zoom: _viewZoom,
+              ),
+            ),
+          ),
+        ),
         Positioned.fill(
           child: CustomPaint(
             painter: CreaturePainter(
@@ -168,10 +203,6 @@ class _SimulationScreenState extends State<SimulationScreen>
                     _cameraX,
                     _cameraY,
                   );
-                  if (!_tickerActive) {
-                    _tickerActive = true;
-                    _ticker.start();
-                  }
                   setState(() {});
                 },
                 onPointerMove: (e) {
@@ -182,14 +213,8 @@ class _SimulationScreenState extends State<SimulationScreen>
                     _cameraY,
                   );
                 },
-                onPointerUp: (_) {
-                  _tickerActive = false;
-                  _ticker.stop();
-                },
-                onPointerCancel: (_) {
-                  _tickerActive = false;
-                  _ticker.stop();
-                },
+                onPointerUp: (_) {},
+                onPointerCancel: (_) {},
                 child: const SizedBox.expand(),
               );
             },
