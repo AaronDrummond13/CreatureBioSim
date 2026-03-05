@@ -7,17 +7,6 @@ import 'creature.dart';
 import 'simulation/spine.dart';
 import 'simulation/vector.dart';
 
-Vector2 _centroid(List<Vector2> positions) {
-  if (positions.isEmpty) return Vector2(0, 0);
-  double x = 0, y = 0;
-  for (final p in positions) {
-    x += p.x;
-    y += p.y;
-  }
-  final n = positions.length;
-  return Vector2(x / n, y / n);
-}
-
 /// Screen that runs the spine simulation. Hold and drag on the screen:
 /// the head moves toward the touch point; drag to change direction.
 class SimulationScreen extends StatefulWidget {
@@ -125,8 +114,8 @@ class _SimulationScreenState extends State<SimulationScreen>
                 onPointerDown: (e) {
                   final pos = _spine.positions;
                   if (pos.isNotEmpty) {
-                    final center = _centroid(pos);
-                    _updateTouchFromLocal(size, e.localPosition, center.x, center.y);
+                    final head = pos.last;
+                    _updateTouchFromLocal(size, e.localPosition, head.x, head.y);
                   }
                   if (!_tickerActive) {
                     _tickerActive = true;
@@ -137,8 +126,8 @@ class _SimulationScreenState extends State<SimulationScreen>
                 onPointerMove: (e) {
                   final pos = _spine.positions;
                   if (pos.isNotEmpty) {
-                    final center = _centroid(pos);
-                    _updateTouchFromLocal(size, e.localPosition, center.x, center.y);
+                    final head = pos.last;
+                    _updateTouchFromLocal(size, e.localPosition, head.x, head.y);
                   }
                 },
                 onPointerUp: (_) {
@@ -194,13 +183,13 @@ class _SpinePainter extends CustomPainter {
 
     final centerX = size.width / 2;
     final centerY = size.height / 2;
-    final center = _centroid(positions);
+    final head = positions.last;
     final n = positions.length - 1;
     final z = zoom;
 
-    // World → screen: centroid at center; center + (world - center) * zoom.
-    double sx(double wx) => centerX + (wx - center.x) * z;
-    double sy(double wy) => centerY + (wy - center.y) * z;
+    // World → screen: head at center; center + (world - head) * zoom.
+    double sx(double wx) => centerX + (wx - head.x) * z;
+    double sy(double wy) => centerY + (wy - head.y) * z;
     double wAt(int i) => _widthAt(i) * z;
 
     // Background dots (fixed in world space) for relative motion.
