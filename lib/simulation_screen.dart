@@ -54,12 +54,14 @@ class _SimulationScreenState extends State<SimulationScreen>
     final dy = _touchY - head.y;
     final len = sqrt(dx * dx + dy * dy);
     if (len <= _arrivalThreshold) {
-      _spine.resolve(head.x, head.y);
+      _spine.resolve(head.x, head.y,
+          intendedTargetX: _touchX, intendedTargetY: _touchY);
     } else {
       final step = _headMoveSpeed / len;
       final nx = head.x + dx * step;
       final ny = head.y + dy * step;
-      _spine.resolve(nx, ny);
+      _spine.resolve(nx, ny,
+          intendedTargetX: _touchX, intendedTargetY: _touchY);
     }
     if (mounted) setState(() {});
   }

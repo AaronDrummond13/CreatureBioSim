@@ -29,10 +29,28 @@ class Spine {
 
   int get headIndex => particles.length - 1;
 
-  /// Kinematic resolve: set head to target, propagate toward base, then
-  /// clamp so every consecutive segment pair has bend <= maxJointAngle.
-  void resolve(double targetX, double targetY) {
+  /// Kinematic resolve: set head to target, propagate toward base, clamp bends,
+  /// then spread curve. Uses [intendedTargetX/Y] for reverse check when provided.
+  void resolve(double targetX, double targetY,
+      {double? intendedTargetX, double? intendedTargetY}) {
     final n = headIndex;
+    final checkX = intendedTargetX ?? targetX;
+    final checkY = intendedTargetY ?? targetY;
+    if (n >= 1) {
+      final neck = particles[n - 1].position;
+      final headDir = _segmentAngles[n - 1];
+      final dx = checkX - neck.x;
+      final dy = checkY - neck.y;
+      if (dx * dx + dy * dy > 1e-12) {
+        final turn = relativeAngleDiff(headDir, math.atan2(dy, dx));
+        if (turn.abs() > maxJointAngleRad) {
+          final cap = turn > 0 ? maxJointAngleRad : -maxJointAngleRad;
+          final dir = simplifyAngle(headDir + cap);
+          targetX = neck.x + segmentLength * math.cos(dir);
+          targetY = neck.y + segmentLength * math.sin(dir);
+        }
+      }
+    }
     particles[n].position.x = targetX;
     particles[n].position.y = targetY;
 
