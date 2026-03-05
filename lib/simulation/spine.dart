@@ -97,8 +97,8 @@ class Spine {
       }
     }
     // Curve spread: when at the limit, ease toward midpoint of neighbors (blend per pass)
-    const double atLimitThreshold = 0.75;
-    const int spreadPasses = 2;
+    const double atLimitThreshold = 0.85;
+    const int spreadPasses = 3;
     const double spreadStep = 0.1;
     for (var pass = 0; pass < spreadPasses; pass++) {
       for (var j = 1; j < n - 1; j++) {
