@@ -3,7 +3,7 @@ import 'dart:math' show sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 
-import 'controller/bot_controller.dart';
+import 'controller/spawner.dart';
 import 'creature.dart';
 import 'render/spine_painter.dart';
 import 'render/view.dart' show CameraView;
@@ -54,18 +54,9 @@ class _SimulationScreenState extends State<SimulationScreen>
   );
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
 
-  /// Second creature: bot-driven, wanders randomly in same view.
-  final Creature _botCreature = Creature.withSegments(
-    12,
-    color: 0xFF1565C0,
-    width: 18.0,
-  );
-  late final Spine _botSpine = Spine(segmentCount: _botCreature.segmentCount);
-  late final BotController _botController = BotController(
-    spine: _botSpine,
-    wanderRadius: 2000.0,
-    ticksPerNewTarget: 135,
-  );
+  final Spawner _spawner = Spawner(spawnInterval: 10.0);
+  double _viewWidthWorld = 800.0;
+  double _viewHeightWorld = 600.0;
 
   double _touchX = 120;
   double _touchY = 0;
@@ -98,11 +89,6 @@ class _SimulationScreenState extends State<SimulationScreen>
       _touchX = _spine.segmentCount * 40.0;
       _cameraX = _touchX;
       _cameraY = _touchY;
-    }
-    // Offset bot so it doesn't start on top of the player.
-    const botOffsetX = 180.0;
-    for (final p in _botSpine.particles) {
-      p.position.x += botOffsetX;
     }
     _ticker = createTicker(_onTick);
     _ticker.start();
@@ -143,8 +129,19 @@ class _SimulationScreenState extends State<SimulationScreen>
       _cameraX = head.x;
       _cameraY = head.y;
     }
-    _botController.tick();
     _timeSeconds = elapsed.inMilliseconds / 1000.0;
+    if (_viewWidthWorld > 0 && _viewHeightWorld > 0) {
+      _spawner.tick(
+        _timeSeconds,
+        _cameraX,
+        _cameraY,
+        _viewWidthWorld,
+        _viewHeightWorld,
+      );
+      for (final e in _spawner.entities) {
+        e.botController.tick();
+      }
+    }
     if (mounted) setState(() {});
   }
 
@@ -161,19 +158,27 @@ class _SimulationScreenState extends State<SimulationScreen>
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    _viewWidthWorld = size.width / _viewZoom;
+    _viewHeightWorld = size.height / _viewZoom;
+
+    final cameraView = CameraView(
+      cameraX: _cameraX,
+      cameraY: _cameraY,
+      zoom: _viewZoom,
+    );
+
     return Stack(
       children: [
-        Positioned.fill(
-          child: CustomPaint(
-            painter: CreaturePainter(
-              creature: _botCreature,
-              spine: _botSpine,
-              view: CameraView(
-                cameraX: _cameraX,
-                cameraY: _cameraY,
-                zoom: _viewZoom,
+        ..._spawner.entities.map(
+          (e) => Positioned.fill(
+            child: CustomPaint(
+              painter: CreaturePainter(
+                creature: e.creature,
+                spine: e.spine,
+                view: cameraView,
+                timeSeconds: _timeSeconds,
               ),
-              timeSeconds: _timeSeconds,
             ),
           ),
         ),
@@ -182,11 +187,7 @@ class _SimulationScreenState extends State<SimulationScreen>
             painter: CreaturePainter(
               creature: _creature,
               spine: _spine,
-              view: CameraView(
-                cameraX: _cameraX,
-                cameraY: _cameraY,
-                zoom: _viewZoom,
-              ),
+              view: cameraView,
               timeSeconds: _timeSeconds,
             ),
           ),
