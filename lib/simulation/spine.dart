@@ -7,6 +7,11 @@ import 'vector.dart';
 /// Spine simulation engine: head-driven kinematic resolve, angle constraints,
 /// curve spread. Pure Dart; no rendering. Driven by segment count (e.g. from Creature).
 class Spine {
+  static const double minSegmentLength = 5.0;
+  static const double maxSegmentLength = 30.0;
+  static const double minMaxJointAngleRad = 0.2;
+  static const double maxMaxJointAngleRad = 0.6;
+
   final int segmentCount;
   final double segmentLength;
   final double maxJointAngleRad;
@@ -15,10 +20,12 @@ class Spine {
   final List<double> _segmentAngles = [];
 
   Spine({
-    this.segmentCount = 20,
-    this.segmentLength = 10.0,
-    this.maxJointAngleRad = 0.4,
-  }) {
+    this.segmentCount = 1,
+    double segmentLength = 10.0,
+    double maxJointAngleRad = 0.3,
+  })  : segmentLength = segmentLength.clamp(minSegmentLength, maxSegmentLength),
+        maxJointAngleRad =
+            maxJointAngleRad.clamp(minMaxJointAngleRad, maxMaxJointAngleRad) {
     for (var i = 0; i <= segmentCount; i++) {
       particles.add(Particle(i * segmentLength, 0));
     }
@@ -31,8 +38,12 @@ class Spine {
 
   /// Kinematic resolve: set head to target, propagate toward base, clamp bends,
   /// then spread curve. Uses [intendedTargetX/Y] for reverse check when provided.
-  void resolve(double targetX, double targetY,
-      {double? intendedTargetX, double? intendedTargetY}) {
+  void resolve(
+    double targetX,
+    double targetY, {
+    double? intendedTargetX,
+    double? intendedTargetY,
+  }) {
     final n = headIndex;
     final checkX = intendedTargetX ?? targetX;
     final checkY = intendedTargetY ?? targetY;

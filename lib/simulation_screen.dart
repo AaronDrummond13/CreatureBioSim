@@ -7,6 +7,17 @@ import 'creature.dart';
 import 'simulation/spine.dart';
 import 'simulation/vector.dart';
 
+Vector2 _centroid(List<Vector2> positions) {
+  if (positions.isEmpty) return Vector2(0, 0);
+  double x = 0, y = 0;
+  for (final p in positions) {
+    x += p.x;
+    y += p.y;
+  }
+  final n = positions.length;
+  return Vector2(x / n, y / n);
+}
+
 /// Screen that runs the spine simulation. Hold and drag on the screen:
 /// the head moves toward the touch point; drag to change direction.
 class SimulationScreen extends StatefulWidget {
@@ -18,7 +29,10 @@ class SimulationScreen extends StatefulWidget {
 
 class _SimulationScreenState extends State<SimulationScreen>
     with SingleTickerProviderStateMixin {
-  final Creature _creature = const Creature(segmentCount: 20, color: 0xFF2E7D32);
+  final Creature _creature = const Creature(
+    segmentCount: 50,
+    color: 0xFF2E7D32,
+  );
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
   double _touchX = 120;
   double _touchY = 0;
@@ -54,14 +68,22 @@ class _SimulationScreenState extends State<SimulationScreen>
     final dy = _touchY - head.y;
     final len = sqrt(dx * dx + dy * dy);
     if (len <= _arrivalThreshold) {
-      _spine.resolve(head.x, head.y,
-          intendedTargetX: _touchX, intendedTargetY: _touchY);
+      _spine.resolve(
+        head.x,
+        head.y,
+        intendedTargetX: _touchX,
+        intendedTargetY: _touchY,
+      );
     } else {
       final step = _headMoveSpeed / len;
       final nx = head.x + dx * step;
       final ny = head.y + dy * step;
-      _spine.resolve(nx, ny,
-          intendedTargetX: _touchX, intendedTargetY: _touchY);
+      _spine.resolve(
+        nx,
+        ny,
+        intendedTargetX: _touchX,
+        intendedTargetY: _touchY,
+      );
     }
     if (mounted) setState(() {});
   }
@@ -103,8 +125,8 @@ class _SimulationScreenState extends State<SimulationScreen>
                 onPointerDown: (e) {
                   final pos = _spine.positions;
                   if (pos.isNotEmpty) {
-                    final mid = pos[(pos.length - 1) ~/ 2];
-                    _updateTouchFromLocal(size, e.localPosition, mid.x, mid.y);
+                    final center = _centroid(pos);
+                    _updateTouchFromLocal(size, e.localPosition, center.x, center.y);
                   }
                   if (!_tickerActive) {
                     _tickerActive = true;
@@ -115,8 +137,8 @@ class _SimulationScreenState extends State<SimulationScreen>
                 onPointerMove: (e) {
                   final pos = _spine.positions;
                   if (pos.isNotEmpty) {
-                    final mid = pos[(pos.length - 1) ~/ 2];
-                    _updateTouchFromLocal(size, e.localPosition, mid.x, mid.y);
+                    final center = _centroid(pos);
+                    _updateTouchFromLocal(size, e.localPosition, center.x, center.y);
                   }
                 },
                 onPointerUp: (_) {
@@ -172,14 +194,13 @@ class _SpinePainter extends CustomPainter {
 
     final centerX = size.width / 2;
     final centerY = size.height / 2;
-    final midIndex = (positions.length - 1) ~/ 2;
-    final mid = positions[midIndex];
+    final center = _centroid(positions);
     final n = positions.length - 1;
     final z = zoom;
 
-    // World → screen: center + (world - mid) * zoom. Widths scale with zoom.
-    double sx(double wx) => centerX + (wx - mid.x) * z;
-    double sy(double wy) => centerY + (wy - mid.y) * z;
+    // World → screen: centroid at center; center + (world - center) * zoom.
+    double sx(double wx) => centerX + (wx - center.x) * z;
+    double sy(double wy) => centerY + (wy - center.y) * z;
     double wAt(int i) => _widthAt(i) * z;
 
     // Background dots (fixed in world space) for relative motion.
@@ -195,8 +216,10 @@ class _SpinePainter extends CustomPainter {
         final wy = j * dotSpacing;
         final px = sx(wx);
         final py = sy(wy);
-        if (px >= -dotRadius && px <= size.width + dotRadius &&
-            py >= -dotRadius && py <= size.height + dotRadius) {
+        if (px >= -dotRadius &&
+            px <= size.width + dotRadius &&
+            py >= -dotRadius &&
+            py <= size.height + dotRadius) {
           canvas.drawCircle(Offset(px, py), dotRadius, dotPaint);
         }
       }
@@ -231,34 +254,32 @@ class _SpinePainter extends CustomPainter {
     final tailWWorld = _widthAt(0);
     final headWWorld = _widthAt(n);
 
+    const int capSegments =
+        7; // Points on each cap semicircle (more = rounder).
     final curve = <Offset>[];
-    // Tail cap: 3 points at body width, 60° apart on the back semicircle (order: left 240°, tip 180°, right 120°).
-    curve.add(Offset(
-      sx(positions[0].x + tailWWorld * cos(tailA + 4 * pi / 3)),
-      sy(positions[0].y + tailWWorld * sin(tailA + 4 * pi / 3)),
-    ));
-    curve.add(Offset(
-      sx(positions[0].x - tailWWorld * cos(tailA)),
-      sy(positions[0].y - tailWWorld * sin(tailA)),
-    ));
-    curve.add(Offset(
-      sx(positions[0].x + tailWWorld * cos(tailA + 2 * pi / 3)),
-      sy(positions[0].y + tailWWorld * sin(tailA + 2 * pi / 3)),
-    ));
+    // Tail cap: semicircle from left body edge (4π/3) via tip (π) to right body edge (2π/3).
+    for (var i = 0; i < capSegments; i++) {
+      final t = i / (capSegments - 1);
+      final a = tailA + 4 * pi / 3 + t * (2 * pi / 3 - 4 * pi / 3);
+      curve.add(
+        Offset(
+          sx(positions[0].x + tailWWorld * cos(a)),
+          sy(positions[0].y + tailWWorld * sin(a)),
+        ),
+      );
+    }
     for (var i = 0; i <= n; i++) curve.add(rightAt(i));
-    // Head cap: 3 points at body width, 60° apart (right 60°, tip 0°, left −60°).
-    curve.add(Offset(
-      sx(positions[n].x + headWWorld * cos(headA + pi / 3)),
-      sy(positions[n].y + headWWorld * sin(headA + pi / 3)),
-    ));
-    curve.add(Offset(
-      sx(positions[n].x + headWWorld * cos(headA)),
-      sy(positions[n].y + headWWorld * sin(headA)),
-    ));
-    curve.add(Offset(
-      sx(positions[n].x + headWWorld * cos(headA - pi / 3)),
-      sy(positions[n].y + headWWorld * sin(headA - pi / 3)),
-    ));
+    // Head cap: semicircle from right (π/3) via tip (0) to left (−π/3).
+    for (var i = 0; i < capSegments; i++) {
+      final t = i / (capSegments - 1);
+      final a = headA + pi / 3 - t * (2 * pi / 3);
+      curve.add(
+        Offset(
+          sx(positions[n].x + headWWorld * cos(a)),
+          sy(positions[n].y + headWWorld * sin(a)),
+        ),
+      );
+    }
     for (var i = n; i >= 0; i--) curve.add(leftAt(i));
 
     // Connect all points with one smooth curve (Catmull-Rom style cubic between consecutive points).
