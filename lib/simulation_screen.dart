@@ -73,6 +73,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   /// Camera: world position at screen center. Does not affect creature positions; only the view.
   double _cameraX = 0;
   double _cameraY = 0;
+  double _timeSeconds = 0;
   late Ticker _ticker;
 
   static const double _headMoveSpeed = 4.0;
@@ -143,6 +144,7 @@ class _SimulationScreenState extends State<SimulationScreen>
       _cameraY = head.y;
     }
     _botController.tick();
+    _timeSeconds = elapsed.inMilliseconds / 1000.0;
     if (mounted) setState(() {});
   }
 
@@ -171,6 +173,7 @@ class _SimulationScreenState extends State<SimulationScreen>
                 cameraY: _cameraY,
                 zoom: _viewZoom,
               ),
+              timeSeconds: _timeSeconds,
             ),
           ),
         ),
@@ -184,6 +187,7 @@ class _SimulationScreenState extends State<SimulationScreen>
                 cameraY: _cameraY,
                 zoom: _viewZoom,
               ),
+              timeSeconds: _timeSeconds,
             ),
           ),
         ),

@@ -14,16 +14,21 @@ class CreaturePainter extends CustomPainter {
   final Spine spine;
   final CameraView view;
 
+  /// Time in seconds for background dot drift (optional).
+  final double timeSeconds;
+
   static const double dorsalFinHeight = 18.0;
   static const double dorsalFinBaseFrac = 0.3;
   static const double minDefaultWidth = 10.0;
   static const double maxDefaultWidth = 50.0;
   static const double _fallbackWidth = 30.0;
+  static const double _dotDriftAmount = 50.0;
 
   CreaturePainter({
     required this.creature,
     required this.spine,
     required this.view,
+    this.timeSeconds = 0.0,
   });
 
   double _widthAt(int i) {
@@ -33,7 +38,11 @@ class CreaturePainter extends CustomPainter {
   }
 
   /// Appends Catmull-Rom style cubic segments through [points] to [path].
-  static void _appendSmoothCurve(Path path, List<Offset> points, double tension) {
+  static void _appendSmoothCurve(
+    Path path,
+    List<Offset> points,
+    double tension,
+  ) {
     if (points.length < 2) return;
     for (var i = 0; i < points.length - 1; i++) {
       final p0 = i > 0 ? points[i - 1] : points[0];
@@ -84,10 +93,16 @@ class CreaturePainter extends CustomPainter {
       ..color = Colors.white.withOpacity(0.4)
       ..style = PaintingStyle.fill;
     const dotRadius = 2.0;
+    const double _dotDriftSpeed = 0.4;
     for (var i = iMin; i <= iMax; i++) {
       for (var j = jMin; j <= jMax; j++) {
-        final px = sx(i * dotSpacing);
-        final py = sy(j * dotSpacing);
+        final t = timeSeconds * _dotDriftSpeed;
+        final driftX = sin(i * 1.1 + j * 0.7 + t) * _dotDriftAmount;
+        final driftY = cos(i * 0.9 + j * 1.3 + t * 0.8) * _dotDriftAmount;
+        final wx = i * dotSpacing + driftX;
+        final wy = j * dotSpacing + driftY;
+        final px = sx(wx);
+        final py = sy(wy);
         if (px >= -dotRadius &&
             px <= size.width + dotRadius &&
             py >= -dotRadius &&
@@ -294,5 +309,6 @@ class CreaturePainter extends CustomPainter {
   bool shouldRepaint(covariant CreaturePainter oldDelegate) =>
       oldDelegate.creature != creature ||
       oldDelegate.spine != spine ||
-      oldDelegate.view != view;
+      oldDelegate.view != view ||
+      oldDelegate.timeSeconds != timeSeconds;
 }
