@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'creature.dart';
 import 'render/spine_painter.dart';
+import 'render/view.dart' show CameraView;
 import 'simulation/spine.dart';
 
 /// Screen that runs the spine simulation. Hold and drag on the screen:
@@ -140,19 +141,14 @@ class _SimulationScreenState extends State<SimulationScreen>
       children: [
         Positioned.fill(
           child: CustomPaint(
-            painter: SpinePainter(
-              positions: _spine.positions,
-              segmentAngles: _spine.segmentAngles,
-              vertexWidths: _creature.vertexWidths,
-              cameraX: _cameraX,
-              cameraY: _cameraY,
-              zoom: _viewZoom,
-              fillColor: Color(_creature.color),
-              dorsalFins: _creature.dorsalFins,
-              finColor: _creature.finColor != null
-                  ? Color(_creature.finColor!)
-                  : null,
-              maxJointAngleRadForFin: _spine.maxJointAngleRad,
+            painter: CreaturePainter(
+              creature: _creature,
+              spine: _spine,
+              view: CameraView(
+                cameraX: _cameraX,
+                cameraY: _cameraY,
+                zoom: _viewZoom,
+              ),
             ),
           ),
         ),

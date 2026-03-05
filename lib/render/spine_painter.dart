@@ -2,67 +2,34 @@ import 'dart:math' show cos, pi, sin;
 
 import 'package:flutter/material.dart';
 
+import '../creature.dart';
 import '../simulation/angle_util.dart';
-import '../simulation/vector.dart';
+import '../simulation/spine.dart';
+import 'view.dart';
 
-/// Paints a spine (body outline, caps, eyes) in world space using a camera transform.
-/// Positions and segmentAngles are in world space; [cameraX], [cameraY], [zoom] define the view.
-class SpinePainter extends CustomPainter {
-  final List<Vector2> positions;
-  final List<double> segmentAngles;
+/// Paints one creature in world space. Uses [view] to transform world → screen.
+/// For multiple creatures, pass the same [CameraView] to each painter so they share one camera.
+class CreaturePainter extends CustomPainter {
+  final Creature creature;
+  final Spine spine;
+  final CameraView view;
 
-  /// Per-vertex width (half-width from spine to outline). If null, uses [defaultWidth].
-  final List<double>? vertexWidths;
-
-  /// Camera: world position at screen center. Creature positions are in world space; camera only affects view.
-  final double cameraX;
-  final double cameraY;
-
-  /// View zoom: world units scale by this when drawing. 1 = 1:1, < 1 = zoom out.
-  final double zoom;
-
-  /// Fill colour for the creature body (from creature.color).
-  final Color fillColor;
-
-  /// Dorsal fins: (segment indices, optional height). Null height uses [dorsalFinHeight].
-  final List<(List<int>, double?)>? dorsalFins;
-
-  /// Fin colour. When null, a lighter tint of [fillColor] is used.
-  final Color? finColor;
-
-  /// Max joint angle (rad) for proportional fin height. Pass spine's for consistency; default 0.4.
-  final double? maxJointAngleRadForFin;
-
-  /// Max dorsal fin height (outward at full bend).
   static const double dorsalFinHeight = 18.0;
-  /// Rest/inward height as fraction of fin height (straight and concave side).
   static const double dorsalFinBaseFrac = 0.3;
-
   static const double minDefaultWidth = 10.0;
   static const double maxDefaultWidth = 50.0;
+  static const double _fallbackWidth = 30.0;
 
-  final double _effectiveDefaultWidth;
-
-  SpinePainter({
-    required this.positions,
-    required this.segmentAngles,
-    this.vertexWidths,
-    double? defaultWidth,
-    required this.cameraX,
-    required this.cameraY,
-    this.zoom = 1.0,
-    this.fillColor = const Color(0xFF2E7D32),
-    this.dorsalFins,
-    this.finColor,
-    this.maxJointAngleRadForFin,
-  }) : _effectiveDefaultWidth = defaultWidth == null
-           ? 30.0
-           : defaultWidth.clamp(minDefaultWidth, maxDefaultWidth);
+  CreaturePainter({
+    required this.creature,
+    required this.spine,
+    required this.view,
+  });
 
   double _widthAt(int i) {
-    if (vertexWidths != null && i < vertexWidths!.length)
-      return vertexWidths![i].clamp(minDefaultWidth, maxDefaultWidth);
-    return _effectiveDefaultWidth;
+    final vw = creature.vertexWidths;
+    if (i < vw.length) return vw[i].clamp(minDefaultWidth, maxDefaultWidth);
+    return _fallbackWidth.clamp(minDefaultWidth, maxDefaultWidth);
   }
 
   /// Appends Catmull-Rom style cubic segments through [points] to [path].
@@ -87,26 +54,28 @@ class SpinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final positions = spine.positions;
+    final segmentAngles = spine.segmentAngles;
     if (positions.length < 2 || segmentAngles.length < 1) return;
 
     final centerX = size.width / 2;
     final centerY = size.height / 2;
     final n = positions.length - 1;
-    final z = zoom;
+    final z = view.zoom;
 
-    // World → screen: camera at center. Positions are in world space; camera does not move the creature.
-    double sx(double wx) => centerX + (wx - cameraX) * z;
-    double sy(double wy) => centerY + (wy - cameraY) * z;
+    double sx(double wx) => centerX + (wx - view.cameraX) * z;
+    double sy(double wy) => centerY + (wy - view.cameraY) * z;
     double wAt(int i) => _widthAt(i) * z;
+    final fillColor = Color(creature.color);
 
     // Background dots: infinite grid in world space; sample only the visible region (plus padding).
     const double dotSpacing = 120.0;
     final halfW = size.width / (2 * z);
     final halfH = size.height / (2 * z);
-    final worldLeft = cameraX - halfW - size.width / z;
-    final worldRight = cameraX + halfW + size.width / z;
-    final worldTop = cameraY - halfH - size.height / z;
-    final worldBottom = cameraY + halfH + size.height / z;
+    final worldLeft = view.cameraX - halfW - size.width / z;
+    final worldRight = view.cameraX + halfW + size.width / z;
+    final worldTop = view.cameraY - halfH - size.height / z;
+    final worldBottom = view.cameraY + halfH + size.height / z;
     final iMin = (worldLeft / dotSpacing).floor();
     final iMax = (worldRight / dotSpacing).ceil();
     final jMin = (worldTop / dotSpacing).floor();
@@ -213,23 +182,26 @@ class SpinePainter extends CustomPainter {
     final strokePaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = (3 * z).clamp(1.0, 3.0);
+      ..strokeWidth = (3.0 * z).clamp(1.0, 3.0);
 
     canvas.drawPath(path, fillPaint);
     canvas.drawPath(path, strokePaint);
 
     // Dorsal fins: tapered ends, height from bend (smoothstep), inward fixed at baseFrac.
-    final fins = dorsalFins;
+    final fins = creature.dorsalFins;
     if (fins != null && fins.isNotEmpty) {
+      final finColorResolved = creature.finColor != null
+          ? Color(creature.finColor!)
+          : Color.lerp(fillColor, Colors.white, 0.15)!;
       final finFill = Paint()
-        ..color = finColor ?? Color.lerp(fillColor, Colors.white, 0.15)!
+        ..color = finColorResolved
         ..style = PaintingStyle.fill;
       final finStroke = Paint()
         ..color = Colors.white
         ..style = PaintingStyle.stroke
-        ..strokeWidth = (2 * z).clamp(1.0, 2.0);
+        ..strokeWidth = (2.0 * z).clamp(1.0, 2.0);
       const tension = 1.0 / 6.0;
-      final maxAngle = maxJointAngleRadForFin ?? 0.4;
+      final maxAngle = spine.maxJointAngleRad;
       for (final fin in fins) {
         final run = fin.$1;
         final fullH = fin.$2 ?? dorsalFinHeight;
@@ -319,15 +291,8 @@ class SpinePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant SpinePainter oldDelegate) =>
-      oldDelegate.zoom != zoom ||
-      oldDelegate.fillColor != fillColor ||
-      oldDelegate.finColor != finColor ||
-      oldDelegate.maxJointAngleRadForFin != maxJointAngleRadForFin ||
-      oldDelegate.dorsalFins != dorsalFins ||
-      oldDelegate._effectiveDefaultWidth != _effectiveDefaultWidth ||
-      oldDelegate.cameraX != cameraX ||
-      oldDelegate.cameraY != cameraY ||
-      oldDelegate.positions.length != positions.length ||
-      oldDelegate.segmentAngles.length != segmentAngles.length;
+  bool shouldRepaint(covariant CreaturePainter oldDelegate) =>
+      oldDelegate.creature != creature ||
+      oldDelegate.spine != spine ||
+      oldDelegate.view != view;
 }
