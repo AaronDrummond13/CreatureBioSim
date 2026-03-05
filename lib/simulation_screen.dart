@@ -21,13 +21,34 @@ class _SimulationScreenState extends State<SimulationScreen>
   final Creature _creature = Creature(
     vertexWidths: [
       // tail → head (index 0 = tail, last = head)
-      10, 10, 10, 10, 20, 30, 30, 30, 20, 15, 30, 35, 35, 30,
+      10,
+      10,
+      10,
+      10,
+      10,
+      15,
+      20,
+      30,
+      30,
+      30,
+      35,
+      35,
+      30,
+      30,
+      30,
+      20,
+      20,
+      30,
+      35,
+      40,
+      40,
     ],
     color: 0xFF2E7D32,
   );
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
   double _touchX = 120;
   double _touchY = 0;
+
   /// Camera: world position at screen center. Does not affect creature positions; only the view.
   double _cameraX = 0;
   double _cameraY = 0;
@@ -135,7 +156,12 @@ class _SimulationScreenState extends State<SimulationScreen>
               return Listener(
                 behavior: HitTestBehavior.opaque,
                 onPointerDown: (e) {
-                  _updateTouchFromLocal(size, e.localPosition, _cameraX, _cameraY);
+                  _updateTouchFromLocal(
+                    size,
+                    e.localPosition,
+                    _cameraX,
+                    _cameraY,
+                  );
                   if (!_tickerActive) {
                     _tickerActive = true;
                     _ticker.start();
@@ -143,7 +169,12 @@ class _SimulationScreenState extends State<SimulationScreen>
                   setState(() {});
                 },
                 onPointerMove: (e) {
-                  _updateTouchFromLocal(size, e.localPosition, _cameraX, _cameraY);
+                  _updateTouchFromLocal(
+                    size,
+                    e.localPosition,
+                    _cameraX,
+                    _cameraY,
+                  );
                 },
                 onPointerUp: (_) {
                   _tickerActive = false;
