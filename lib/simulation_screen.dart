@@ -39,11 +39,16 @@ class _SimulationScreenState extends State<SimulationScreen>
       20,
       20,
       30,
-      35,
-      40,
-      40,
+      30,
+      30,
+      20,
+    ],
+    dorsalFins: [
+      ([14, 15, 16, 17, 18, 19], 8.0),
+      ([2, 3, 4, 5, 6, 7, 8, 9, 10], null),
     ],
     color: 0xFF2E7D32,
+    finColor: 0xFF5EAD62,
   );
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
   double _touchX = 120;
@@ -143,6 +148,11 @@ class _SimulationScreenState extends State<SimulationScreen>
               cameraY: _cameraY,
               zoom: _viewZoom,
               fillColor: Color(_creature.color),
+              dorsalFins: _creature.dorsalFins,
+              finColor: _creature.finColor != null
+                  ? Color(_creature.finColor!)
+                  : null,
+              maxJointAngleRadForFin: _spine.maxJointAngleRad,
             ),
           ),
         ),

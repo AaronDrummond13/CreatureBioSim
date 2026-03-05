@@ -2,6 +2,7 @@ import 'dart:math' show cos, pi, sin;
 
 import 'package:flutter/material.dart';
 
+import '../simulation/angle_util.dart';
 import '../simulation/vector.dart';
 
 /// Paints a spine (body outline, caps, eyes) in world space using a camera transform.
@@ -23,6 +24,20 @@ class SpinePainter extends CustomPainter {
   /// Fill colour for the creature body (from creature.color).
   final Color fillColor;
 
+  /// Dorsal fins: (segment indices, optional height). Null height uses [dorsalFinHeight].
+  final List<(List<int>, double?)>? dorsalFins;
+
+  /// Fin colour. When null, a lighter tint of [fillColor] is used.
+  final Color? finColor;
+
+  /// Max joint angle (rad) for proportional fin height. Pass spine's for consistency; default 0.4.
+  final double? maxJointAngleRadForFin;
+
+  /// Max dorsal fin height (outward at full bend).
+  static const double dorsalFinHeight = 18.0;
+  /// Rest/inward height as fraction of fin height (straight and concave side).
+  static const double dorsalFinBaseFrac = 0.3;
+
   static const double minDefaultWidth = 10.0;
   static const double maxDefaultWidth = 50.0;
 
@@ -37,14 +52,37 @@ class SpinePainter extends CustomPainter {
     required this.cameraY,
     this.zoom = 1.0,
     this.fillColor = const Color(0xFF2E7D32),
+    this.dorsalFins,
+    this.finColor,
+    this.maxJointAngleRadForFin,
   }) : _effectiveDefaultWidth = defaultWidth == null
-        ? 30.0
-        : defaultWidth.clamp(minDefaultWidth, maxDefaultWidth);
+           ? 30.0
+           : defaultWidth.clamp(minDefaultWidth, maxDefaultWidth);
 
   double _widthAt(int i) {
     if (vertexWidths != null && i < vertexWidths!.length)
       return vertexWidths![i].clamp(minDefaultWidth, maxDefaultWidth);
     return _effectiveDefaultWidth;
+  }
+
+  /// Appends Catmull-Rom style cubic segments through [points] to [path].
+  static void _appendSmoothCurve(Path path, List<Offset> points, double tension) {
+    if (points.length < 2) return;
+    for (var i = 0; i < points.length - 1; i++) {
+      final p0 = i > 0 ? points[i - 1] : points[0];
+      final p1 = points[i];
+      final p2 = points[i + 1];
+      final p3 = i + 2 < points.length ? points[i + 2] : points[i + 1];
+      final c0 = Offset(
+        p1.dx + (p2.dx - p0.dx) * tension,
+        p1.dy + (p2.dy - p0.dy) * tension,
+      );
+      final c1 = Offset(
+        p2.dx - (p3.dx - p1.dx) * tension,
+        p2.dy - (p3.dy - p1.dy) * tension,
+      );
+      path.cubicTo(c0.dx, c0.dy, c1.dx, c1.dy, p2.dx, p2.dy);
+    }
   }
 
   @override
@@ -180,6 +218,85 @@ class SpinePainter extends CustomPainter {
     canvas.drawPath(path, fillPaint);
     canvas.drawPath(path, strokePaint);
 
+    // Dorsal fins: tapered ends, height from bend (smoothstep), inward fixed at baseFrac.
+    final fins = dorsalFins;
+    if (fins != null && fins.isNotEmpty) {
+      final finFill = Paint()
+        ..color = finColor ?? Color.lerp(fillColor, Colors.white, 0.15)!
+        ..style = PaintingStyle.fill;
+      final finStroke = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = (2 * z).clamp(1.0, 2.0);
+      const tension = 1.0 / 6.0;
+      final maxAngle = maxJointAngleRadForFin ?? 0.4;
+      for (final fin in fins) {
+        final run = fin.$1;
+        final fullH = fin.$2 ?? dorsalFinHeight;
+        if (run.isEmpty) continue;
+        final s = run.first;
+        final e = run.last;
+        if (s < 0 || e >= segmentAngles.length || e + 1 >= positions.length)
+          continue;
+        final baseH = fullH * dorsalFinBaseFrac;
+        final pts = <({double x, double y, double a, double bend})>[];
+        for (var i = s; i <= e + 1; i++) {
+          final ai = i < segmentAngles.length ? i : e;
+          final bend = (i == s || i == e + 1)
+              ? 0.0
+              : relativeAngleDiff(segmentAngles[ai], segmentAngles[ai - 1]);
+          pts.add((
+            x: positions[i].x,
+            y: positions[i].y,
+            a: segmentAngles[ai],
+            bend: bend,
+          ));
+        }
+        final top = <Offset>[];
+        final bottom = <Offset>[];
+        final nPts = pts.length;
+        for (var i = 0; i < nPts; i++) {
+          final p = pts[i];
+          final isEndpoint = i == 0 || i == nPts - 1;
+          double hTop;
+          double hBottom;
+          if (isEndpoint) {
+            hTop = hBottom = 0;
+          } else {
+            final r = (p.bend.abs() / maxAngle).clamp(0.0, 1.0);
+            final ratio = r * r * (3.0 - 2.0 * r);
+            final hOut = baseH + (fullH - baseH) * ratio;
+            if (p.bend > 0) {
+              hTop = hOut;
+              hBottom = baseH;
+            } else if (p.bend < 0) {
+              hTop = baseH;
+              hBottom = hOut;
+            } else {
+              hTop = hBottom = baseH;
+            }
+            final taper = nPts > 1 ? sin(pi * i / (nPts - 1)) : 1.0;
+            hTop *= taper;
+            hBottom *= taper;
+          }
+          final dxTop = -sin(p.a) * hTop;
+          final dyTop = cos(p.a) * hTop;
+          final dxBottom = -sin(p.a) * hBottom;
+          final dyBottom = cos(p.a) * hBottom;
+          top.add(Offset(sx(p.x + dxTop), sy(p.y + dyTop)));
+          bottom.add(Offset(sx(p.x - dxBottom), sy(p.y - dyBottom)));
+        }
+        final path = Path();
+        path.moveTo(top[0].dx, top[0].dy);
+        _appendSmoothCurve(path, top, tension);
+        path.lineTo(bottom.last.dx, bottom.last.dy);
+        _appendSmoothCurve(path, bottom.reversed.toList(), tension);
+        path.close();
+        canvas.drawPath(path, finFill);
+        canvas.drawPath(path, finStroke);
+      }
+    }
+
     // Eyes at head: left and right vertex, slightly inward.
     const eyeInset = 0.55;
     final headW = wAt(n);
@@ -205,6 +322,9 @@ class SpinePainter extends CustomPainter {
   bool shouldRepaint(covariant SpinePainter oldDelegate) =>
       oldDelegate.zoom != zoom ||
       oldDelegate.fillColor != fillColor ||
+      oldDelegate.finColor != finColor ||
+      oldDelegate.maxJointAngleRadForFin != maxJointAngleRadForFin ||
+      oldDelegate.dorsalFins != dorsalFins ||
       oldDelegate._effectiveDefaultWidth != _effectiveDefaultWidth ||
       oldDelegate.cameraX != cameraX ||
       oldDelegate.cameraY != cameraY ||
