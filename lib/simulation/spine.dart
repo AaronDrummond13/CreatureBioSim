@@ -22,10 +22,12 @@ class Spine {
   Spine({
     this.segmentCount = 1,
     double segmentLength = 10.0,
-    double maxJointAngleRad = 0.3,
-  })  : segmentLength = segmentLength.clamp(minSegmentLength, maxSegmentLength),
-        maxJointAngleRad =
-            maxJointAngleRad.clamp(minMaxJointAngleRad, maxMaxJointAngleRad) {
+    double maxJointAngleRad = 0.25,
+  }) : segmentLength = segmentLength.clamp(minSegmentLength, maxSegmentLength),
+       maxJointAngleRad = maxJointAngleRad.clamp(
+         minMaxJointAngleRad,
+         maxMaxJointAngleRad,
+       ) {
     for (var i = 0; i <= segmentCount; i++) {
       particles.add(Particle(i * segmentLength, 0));
     }

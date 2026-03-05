@@ -25,6 +25,9 @@ class _SimulationScreenState extends State<SimulationScreen>
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
   double _touchX = 120;
   double _touchY = 0;
+  /// Camera: world position at screen center. Does not affect creature positions; only the view.
+  double _cameraX = 0;
+  double _cameraY = 0;
   bool _tickerActive = false;
   late Ticker _ticker;
 
@@ -39,7 +42,18 @@ class _SimulationScreenState extends State<SimulationScreen>
   @override
   void initState() {
     super.initState();
-    _touchX = _spine.segmentCount * 40.0;
+    final pos = _spine.positions;
+    if (pos.isNotEmpty) {
+      final head = pos.last;
+      _touchX = head.x;
+      _touchY = head.y;
+      _cameraX = head.x;
+      _cameraY = head.y;
+    } else {
+      _touchX = _spine.segmentCount * 40.0;
+      _cameraX = _touchX;
+      _cameraY = _touchY;
+    }
     _ticker = createTicker(_onTick);
   }
 
@@ -74,17 +88,21 @@ class _SimulationScreenState extends State<SimulationScreen>
         intendedTargetY: _touchY,
       );
     }
+    // Camera follows head (world position unchanged; only view target).
+    _cameraX = head.x;
+    _cameraY = head.y;
     if (mounted) setState(() {});
   }
 
+  /// Convert screen point to world using current camera (camera does not move creatures).
   void _updateTouchFromLocal(
     Size screenSize,
     Offset local,
-    double worldCenterX,
-    double worldCenterY,
+    double cameraX,
+    double cameraY,
   ) {
-    _touchX = worldCenterX + (local.dx - screenSize.width / 2) / _viewZoom;
-    _touchY = worldCenterY + (local.dy - screenSize.height / 2) / _viewZoom;
+    _touchX = cameraX + (local.dx - screenSize.width / 2) / _viewZoom;
+    _touchY = cameraY + (local.dy - screenSize.height / 2) / _viewZoom;
   }
 
   @override
@@ -97,6 +115,8 @@ class _SimulationScreenState extends State<SimulationScreen>
               positions: _spine.positions,
               segmentAngles: _spine.segmentAngles,
               vertexWidths: null,
+              cameraX: _cameraX,
+              cameraY: _cameraY,
               zoom: _viewZoom,
               fillColor: Color(_creature.color),
             ),
@@ -112,11 +132,7 @@ class _SimulationScreenState extends State<SimulationScreen>
               return Listener(
                 behavior: HitTestBehavior.opaque,
                 onPointerDown: (e) {
-                  final pos = _spine.positions;
-                  if (pos.isNotEmpty) {
-                    final head = pos.last;
-                    _updateTouchFromLocal(size, e.localPosition, head.x, head.y);
-                  }
+                  _updateTouchFromLocal(size, e.localPosition, _cameraX, _cameraY);
                   if (!_tickerActive) {
                     _tickerActive = true;
                     _ticker.start();
@@ -124,11 +140,7 @@ class _SimulationScreenState extends State<SimulationScreen>
                   setState(() {});
                 },
                 onPointerMove: (e) {
-                  final pos = _spine.positions;
-                  if (pos.isNotEmpty) {
-                    final head = pos.last;
-                    _updateTouchFromLocal(size, e.localPosition, head.x, head.y);
-                  }
+                  _updateTouchFromLocal(size, e.localPosition, _cameraX, _cameraY);
                 },
                 onPointerUp: (_) {
                   _tickerActive = false;
@@ -155,6 +167,10 @@ class _SpinePainter extends CustomPainter {
   /// Per-vertex width (half-width from spine to outline). If null, uses [defaultWidth].
   final List<double>? vertexWidths;
 
+  /// Camera: world position at screen center. Creature positions are in world space; camera only affects view.
+  final double cameraX;
+  final double cameraY;
+
   /// View zoom: world units scale by this when drawing. 1 = 1:1, < 1 = zoom out.
   final double zoom;
 
@@ -167,6 +183,8 @@ class _SpinePainter extends CustomPainter {
     required this.positions,
     required this.segmentAngles,
     this.vertexWidths,
+    required this.cameraX,
+    required this.cameraY,
     this.zoom = 1.0,
     this.fillColor = const Color(0xFF2E7D32),
   });
@@ -183,28 +201,34 @@ class _SpinePainter extends CustomPainter {
 
     final centerX = size.width / 2;
     final centerY = size.height / 2;
-    final head = positions.last;
     final n = positions.length - 1;
     final z = zoom;
 
-    // World → screen: head at center; center + (world - head) * zoom.
-    double sx(double wx) => centerX + (wx - head.x) * z;
-    double sy(double wy) => centerY + (wy - head.y) * z;
+    // World → screen: camera at center. Positions are in world space; camera does not move the creature.
+    double sx(double wx) => centerX + (wx - cameraX) * z;
+    double sy(double wy) => centerY + (wy - cameraY) * z;
     double wAt(int i) => _widthAt(i) * z;
 
-    // Background dots (fixed in world space) for relative motion.
+    // Background dots: infinite grid in world space; sample only the visible region (plus padding).
     const double dotSpacing = 120.0;
-    const int dotExtent = 12;
+    final halfW = size.width / (2 * z);
+    final halfH = size.height / (2 * z);
+    final worldLeft = cameraX - halfW - size.width / z;
+    final worldRight = cameraX + halfW + size.width / z;
+    final worldTop = cameraY - halfH - size.height / z;
+    final worldBottom = cameraY + halfH + size.height / z;
+    final iMin = (worldLeft / dotSpacing).floor();
+    final iMax = (worldRight / dotSpacing).ceil();
+    final jMin = (worldTop / dotSpacing).floor();
+    final jMax = (worldBottom / dotSpacing).ceil();
     final dotPaint = Paint()
       ..color = Colors.white.withOpacity(0.4)
       ..style = PaintingStyle.fill;
     const dotRadius = 2.0;
-    for (var i = -dotExtent; i <= dotExtent; i++) {
-      for (var j = -dotExtent; j <= dotExtent; j++) {
-        final wx = i * dotSpacing;
-        final wy = j * dotSpacing;
-        final px = sx(wx);
-        final py = sy(wy);
+    for (var i = iMin; i <= iMax; i++) {
+      for (var j = jMin; j <= jMax; j++) {
+        final px = sx(i * dotSpacing);
+        final py = sy(j * dotSpacing);
         if (px >= -dotRadius &&
             px <= size.width + dotRadius &&
             py >= -dotRadius &&
@@ -327,5 +351,10 @@ class _SpinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SpinePainter oldDelegate) =>
-      oldDelegate.zoom != zoom || oldDelegate.fillColor != fillColor || true;
+      oldDelegate.zoom != zoom ||
+      oldDelegate.fillColor != fillColor ||
+      oldDelegate.cameraX != cameraX ||
+      oldDelegate.cameraY != cameraY ||
+      oldDelegate.positions.length != positions.length ||
+      oldDelegate.segmentAngles.length != segmentAngles.length;
 }
