@@ -98,10 +98,12 @@ class Spawner {
     final widths = _smoothVertexWidths(vertexCount);
     final color = 0xFF000000 | _rng.nextInt(0xFFFFFF);
     final dorsalFins = _randomDorsalFins(segmentCount);
+    final tailFin = _rng.nextBool() ? CaudalFinType.truncate : null;
     return Creature(
       vertexWidths: widths,
       color: color,
       dorsalFins: (dorsalFins == null || dorsalFins.isEmpty) ? null : dorsalFins,
+      tailFin: tailFin,
     );
   }
 

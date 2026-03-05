@@ -19,6 +19,8 @@ class CreaturePainter extends CustomPainter {
 
   static const double dorsalFinHeight = 18.0;
   static const double dorsalFinBaseFrac = 0.3;
+  static const double caudalFinBaseFrac = 0.1;
+  static const double _caudalFinLength = 60.0;
   static const double minDefaultWidth = 10.0;
   static const double maxDefaultWidth = 50.0;
   static const double _fallbackWidth = 30.0;
@@ -35,6 +37,157 @@ class CreaturePainter extends CustomPainter {
     final vw = creature.vertexWidths;
     if (i < vw.length) return vw[i].clamp(minDefaultWidth, maxDefaultWidth);
     return _fallbackWidth.clamp(minDefaultWidth, maxDefaultWidth);
+  }
+
+  /// Caudal fin: shared scale/geometry, node set varies by [tailFinType] (truncate vs rounded).
+  void _drawCaudalFin(
+    Canvas canvas,
+    CaudalFinType tailFinType,
+    double tailX,
+    double tailY,
+    double tailA,
+    double rootW,
+    double maxW,
+    double innerScale,
+    double outerScale,
+    double bend,
+    double maxAngle,
+    double ratio,
+    double Function(double) sx,
+    double Function(double) sy,
+    double z,
+    Color fillColor,
+  ) {
+    final back = tailA + pi;
+    final len = _caudalFinLength;
+    // Smooth blend so left/right scale transition continuously through straight (no snap at bend=0).
+    final t = (maxAngle > 1e-6)
+        ? (bend / maxAngle * 0.5 + 0.5).clamp(0.0, 1.0)
+        : 0.5;
+    final leftScale = outerScale + (innerScale - outerScale) * t;
+    final rightScale = outerScale + (innerScale - outerScale) * (1.0 - t);
+    // Root: symmetric scale from 30% when straight to full at max bend.
+    final rootScale = caudalFinBaseFrac + (1.0 - caudalFinBaseFrac) * ratio;
+    final rootHalfW = rootW * rootScale;
+    // Tip width must be >= scaled root so fin always flares out.
+    final leftMax = (maxW * leftScale).clamp(rootHalfW, maxW);
+    final rightMax = (maxW * rightScale).clamp(rootHalfW, maxW);
+
+    final leftDirX = sin(tailA);
+    final leftDirY = -cos(tailA);
+    final rightDirX = -sin(tailA);
+    final rightDirY = cos(tailA);
+
+    // Root points: symmetric, tighter to center when straight (rootHalfW = 0.3*rootW), full at max bend.
+    final leftTailX = tailX + leftDirX * rootHalfW;
+    final leftTailY = tailY + leftDirY * rootHalfW;
+    final rightTailX = tailX + rightDirX * rootHalfW;
+    final rightTailY = tailY + rightDirY * rootHalfW;
+
+    final tipCx = tailX + cos(back) * len;
+    final tipCy = tailY + sin(back) * len;
+
+    final pts = <Offset>[];
+    pts.add(Offset(sx(leftTailX), sy(leftTailY)));
+    if (tailFinType == CaudalFinType.rounded) {
+      pts.add(
+        Offset(
+          sx(leftTailX + cos(back) * len * 0.3 + leftDirX * leftMax * 0.8),
+          sy(leftTailY + sin(back) * len * 0.3 + leftDirY * leftMax * 0.8),
+        ),
+      );
+    }
+    if (tailFinType != CaudalFinType.pointed) {
+      pts.add(
+        Offset(
+          sx(leftTailX + cos(back) * len * 0.7 + leftDirX * leftMax),
+          sy(leftTailY + sin(back) * len * 0.7 + leftDirY * leftMax),
+        ),
+      );
+    }
+    if (tailFinType == CaudalFinType.lunate) {
+      pts.add(
+        Offset(
+          sx(leftTailX + cos(back) * len * 0.6 + leftDirX * leftMax * 0.7),
+          sy(leftTailY + sin(back) * len * 0.6 + leftDirY * leftMax * 0.7),
+        ),
+      );
+    }
+    if (tailFinType == CaudalFinType.pointed ||
+        tailFinType == CaudalFinType.rhomboid) {
+      pts.add(Offset(sx(tipCx), sy(tipCy)));
+    } else if (tailFinType == CaudalFinType.rounded) {
+      pts.add(
+        Offset(
+          sx(tailX + cos(back) * len * 0.9),
+          sy(tailY + sin(back) * len * 0.9),
+        ),
+      );
+    } else if (tailFinType == CaudalFinType.forked) {
+      pts.add(
+        Offset(
+          sx(tailX + cos(back) * len * 0.35),
+          sy(tailY + sin(back) * len * 0.35),
+        ),
+      );
+    } else if (tailFinType == CaudalFinType.lunate) {
+      pts.add(
+        Offset(
+          sx(tailX + cos(back) * len * 0.45),
+          sy(tailY + sin(back) * len * 0.45),
+        ),
+      );
+    } else if (tailFinType == CaudalFinType.emarginate) {
+      pts.add(
+        Offset(
+          sx(tailX + cos(back) * len * 0.65),
+          sy(tailY + sin(back) * len * 0.65),
+        ),
+      );
+    }
+    if (tailFinType == CaudalFinType.lunate) {
+      pts.add(
+        Offset(
+          sx(rightTailX + cos(back) * len * 0.6 + rightDirX * rightMax * 0.7),
+          sy(rightTailY + sin(back) * len * 0.6 + rightDirY * rightMax * 0.7),
+        ),
+      );
+    }
+    if (tailFinType != CaudalFinType.pointed) {
+      pts.add(
+        Offset(
+          sx(rightTailX + cos(back) * len * 0.7 + rightDirX * rightMax),
+          sy(rightTailY + sin(back) * len * 0.7 + rightDirY * rightMax),
+        ),
+      );
+    }
+    if (tailFinType == CaudalFinType.rounded) {
+      pts.add(
+        Offset(
+          sx(rightTailX + cos(back) * len * 0.3 + rightDirX * rightMax * 0.8),
+          sy(rightTailY + sin(back) * len * 0.3 + rightDirY * rightMax * 0.8),
+        ),
+      );
+    }
+    pts.add(Offset(sx(rightTailX), sy(rightTailY)));
+
+    final path = Path();
+    path.moveTo(pts[0].dx, pts[0].dy);
+    _appendSmoothCurve(path, pts, 1.0 / 6.0);
+    path.close();
+
+    final finColor = creature.finColor != null
+        ? Color(creature.finColor!)
+        : Color.lerp(fillColor, Colors.white, 0.12)!;
+    final finPaint = Paint()
+      ..color = finColor
+      ..style = PaintingStyle.fill;
+    final strokePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = (2.0 * z).clamp(1.0, 2.0);
+    canvas.drawPath(path, finPaint);
+    canvas.drawPath(path, strokePaint);
   }
 
   /// Appends Catmull-Rom style cubic segments through [points] to [path].
@@ -140,6 +293,54 @@ class CreaturePainter extends CustomPainter {
     final headA = segmentAngles[segmentAngles.length - 1];
     final tailWWorld = _widthAt(0);
     final headWWorld = _widthAt(n);
+
+    // Caudal fin: root = tail width (smallest), max = largest segment width; straight = 30% scale, bent = full scale biased inward.
+    if (creature.tailFin != null) {
+      final tailBend = segmentAngles.length >= 2
+          ? relativeAngleDiff(segmentAngles[1], segmentAngles[0])
+          : 0.0;
+      final maxAngle = spine.maxJointAngleRad;
+      var sumAbsBend = 0.0;
+      var count = 0;
+      for (var i = 1; i < segmentAngles.length; i++) {
+        sumAbsBend += relativeAngleDiff(
+          segmentAngles[i],
+          segmentAngles[i - 1],
+        ).abs();
+        count++;
+      }
+      final avgBend = count > 0 ? sumAbsBend / count : 0.0;
+      final ratio = (avgBend / maxAngle).clamp(0.0, 1.0);
+      final innerScale = caudalFinBaseFrac + (1.0 - caudalFinBaseFrac) * ratio;
+      final outerScale = caudalFinBaseFrac;
+      final vws = creature.vertexWidths
+          .map((w) => w.clamp(minDefaultWidth, maxDefaultWidth))
+          .toList();
+      final rootW = vws.isEmpty
+          ? _widthAt(0)
+          : vws.reduce((a, b) => a < b ? a : b);
+      final maxSegmentW = vws.isEmpty
+          ? rootW
+          : vws.reduce((a, b) => a > b ? a : b);
+      _drawCaudalFin(
+        canvas,
+        creature.tailFin!,
+        positions[0].x,
+        positions[0].y,
+        tailA,
+        rootW,
+        maxSegmentW,
+        innerScale,
+        outerScale,
+        tailBend,
+        maxAngle,
+        ratio,
+        sx,
+        sy,
+        z,
+        fillColor,
+      );
+    }
 
     const int capSegments =
         7; // Points on each cap semicircle (more = rounder).

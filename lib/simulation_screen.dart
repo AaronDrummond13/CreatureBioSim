@@ -4,7 +4,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 
 import 'controller/spawner.dart';
-import 'creature.dart';
+import 'creature.dart' show Creature, CaudalFinType;
 import 'render/spine_painter.dart';
 import 'render/view.dart' show CameraView;
 import 'simulation/spine.dart';
@@ -51,6 +51,7 @@ class _SimulationScreenState extends State<SimulationScreen>
     ],
     color: 0xFF2E7D32,
     finColor: 0xFF5EAD62,
+    tailFin: CaudalFinType.truncate,
   );
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
 
@@ -73,7 +74,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   static const double _arrivalThreshold = 4.0;
 
   /// View zoom: 1 = 1:1, < 1 = zoom out (see more world), > 1 = zoom in. Creature size in world unchanged.
-  static const double _viewZoom = 0.5;
+  static const double _viewZoom = 1;
 
   @override
   void initState() {
