@@ -23,22 +23,28 @@ class SpinePainter extends CustomPainter {
   /// Fill colour for the creature body (from creature.color).
   final Color fillColor;
 
-  static const double _defaultWidth = 40.0;
+  static const double minDefaultWidth = 10.0;
+  static const double maxDefaultWidth = 50.0;
+
+  final double _effectiveDefaultWidth;
 
   SpinePainter({
     required this.positions,
     required this.segmentAngles,
     this.vertexWidths,
+    double? defaultWidth,
     required this.cameraX,
     required this.cameraY,
     this.zoom = 1.0,
     this.fillColor = const Color(0xFF2E7D32),
-  });
+  }) : _effectiveDefaultWidth = defaultWidth == null
+        ? 30.0
+        : defaultWidth.clamp(minDefaultWidth, maxDefaultWidth);
 
   double _widthAt(int i) {
     if (vertexWidths != null && i < vertexWidths!.length)
-      return vertexWidths![i];
-    return _defaultWidth;
+      return vertexWidths![i].clamp(minDefaultWidth, maxDefaultWidth);
+    return _effectiveDefaultWidth;
   }
 
   @override
@@ -199,6 +205,7 @@ class SpinePainter extends CustomPainter {
   bool shouldRepaint(covariant SpinePainter oldDelegate) =>
       oldDelegate.zoom != zoom ||
       oldDelegate.fillColor != fillColor ||
+      oldDelegate._effectiveDefaultWidth != _effectiveDefaultWidth ||
       oldDelegate.cameraX != cameraX ||
       oldDelegate.cameraY != cameraY ||
       oldDelegate.positions.length != positions.length ||

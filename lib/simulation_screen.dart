@@ -18,8 +18,11 @@ class SimulationScreen extends StatefulWidget {
 
 class _SimulationScreenState extends State<SimulationScreen>
     with SingleTickerProviderStateMixin {
-  final Creature _creature = const Creature(
-    segmentCount: 50,
+  final Creature _creature = Creature(
+    vertexWidths: [
+      // tail → head (index 0 = tail, last = head)
+      10, 10, 10, 10, 20, 30, 30, 30, 20, 15, 30, 35, 35, 30,
+    ],
     color: 0xFF2E7D32,
   );
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
@@ -114,7 +117,7 @@ class _SimulationScreenState extends State<SimulationScreen>
             painter: SpinePainter(
               positions: _spine.positions,
               segmentAngles: _spine.segmentAngles,
-              vertexWidths: null,
+              vertexWidths: _creature.vertexWidths,
               cameraX: _cameraX,
               cameraY: _cameraY,
               zoom: _viewZoom,
