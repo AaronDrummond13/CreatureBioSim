@@ -123,12 +123,25 @@ class Spawner {
     final color = 0xFF000000 | _rng.nextInt(0xFFFFFF);
     final dorsalFins = _randomDorsalFins(segmentCount);
     final tailFin = _randomTailFin();
+    final lateralFins = _randomLateralFins(segmentCount);
     return Creature(
       vertexWidths: widths,
       color: color,
       dorsalFins: (dorsalFins == null || dorsalFins.isEmpty) ? null : dorsalFins,
       tailFin: tailFin,
+      lateralFins: (lateralFins == null || lateralFins.isEmpty) ? null : lateralFins,
     );
+  }
+
+  /// ~1/6 chance per segment (excluding head) to get a lateral fin.
+  List<int>? _randomLateralFins(int segmentCount) {
+    final n = segmentCount;
+    if (n < 1) return null;
+    final list = <int>[];
+    for (var seg = 0; seg < n; seg++) {
+      if (_rng.nextDouble() < 1 / 6) list.add(seg);
+    }
+    return list.isEmpty ? null : list;
   }
 
   /// Interpolate between a few random control points so widths vary smoothly.

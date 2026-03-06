@@ -17,10 +17,17 @@ class BackgroundPainter extends CustomPainter {
 
   // Second layer: bubbles in the distance — bigger, slower, more spaced, blurred.
   static const double _bubbleSpacing = 320.0;
-  static const double _bubbleDriftAmount = 14.0;
+  static const double _bubbleDriftAmount = 105.0;
   static const double _bubbleDriftSpeed = 0.12;
   static const double _bubbleRadius = 7.0;
   static const double _bubbleBlurRadius = 5.0;
+
+  // Third layer: distant blobs — even bigger, slower, more spaced, more blurred.
+  static const double _blobSpacing = 520.0;
+  static const double _blobDriftAmount = 170.0;
+  static const double _blobDriftSpeed = 0.06;
+  static const double _blobRadius = 14.0;
+  static const double _blobBlurRadius = 12.0;
 
   BackgroundPainter({required this.view, this.timeSeconds = 0.0});
 
@@ -39,7 +46,34 @@ class BackgroundPainter extends CustomPainter {
     final worldTop = view.cameraY - halfH - size.height / z;
     final worldBottom = view.cameraY + halfH + size.height / z;
 
-    // Layer 1: distant bubbles (drawn first, under the main dots).
+    // Layer 1: distant blobs (drawn first, furthest back).
+    final blobIMin = (worldLeft / _blobSpacing).floor();
+    final blobIMax = (worldRight / _blobSpacing).ceil();
+    final blobJMin = (worldTop / _blobSpacing).floor();
+    final blobJMax = (worldBottom / _blobSpacing).ceil();
+    final blobPaint = Paint()
+      ..color = Colors.white.withOpacity(0.14)
+      ..style = PaintingStyle.fill
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, _blobBlurRadius);
+    final blobT = timeSeconds * _blobDriftSpeed;
+    for (var i = blobIMin; i <= blobIMax; i++) {
+      for (var j = blobJMin; j <= blobJMax; j++) {
+        final driftX = sin(i * 0.6 + j * 0.5 + blobT) * _blobDriftAmount;
+        final driftY = cos(i * 0.5 + j * 0.7 + blobT * 1.2) * _blobDriftAmount;
+        final wx = i * _blobSpacing + driftX;
+        final wy = j * _blobSpacing + driftY;
+        final px = sx(wx);
+        final py = sy(wy);
+        if (px >= -_blobRadius &&
+            px <= size.width + _blobRadius &&
+            py >= -_blobRadius &&
+            py <= size.height + _blobRadius) {
+          canvas.drawCircle(Offset(px, py), _blobRadius, blobPaint);
+        }
+      }
+    }
+
+    // Layer 2: bubbles (mid distance).
     final bubbleIMin = (worldLeft / _bubbleSpacing).floor();
     final bubbleIMax = (worldRight / _bubbleSpacing).ceil();
     final bubbleJMin = (worldTop / _bubbleSpacing).floor();
@@ -66,7 +100,7 @@ class BackgroundPainter extends CustomPainter {
       }
     }
 
-    // Layer 2: main dots.
+    // Layer 3: main dots.
     final iMin = (worldLeft / _dotSpacing).floor();
     final iMax = (worldRight / _dotSpacing).ceil();
     final jMin = (worldTop / _dotSpacing).floor();
