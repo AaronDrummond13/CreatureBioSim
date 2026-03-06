@@ -92,13 +92,37 @@ class Spawner {
     ));
   }
 
+  /// 1/8 chance for each tail type including none.
+  CaudalFinType? _randomTailFin() {
+    switch (_rng.nextInt(8)) {
+      case 0:
+        return null;
+      case 1:
+        return CaudalFinType.truncate;
+      case 2:
+        return CaudalFinType.rounded;
+      case 3:
+        return CaudalFinType.emarginate;
+      case 4:
+        return CaudalFinType.lunate;
+      case 5:
+        return CaudalFinType.forked;
+      case 6:
+        return CaudalFinType.pointed;
+      case 7:
+        return CaudalFinType.rhomboid;
+      default:
+        return null;
+    }
+  }
+
   Creature _randomCreature() {
     final segmentCount = 5 + _rng.nextInt(14);
     final vertexCount = segmentCount + 1;
     final widths = _smoothVertexWidths(vertexCount);
     final color = 0xFF000000 | _rng.nextInt(0xFFFFFF);
     final dorsalFins = _randomDorsalFins(segmentCount);
-    final tailFin = _rng.nextBool() ? CaudalFinType.truncate : null;
+    final tailFin = _randomTailFin();
     return Creature(
       vertexWidths: widths,
       color: color,
