@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'controller/spawner.dart';
 import 'creature.dart' show Creature, CaudalFinType;
+import 'render/background_painter.dart';
 import 'render/spine_painter.dart';
 import 'render/view.dart' show CameraView;
 import 'simulation/spine.dart';
@@ -171,6 +172,14 @@ class _SimulationScreenState extends State<SimulationScreen>
 
     return Stack(
       children: [
+        Positioned.fill(
+          child: CustomPaint(
+            painter: BackgroundPainter(
+              view: cameraView,
+              timeSeconds: _timeSeconds,
+            ),
+          ),
+        ),
         ..._spawner.entities.map(
           (e) => Positioned.fill(
             child: CustomPaint(

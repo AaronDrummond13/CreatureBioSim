@@ -24,7 +24,6 @@ class CreaturePainter extends CustomPainter {
   static const double minDefaultWidth = 10.0;
   static const double maxDefaultWidth = 50.0;
   static const double _fallbackWidth = 30.0;
-  static const double _dotDriftAmount = 50.0;
 
   CreaturePainter({
     required this.creature,
@@ -85,45 +84,6 @@ class CreaturePainter extends CustomPainter {
     _paintPositions = positions;
     _paintSegmentAngles = segmentAngles;
     _paintN = positions.length - 1;
-
-    final z = _paintZ;
-    double sx(double wx) => _paintCenterX + (wx - view.cameraX) * z;
-    double sy(double wy) => _paintCenterY + (wy - view.cameraY) * z;
-
-    // Background dots: infinite grid in world space; sample only the visible region (plus padding).
-    const double dotSpacing = 120.0;
-    final halfW = size.width / (2 * z);
-    final halfH = size.height / (2 * z);
-    final worldLeft = view.cameraX - halfW - size.width / z;
-    final worldRight = view.cameraX + halfW + size.width / z;
-    final worldTop = view.cameraY - halfH - size.height / z;
-    final worldBottom = view.cameraY + halfH + size.height / z;
-    final iMin = (worldLeft / dotSpacing).floor();
-    final iMax = (worldRight / dotSpacing).ceil();
-    final jMin = (worldTop / dotSpacing).floor();
-    final jMax = (worldBottom / dotSpacing).ceil();
-    final dotPaint = Paint()
-      ..color = Colors.white.withOpacity(0.4)
-      ..style = PaintingStyle.fill;
-    const dotRadius = 2.0;
-    const double _dotDriftSpeed = 0.4;
-    for (var i = iMin; i <= iMax; i++) {
-      for (var j = jMin; j <= jMax; j++) {
-        final t = timeSeconds * _dotDriftSpeed;
-        final driftX = sin(i * 1.1 + j * 0.7 + t) * _dotDriftAmount;
-        final driftY = cos(i * 0.9 + j * 1.3 + t * 0.8) * _dotDriftAmount;
-        final wx = i * dotSpacing + driftX;
-        final wy = j * dotSpacing + driftY;
-        final px = sx(wx);
-        final py = sy(wy);
-        if (px >= -dotRadius &&
-            px <= size.width + dotRadius &&
-            py >= -dotRadius &&
-            py <= size.height + dotRadius) {
-          canvas.drawCircle(Offset(px, py), dotRadius, dotPaint);
-        }
-      }
-    }
 
     _drawCreature(canvas);
   }
