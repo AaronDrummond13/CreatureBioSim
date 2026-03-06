@@ -1,5 +1,6 @@
 import 'dart:math' show cos, sin;
 import 'package:flutter/material.dart';
+import '../world/chunk_map.dart';
 import 'view.dart';
 
 /// Full bubble: fill, rim, primary and optional secondary highlight.
@@ -76,19 +77,21 @@ class SolidBackgroundPainter extends CustomPainter {
 
 /// Paints the procedural background dots. Uses [view] for world→screen transform.
 /// [parallaxBlobs] and [parallaxBubbles] scale camera position so layers move more slowly (depth).
-/// Add as the bottom layer of the stack so creatures draw on top.
+/// When [chunkMap] is set, dots/blobs/bubbles are tinted by blended biome colour at their world position.
 class BackgroundPainter extends CustomPainter {
   BackgroundPainter({
     required this.view,
     this.timeSeconds = 0.0,
     this.parallaxBlobs = 0.8,
     this.parallaxBubbles = 0.9,
+    this.chunkMap,
   });
 
   final CameraView view;
   final double timeSeconds;
   final double parallaxBlobs;
   final double parallaxBubbles;
+  final ChunkMap? chunkMap;
 
   static const double _dotSpacing = 150.0;
   static const double _dotDriftAmount = 100.0;
@@ -146,16 +149,16 @@ class BackgroundPainter extends CustomPainter {
     final blobJMin = (blobWorldTop / _blobSpacing).floor();
     final blobJMax = (blobWorldBottom / _blobSpacing).ceil();
     final blobFill = Paint()
-      ..color = Colors.white.withOpacity(_blobFillOpacity)
+      ..color = Colors.white.withValues(alpha:_blobFillOpacity)
       ..style = PaintingStyle.fill
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, _blobFillBlur);
-    final blobRim = Paint()..color = Colors.white.withOpacity(_blobRimOpacity);
+    final blobRim = Paint()..color = Colors.white.withValues(alpha:_blobRimOpacity);
     final blobPrimary = Paint()
-      ..color = Colors.white.withOpacity(_blobPrimaryOpacity)
+      ..color = Colors.white.withValues(alpha:_blobPrimaryOpacity)
       ..style = PaintingStyle.fill
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, _blobFillBlur * 0.5);
     final blobSecondary = Paint()
-      ..color = Colors.white.withOpacity(_blobSecondaryOpacity)
+      ..color = Colors.white.withValues(alpha:_blobSecondaryOpacity)
       ..style = PaintingStyle.fill
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, _blobFillBlur * 0.4);
     final blobT = timeSeconds * _blobDriftSpeed;
@@ -168,6 +171,13 @@ class BackgroundPainter extends CustomPainter {
         final driftY = cos(i * 0.5 + j * 0.7 + blobT * 1.2) * _blobDriftAmount;
         final wx = i * _blobSpacing + driftX;
         final wy = j * _blobSpacing + driftY;
+        if (chunkMap != null) {
+          final c = chunkMap!.blendedColorAt(wx, wy);
+          blobFill.color = c.withValues(alpha:_blobFillOpacity);
+          blobRim.color = c.withValues(alpha:_blobRimOpacity);
+          blobPrimary.color = c.withValues(alpha:_blobPrimaryOpacity);
+          blobSecondary.color = c.withValues(alpha:_blobSecondaryOpacity);
+        }
         final px = blobSx(wx);
         final py = blobSy(wy);
         if (px >= -r &&
@@ -202,17 +212,17 @@ class BackgroundPainter extends CustomPainter {
     final bubbleJMin = (bubbleWorldTop / _bubbleSpacing).floor();
     final bubbleJMax = (bubbleWorldBottom / _bubbleSpacing).ceil();
     final bubbleFill = Paint()
-      ..color = Colors.white.withOpacity(_bubbleFillOpacity)
+      ..color = Colors.white.withValues(alpha:_bubbleFillOpacity)
       ..style = PaintingStyle.fill
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, _bubbleBlurRadius);
     final bubbleRim = Paint()
-      ..color = Colors.white.withOpacity(_bubbleRimOpacity);
+      ..color = Colors.white.withValues(alpha:_bubbleRimOpacity);
     final bubblePrimary = Paint()
-      ..color = Colors.white.withOpacity(_bubblePrimaryOpacity)
+      ..color = Colors.white.withValues(alpha:_bubblePrimaryOpacity)
       ..style = PaintingStyle.fill
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, _bubbleBlurRadius * 0.5);
     final bubbleSecondary = Paint()
-      ..color = Colors.white.withOpacity(_bubbleSecondaryOpacity)
+      ..color = Colors.white.withValues(alpha:_bubbleSecondaryOpacity)
       ..style = PaintingStyle.fill
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, _bubbleBlurRadius * 0.4);
     final bubbleT = timeSeconds * _bubbleDriftSpeed;
@@ -226,6 +236,13 @@ class BackgroundPainter extends CustomPainter {
             cos(i * 0.7 + j * 0.9 + bubbleT * 1.1) * _bubbleDriftAmount;
         final wx = i * _bubbleSpacing + driftX;
         final wy = j * _bubbleSpacing + driftY;
+        if (chunkMap != null) {
+          final c = chunkMap!.blendedColorAt(wx, wy);
+          bubbleFill.color = c.withValues(alpha:_bubbleFillOpacity);
+          bubbleRim.color = c.withValues(alpha:_bubbleRimOpacity);
+          bubblePrimary.color = c.withValues(alpha:_bubblePrimaryOpacity);
+          bubbleSecondary.color = c.withValues(alpha:_bubbleSecondaryOpacity);
+        }
         final px = bubbleSx(wx);
         final py = bubbleSy(wy);
         if (px >= -r &&
@@ -258,7 +275,7 @@ class BackgroundPainter extends CustomPainter {
     final jMin = (dotWorldTop / _dotSpacing).floor();
     final jMax = (dotWorldBottom / _dotSpacing).ceil();
     final dotPaint = Paint()
-      ..color = Colors.white.withOpacity(_dotOpacity)
+      ..color = Colors.white.withValues(alpha:_dotOpacity)
       ..style = PaintingStyle.fill;
 
     final t = timeSeconds * _dotDriftSpeed;
@@ -271,6 +288,9 @@ class BackgroundPainter extends CustomPainter {
         final driftY = cos(i * 0.9 + j * 1.3 + t * 0.8) * _dotDriftAmount;
         final wx = i * _dotSpacing + driftX;
         final wy = j * _dotSpacing + driftY;
+        if (chunkMap != null) {
+          dotPaint.color = chunkMap!.blendedColorAt(wx, wy).withValues(alpha:_dotOpacity);
+        }
         final px = dotSx(wx);
         final py = dotSy(wy);
         if (px >= -r &&
@@ -288,5 +308,6 @@ class BackgroundPainter extends CustomPainter {
       oldDelegate.view != view ||
       oldDelegate.timeSeconds != timeSeconds ||
       oldDelegate.parallaxBlobs != parallaxBlobs ||
-      oldDelegate.parallaxBubbles != parallaxBubbles;
+      oldDelegate.parallaxBubbles != parallaxBubbles ||
+      oldDelegate.chunkMap != chunkMap;
 }

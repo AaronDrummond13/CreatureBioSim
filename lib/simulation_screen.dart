@@ -6,10 +6,11 @@ import 'controller/spawner.dart';
 import 'creature.dart' show Creature, CaudalFinType;
 import 'input/simulation_gesture_region.dart';
 import 'render/background_painter.dart'
-    show BackgroundPainter, SolidBackgroundPainter, kSimulationBackground;
+    show BackgroundPainter, SolidBackgroundPainter;
 import 'render/spine_painter.dart';
 import 'simulation/spine.dart';
 import 'simulation_view_state.dart';
+import 'world/chunk_map.dart';
 
 /// Screen that runs the spine simulation. Hold and drag on the screen:
 /// the head moves toward the touch point; drag to change direction.
@@ -59,6 +60,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
 
   final Spawner _spawner = Spawner(spawnInterval: 10.0);
+  final ChunkMap _chunkMap = ChunkMap();
 
   /// Single background creature: big, blurred, slow, drawn behind the dots.
   late final Creature _bgCreature;
@@ -158,8 +160,14 @@ class _SimulationScreenState extends State<SimulationScreen>
     final cameraView = _viewState.cameraView;
     final bgView = _viewState.backgroundCameraView();
     final t = _viewState.timeSeconds;
+    final bgColor = _chunkMap.blendedColorAt(
+      _viewState.cameraX,
+      _viewState.cameraY,
+    );
     return [
-      Positioned.fill(child: CustomPaint(painter: SolidBackgroundPainter())),
+      Positioned.fill(
+        child: CustomPaint(painter: SolidBackgroundPainter(color: bgColor)),
+      ),
       Positioned.fill(
         child: CustomPaint(
           painter: CreaturePainter(
@@ -169,13 +177,17 @@ class _SimulationScreenState extends State<SimulationScreen>
             timeSeconds: t,
             blurSigma: 5,
             layerOpacity: 0.35,
-            blurLayerBackgroundColor: kSimulationBackground,
+            blurLayerBackgroundColor: bgColor,
           ),
         ),
       ),
       Positioned.fill(
         child: CustomPaint(
-          painter: BackgroundPainter(view: cameraView, timeSeconds: t),
+          painter: BackgroundPainter(
+            view: cameraView,
+            timeSeconds: t,
+            chunkMap: _chunkMap,
+          ),
         ),
       ),
       ..._spawner.entities.map(

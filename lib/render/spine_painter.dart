@@ -73,7 +73,7 @@ class CreaturePainter extends CustomPainter {
         Paint()
           ..imageFilter = ImageFilter.blur(sigmaX: sigma, sigmaY: sigma)
           ..color = (layerOpacity != null
-              ? Colors.white.withOpacity(layerOpacity!)
+              ? Colors.white.withValues(alpha: layerOpacity!)
               : Colors.white)
           ..blendMode = BlendMode.modulate,
       );
