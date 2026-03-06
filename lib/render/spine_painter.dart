@@ -29,8 +29,6 @@ class CreaturePainter extends CustomPainter {
   static const double dorsalFinHeight = 18.0;
   static const double dorsalFinBaseFrac = 0.3;
   static const double caudalFinBaseFrac = 0.2;
-  static const double minDefaultWidth = 10.0;
-  static const double maxDefaultWidth = 50.0;
   static const double _fallbackWidth = 30.0;
 
   CreaturePainter({
@@ -54,8 +52,10 @@ class CreaturePainter extends CustomPainter {
 
   double _widthAt(int i) {
     final vw = creature.vertexWidths;
-    if (i < vw.length) return vw[i].clamp(minDefaultWidth, maxDefaultWidth);
-    return _fallbackWidth.clamp(minDefaultWidth, maxDefaultWidth);
+    if (i < vw.length) {
+      return vw[i].clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
+    }
+    return _fallbackWidth.clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
   }
 
   @override
@@ -134,7 +134,7 @@ class CreaturePainter extends CustomPainter {
     final innerScale = caudalFinBaseFrac + (1.0 - caudalFinBaseFrac) * ratio;
     final outerScale = caudalFinBaseFrac;
     final vws = creature.vertexWidths
-        .map((w) => w.clamp(minDefaultWidth, maxDefaultWidth))
+        .map((w) => w.clamp(Creature.minVertexWidth, Creature.maxVertexWidth))
         .toList();
     final rootW = vws.isEmpty
         ? _widthAt(0)

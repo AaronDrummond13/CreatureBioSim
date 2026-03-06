@@ -44,6 +44,12 @@ No extra "vertex count" or "joint count" fields — those are derived from `segm
 
 ---
 
+## Implementation note
+
+The spine uses **head-driven kinematic resolve**: the head position is set, then positions and segment angles are solved in one pass from head toward base, with angle clamping and curve spread. There is no generic constraint solver; no `Constraint` / `DistanceConstraint` / `AngleConstraint` types are used. Distance is enforced by construction (segment length); angles use [angle_util](lib/simulation/angle_util.dart).
+
+---
+
 ## Summary
 
 - **In:** `segmentCount`, `segmentLength`, `maxJointAngle`.
