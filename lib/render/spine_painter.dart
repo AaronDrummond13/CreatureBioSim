@@ -6,6 +6,7 @@ import '../creature.dart';
 import '../simulation/angle_util.dart';
 import '../simulation/spine.dart';
 import '../simulation/vector.dart';
+import 'render_utils.dart';
 import 'view.dart';
 
 /// Paints one creature in world space. Uses [view] to transform world → screen.
@@ -47,35 +48,11 @@ class CreaturePainter extends CustomPainter {
     return _fallbackWidth.clamp(minDefaultWidth, maxDefaultWidth);
   }
 
-  /// Appends Catmull-Rom style cubic segments through [points] to [path].
-  static void _appendSmoothCurve(
-    Path path,
-    List<Offset> points,
-    double tension,
-  ) {
-    if (points.length < 2) return;
-    for (var i = 0; i < points.length - 1; i++) {
-      final p0 = i > 0 ? points[i - 1] : points[0];
-      final p1 = points[i];
-      final p2 = points[i + 1];
-      final p3 = i + 2 < points.length ? points[i + 2] : points[i + 1];
-      final c0 = Offset(
-        p1.dx + (p2.dx - p0.dx) * tension,
-        p1.dy + (p2.dy - p0.dy) * tension,
-      );
-      final c1 = Offset(
-        p2.dx - (p3.dx - p1.dx) * tension,
-        p2.dy - (p3.dy - p1.dy) * tension,
-      );
-      path.cubicTo(c0.dx, c0.dy, c1.dx, c1.dy, p2.dx, p2.dy);
-    }
-  }
-
   @override
   void paint(Canvas canvas, Size size) {
     final positions = spine.positions;
     final segmentAngles = spine.segmentAngles;
-    if (positions.length < 2 || segmentAngles.length < 1) return;
+    if (positions.length < 2 || segmentAngles.isEmpty) return;
 
     _paintCenterX = size.width / 2;
     _paintCenterY = size.height / 2;
@@ -250,7 +227,7 @@ class CreaturePainter extends CustomPainter {
 
     final path = Path();
     path.moveTo(pts[0].dx, pts[0].dy);
-    _appendSmoothCurve(path, pts, 1.0 / 6.0);
+    appendSmoothCurve(path, pts, 1.0 / 6.0);
     path.close();
     final finColor = creature.finColor != null
         ? Color(creature.finColor!)
@@ -275,22 +252,28 @@ class CreaturePainter extends CustomPainter {
     double wAt(int i) => _widthAt(i) * _paintZ;
     Offset rightAt(int i) {
       final a =
-          segmentAngles[i < segmentAngles.length ? i : segmentAngles.length - 1];
+          segmentAngles[i < segmentAngles.length
+              ? i
+              : segmentAngles.length - 1];
       final w = wAt(i);
       return Offset(
         sx(positions[i].x) - sin(a) * w,
         sy(positions[i].y) + cos(a) * w,
       );
     }
+
     Offset leftAt(int i) {
       final a =
-          segmentAngles[i < segmentAngles.length ? i : segmentAngles.length - 1];
+          segmentAngles[i < segmentAngles.length
+              ? i
+              : segmentAngles.length - 1];
       final w = wAt(i);
       return Offset(
         sx(positions[i].x) + sin(a) * w,
         sy(positions[i].y) - cos(a) * w,
       );
     }
+
     final tailA = segmentAngles[0];
     final headA = segmentAngles[segmentAngles.length - 1];
     final tailWWorld = _widthAt(0);
@@ -321,24 +304,7 @@ class CreaturePainter extends CustomPainter {
     for (var i = n; i >= 0; i--) curve.add(leftAt(i));
     const tension = 1.0 / 6.0;
     final path = Path();
-    path.moveTo(curve[0].dx, curve[0].dy);
-    final len = curve.length;
-    for (var i = 0; i < len; i++) {
-      final p0 = curve[(i - 1 + len) % len];
-      final p1 = curve[i];
-      final p2 = curve[(i + 1) % len];
-      final p3 = curve[(i + 2) % len];
-      final c0 = Offset(
-        p1.dx + (p2.dx - p0.dx) * tension,
-        p1.dy + (p2.dy - p0.dy) * tension,
-      );
-      final c1 = Offset(
-        p2.dx - (p3.dx - p1.dx) * tension,
-        p2.dy - (p3.dy - p1.dy) * tension,
-      );
-      path.cubicTo(c0.dx, c0.dy, c1.dx, c1.dy, p2.dx, p2.dy);
-    }
-    path.close();
+    appendSmoothCurve(path, curve, tension, closed: true);
     final fillPaint = Paint()
       ..color = _paintFillColor
       ..style = PaintingStyle.fill;
@@ -375,7 +341,8 @@ class CreaturePainter extends CustomPainter {
       if (run.isEmpty) continue;
       final s = run.first;
       final e = run.last;
-      if (s < 0 || e >= segmentAngles.length || e + 1 >= positions.length) continue;
+      if (s < 0 || e >= segmentAngles.length || e + 1 >= positions.length)
+        continue;
       final baseH = fullH * dorsalFinBaseFrac;
       final pts = <({double x, double y, double a, double bend})>[];
       for (var i = s; i <= e + 1; i++) {
@@ -426,9 +393,9 @@ class CreaturePainter extends CustomPainter {
       }
       final path = Path();
       path.moveTo(top[0].dx, top[0].dy);
-      _appendSmoothCurve(path, top, tension);
+      appendSmoothCurve(path, top, tension);
       path.lineTo(bottom.last.dx, bottom.last.dy);
-      _appendSmoothCurve(path, bottom.reversed.toList(), tension);
+      appendSmoothCurve(path, bottom.reversed.toList(), tension);
       path.close();
       canvas.drawPath(path, finFill);
       canvas.drawPath(path, finStroke);

@@ -15,6 +15,13 @@ class BackgroundPainter extends CustomPainter {
   static const double _dotDriftSpeed = 0.4;
   static const double _dotRadius = 2.0;
 
+  // Second layer: bubbles in the distance — bigger, slower, more spaced, blurred.
+  static const double _bubbleSpacing = 320.0;
+  static const double _bubbleDriftAmount = 14.0;
+  static const double _bubbleDriftSpeed = 0.12;
+  static const double _bubbleRadius = 7.0;
+  static const double _bubbleBlurRadius = 5.0;
+
   BackgroundPainter({required this.view, this.timeSeconds = 0.0});
 
   @override
@@ -31,11 +38,39 @@ class BackgroundPainter extends CustomPainter {
     final worldRight = view.cameraX + halfW + size.width / z;
     final worldTop = view.cameraY - halfH - size.height / z;
     final worldBottom = view.cameraY + halfH + size.height / z;
+
+    // Layer 1: distant bubbles (drawn first, under the main dots).
+    final bubbleIMin = (worldLeft / _bubbleSpacing).floor();
+    final bubbleIMax = (worldRight / _bubbleSpacing).ceil();
+    final bubbleJMin = (worldTop / _bubbleSpacing).floor();
+    final bubbleJMax = (worldBottom / _bubbleSpacing).ceil();
+    final bubblePaint = Paint()
+      ..color = Colors.white.withOpacity(0.22)
+      ..style = PaintingStyle.fill
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, _bubbleBlurRadius);
+    final bubbleT = timeSeconds * _bubbleDriftSpeed;
+    for (var i = bubbleIMin; i <= bubbleIMax; i++) {
+      for (var j = bubbleJMin; j <= bubbleJMax; j++) {
+        final driftX = sin(i * 0.8 + j * 0.6 + bubbleT) * _bubbleDriftAmount;
+        final driftY = cos(i * 0.7 + j * 0.9 + bubbleT * 1.1) * _bubbleDriftAmount;
+        final wx = i * _bubbleSpacing + driftX;
+        final wy = j * _bubbleSpacing + driftY;
+        final px = sx(wx);
+        final py = sy(wy);
+        if (px >= -_bubbleRadius &&
+            px <= size.width + _bubbleRadius &&
+            py >= -_bubbleRadius &&
+            py <= size.height + _bubbleRadius) {
+          canvas.drawCircle(Offset(px, py), _bubbleRadius, bubblePaint);
+        }
+      }
+    }
+
+    // Layer 2: main dots.
     final iMin = (worldLeft / _dotSpacing).floor();
     final iMax = (worldRight / _dotSpacing).ceil();
     final jMin = (worldTop / _dotSpacing).floor();
     final jMax = (worldBottom / _dotSpacing).ceil();
-
     final dotPaint = Paint()
       ..color = Colors.white.withOpacity(0.4)
       ..style = PaintingStyle.fill;
