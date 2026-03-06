@@ -70,6 +70,7 @@ class _SimulationScreenState extends State<SimulationScreen>
 
   double _touchX = 120;
   double _touchY = 0;
+  int _pointerCount = 0;
 
   /// Camera: world position at screen center. Does not affect creature positions; only the view.
   double _cameraX = 0;
@@ -82,8 +83,12 @@ class _SimulationScreenState extends State<SimulationScreen>
   /// Dead zone: if head is within this distance of target, do not move (stops spasms).
   static const double _arrivalThreshold = 4.0;
 
-  /// View zoom: 1 = 1:1, < 1 = zoom out (see more world), > 1 = zoom in. Creature size in world unchanged.
-  static const double _viewZoom = .5;
+  /// View zoom: 1 = 1:1, < 1 = zoom out, > 1 = zoom in. Updated by pinch; creature size in world unchanged.
+  double _viewZoom = 1.0;
+  double? _pinchStartZoom;
+
+  static const double _minZoom = 0.4;
+  static const double _maxZoom = 2.5;
 
   @override
   void initState() {
@@ -254,25 +259,52 @@ class _SimulationScreenState extends State<SimulationScreen>
               return Listener(
                 behavior: HitTestBehavior.opaque,
                 onPointerDown: (e) {
-                  _updateTouchFromLocal(
-                    size,
-                    e.localPosition,
-                    _cameraX,
-                    _cameraY,
-                  );
-                  setState(() {});
+                  _pointerCount++;
+                  if (_pointerCount == 1) {
+                    _updateTouchFromLocal(
+                      size,
+                      e.localPosition,
+                      _cameraX,
+                      _cameraY,
+                    );
+                    setState(() {});
+                  }
                 },
                 onPointerMove: (e) {
-                  _updateTouchFromLocal(
-                    size,
-                    e.localPosition,
-                    _cameraX,
-                    _cameraY,
-                  );
+                  if (_pointerCount == 1) {
+                    _updateTouchFromLocal(
+                      size,
+                      e.localPosition,
+                      _cameraX,
+                      _cameraY,
+                    );
+                  }
                 },
-                onPointerUp: (_) {},
-                onPointerCancel: (_) {},
-                child: const SizedBox.expand(),
+                onPointerUp: (_) {
+                  _pointerCount = (_pointerCount - 1).clamp(0, 10);
+                },
+                onPointerCancel: (_) {
+                  _pointerCount = (_pointerCount - 1).clamp(0, 10);
+                },
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onScaleStart: (_) {
+                    _pinchStartZoom = _viewZoom;
+                  },
+                  onScaleUpdate: (details) {
+                    if (_pinchStartZoom == null) return;
+                    final z = (_pinchStartZoom! * details.scale)
+                        .clamp(_minZoom, _maxZoom);
+                    if (z != _viewZoom) {
+                      _viewZoom = z;
+                      setState(() {});
+                    }
+                  },
+                  onScaleEnd: (_) {
+                    _pinchStartZoom = null;
+                  },
+                  child: const SizedBox.expand(),
+                ),
               );
             },
           ),

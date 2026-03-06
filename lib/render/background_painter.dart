@@ -4,12 +4,62 @@ import 'package:flutter/material.dart';
 
 import 'view.dart';
 
+/// Full bubble: fill, rim, primary and optional secondary highlight.
+void _drawBubbleShape(
+  Canvas canvas,
+  Offset center,
+  double radius,
+  Paint fillPaint,
+  Paint rimPaint,
+  Paint primaryHighlightPaint,
+  Paint? secondaryHighlightPaint,
+) {
+  const primaryOffset = 0.30;
+  const primaryRadiusFrac = 0.36;
+  const secondaryOffset = 0.26;
+  const secondaryRadiusFrac = 0.24;
+  final rimWidth = radius < 4
+      ? (radius * 0.45)
+      : (radius > 20 ? (1.2 + (radius - 20) * 0.012).clamp(1.2, 2.8) : 1.2);
+  final rim = Paint()
+    ..color = rimPaint.color
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = rimWidth;
+  canvas.drawCircle(center, radius, fillPaint);
+  canvas.drawCircle(center, radius, rim);
+  canvas.drawCircle(
+    Offset(
+      center.dx - radius * primaryOffset,
+      center.dy - radius * primaryOffset,
+    ),
+    radius * primaryRadiusFrac,
+    primaryHighlightPaint,
+  );
+  if (secondaryHighlightPaint != null) {
+    canvas.drawCircle(
+      Offset(
+        center.dx + radius * secondaryOffset,
+        center.dy + radius * secondaryOffset,
+      ),
+      radius * secondaryRadiusFrac,
+      secondaryHighlightPaint,
+    );
+  }
+}
+
+/// Deterministic size variance from grid index: returns multiplier in [minFrac, 1].
+double _sizeVariance(int i, int j, {double minFrac = 0.65}) {
+  final t = sin(i * 1.7 + j * 2.3) * 0.5 + 0.5;
+  return minFrac + (1.0 - minFrac) * t;
+}
+
 /// Single background color for the simulation (dots, blur layer fill). Change here only.
 const Color kSimulationBackground = Color(0xFF556688);
 
 /// Fills the canvas with a solid color. Use as the bottom layer so other painters draw on top.
 class SolidBackgroundPainter extends CustomPainter {
-  SolidBackgroundPainter({Color? color}) : color = color ?? kSimulationBackground;
+  SolidBackgroundPainter({Color? color})
+    : color = color ?? kSimulationBackground;
 
   final Color color;
 
@@ -42,24 +92,37 @@ class BackgroundPainter extends CustomPainter {
   final double parallaxBlobs;
   final double parallaxBubbles;
 
-  static const double _dotSpacing = 120.0;
-  static const double _dotDriftAmount = 60.0; // +50% variance
-  static const double _dotDriftSpeed = 0.4;
+  static const double _dotSpacing = 150.0;
+  static const double _dotDriftAmount = 100.0;
+  static const double _dotDriftSpeed = 0.3;
   static const double _dotRadius = 2.0;
 
-  // Second layer: bubbles in the distance — bigger, slower, more spaced, blurred.
-  static const double _bubbleSpacing = 320.0;
-  static const double _bubbleDriftAmount = 210.0; // +100% variance
-  static const double _bubbleDriftSpeed = 0.12;
-  static const double _bubbleRadius = 7.0;
+  static const double _bubbleSpacing = 750.0;
+  static const double _bubbleDriftAmount = 500.0;
+  static const double _bubbleDriftSpeed = 0.1;
+  static const double _bubbleRadius = 20.0;
   static const double _bubbleBlurRadius = 5.0;
 
-  // Third layer: distant blobs — even bigger, slower, more spaced, more blurred.
-  static const double _blobSpacing = 520.0;
-  static const double _blobDriftAmount = 510.0; // +200% variance
-  static const double _blobDriftSpeed = 0.06;
-  static const double _blobRadius = 14.0;
-  static const double _blobBlurRadius = 12.0;
+  static const double _blobSpacing = 1500.0;
+  static const double _blobDriftAmount = 1000.0;
+  static const double _blobDriftSpeed = 0.05;
+  static const double _blobRadius = 100.0;
+  // Same shape as bubble: fill blur scaled by size (bubble 5 at r20 → blob 25 at r100).
+  static const double _blobFillBlur =
+      _blobRadius / _bubbleRadius * _bubbleBlurRadius;
+
+  // Transparency for depth: blobs most transparent, then bubbles, dots opaque.
+  static const double _blobFillOpacity = 0.12;
+  static const double _blobRimOpacity = 0.35;
+  static const double _blobPrimaryOpacity = 0.16;
+  static const double _blobSecondaryOpacity = 0.08;
+  static const double _bubbleFillOpacity = 0.18;
+  static const double _bubbleRimOpacity = 0.35;
+  static const double _bubblePrimaryOpacity = 0.25;
+  static const double _bubbleSecondaryOpacity = 0.12;
+  static const double _dotOpacity = 0.42;
+
+  static const double _sizeVarianceMin = 0.4;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -84,24 +147,44 @@ class BackgroundPainter extends CustomPainter {
     final blobIMax = (blobWorldRight / _blobSpacing).ceil();
     final blobJMin = (blobWorldTop / _blobSpacing).floor();
     final blobJMax = (blobWorldBottom / _blobSpacing).ceil();
-    final blobPaint = Paint()
-      ..color = Colors.white.withOpacity(0.14)
+    final blobFill = Paint()
+      ..color = Colors.white.withOpacity(_blobFillOpacity)
       ..style = PaintingStyle.fill
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, _blobBlurRadius);
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, _blobFillBlur);
+    final blobRim = Paint()..color = Colors.white.withOpacity(_blobRimOpacity);
+    final blobPrimary = Paint()
+      ..color = Colors.white.withOpacity(_blobPrimaryOpacity)
+      ..style = PaintingStyle.fill
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, _blobFillBlur * 0.5);
+    final blobSecondary = Paint()
+      ..color = Colors.white.withOpacity(_blobSecondaryOpacity)
+      ..style = PaintingStyle.fill
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, _blobFillBlur * 0.4);
     final blobT = timeSeconds * _blobDriftSpeed;
     for (var i = blobIMin; i <= blobIMax; i++) {
       for (var j = blobJMin; j <= blobJMax; j++) {
+        final rWorld =
+            _blobRadius * _sizeVariance(i, j, minFrac: _sizeVarianceMin);
+        final r = rWorld * z;
         final driftX = sin(i * 0.6 + j * 0.5 + blobT) * _blobDriftAmount;
         final driftY = cos(i * 0.5 + j * 0.7 + blobT * 1.2) * _blobDriftAmount;
         final wx = i * _blobSpacing + driftX;
         final wy = j * _blobSpacing + driftY;
         final px = blobSx(wx);
         final py = blobSy(wy);
-        if (px >= -_blobRadius &&
-            px <= size.width + _blobRadius &&
-            py >= -_blobRadius &&
-            py <= size.height + _blobRadius) {
-          canvas.drawCircle(Offset(px, py), _blobRadius, blobPaint);
+        if (px >= -r &&
+            px <= size.width + r &&
+            py >= -r &&
+            py <= size.height + r) {
+          _drawBubbleShape(
+            canvas,
+            Offset(px, py),
+            r,
+            blobFill,
+            blobRim,
+            blobPrimary,
+            blobSecondary,
+          );
         }
       }
     }
@@ -120,29 +203,51 @@ class BackgroundPainter extends CustomPainter {
     final bubbleIMax = (bubbleWorldRight / _bubbleSpacing).ceil();
     final bubbleJMin = (bubbleWorldTop / _bubbleSpacing).floor();
     final bubbleJMax = (bubbleWorldBottom / _bubbleSpacing).ceil();
-    final bubblePaint = Paint()
-      ..color = Colors.white.withOpacity(0.22)
+    final bubbleFill = Paint()
+      ..color = Colors.white.withOpacity(_bubbleFillOpacity)
       ..style = PaintingStyle.fill
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, _bubbleBlurRadius);
+    final bubbleRim = Paint()
+      ..color = Colors.white.withOpacity(_bubbleRimOpacity);
+    final bubblePrimary = Paint()
+      ..color = Colors.white.withOpacity(_bubblePrimaryOpacity)
+      ..style = PaintingStyle.fill
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, _bubbleBlurRadius * 0.5);
+    final bubbleSecondary = Paint()
+      ..color = Colors.white.withOpacity(_bubbleSecondaryOpacity)
+      ..style = PaintingStyle.fill
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, _bubbleBlurRadius * 0.4);
     final bubbleT = timeSeconds * _bubbleDriftSpeed;
     for (var i = bubbleIMin; i <= bubbleIMax; i++) {
       for (var j = bubbleJMin; j <= bubbleJMax; j++) {
+        final rWorld =
+            _bubbleRadius * _sizeVariance(i, j, minFrac: _sizeVarianceMin);
+        final r = rWorld * z;
         final driftX = sin(i * 0.8 + j * 0.6 + bubbleT) * _bubbleDriftAmount;
-        final driftY = cos(i * 0.7 + j * 0.9 + bubbleT * 1.1) * _bubbleDriftAmount;
+        final driftY =
+            cos(i * 0.7 + j * 0.9 + bubbleT * 1.1) * _bubbleDriftAmount;
         final wx = i * _bubbleSpacing + driftX;
         final wy = j * _bubbleSpacing + driftY;
         final px = bubbleSx(wx);
         final py = bubbleSy(wy);
-        if (px >= -_bubbleRadius &&
-            px <= size.width + _bubbleRadius &&
-            py >= -_bubbleRadius &&
-            py <= size.height + _bubbleRadius) {
-          canvas.drawCircle(Offset(px, py), _bubbleRadius, bubblePaint);
+        if (px >= -r &&
+            px <= size.width + r &&
+            py >= -r &&
+            py <= size.height + r) {
+          _drawBubbleShape(
+            canvas,
+            Offset(px, py),
+            r,
+            bubbleFill,
+            bubbleRim,
+            bubblePrimary,
+            bubbleSecondary,
+          );
         }
       }
     }
 
-    // Layer 3: main dots (full camera, no parallax).
+    // Layer 3: main dots (full camera) — same bubble shape, smallest, slight layer blur.
     final dotWorldLeft = view.cameraX - halfW - size.width / z;
     final dotWorldRight = view.cameraX + halfW + size.width / z;
     final dotWorldTop = view.cameraY - halfH - size.height / z;
@@ -155,23 +260,26 @@ class BackgroundPainter extends CustomPainter {
     final jMin = (dotWorldTop / _dotSpacing).floor();
     final jMax = (dotWorldBottom / _dotSpacing).ceil();
     final dotPaint = Paint()
-      ..color = Colors.white.withOpacity(0.4)
+      ..color = Colors.white.withOpacity(_dotOpacity)
       ..style = PaintingStyle.fill;
 
     final t = timeSeconds * _dotDriftSpeed;
     for (var i = iMin; i <= iMax; i++) {
       for (var j = jMin; j <= jMax; j++) {
+        final rWorld =
+            _dotRadius * _sizeVariance(i, j, minFrac: _sizeVarianceMin);
+        final r = rWorld * z;
         final driftX = sin(i * 1.1 + j * 0.7 + t) * _dotDriftAmount;
         final driftY = cos(i * 0.9 + j * 1.3 + t * 0.8) * _dotDriftAmount;
         final wx = i * _dotSpacing + driftX;
         final wy = j * _dotSpacing + driftY;
         final px = dotSx(wx);
         final py = dotSy(wy);
-        if (px >= -_dotRadius &&
-            px <= size.width + _dotRadius &&
-            py >= -_dotRadius &&
-            py <= size.height + _dotRadius) {
-          canvas.drawCircle(Offset(px, py), _dotRadius, dotPaint);
+        if (px >= -r &&
+            px <= size.width + r &&
+            py >= -r &&
+            py <= size.height + r) {
+          canvas.drawCircle(Offset(px, py), r, dotPaint);
         }
       }
     }
