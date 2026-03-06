@@ -1,6 +1,6 @@
 import 'dart:math' show cos, sin;
 import 'package:flutter/material.dart';
-import '../world/chunk_map.dart';
+import '../world/biome_map.dart';
 import 'view.dart';
 
 /// Full bubble: fill, rim, primary and optional secondary highlight.
@@ -77,21 +77,21 @@ class SolidBackgroundPainter extends CustomPainter {
 
 /// Paints the procedural background dots. Uses [view] for world→screen transform.
 /// [parallaxBlobs] and [parallaxBubbles] scale camera position so layers move more slowly (depth).
-/// When [chunkMap] is set, dots/blobs/bubbles are tinted by blended biome colour at their world position.
+/// When [biomeMap] is set, dots/blobs/bubbles are tinted by blended biome colour at their world position.
 class BackgroundPainter extends CustomPainter {
   BackgroundPainter({
     required this.view,
     this.timeSeconds = 0.0,
     this.parallaxBlobs = 0.8,
     this.parallaxBubbles = 0.9,
-    this.chunkMap,
+    this.biomeMap,
   });
 
   final CameraView view;
   final double timeSeconds;
   final double parallaxBlobs;
   final double parallaxBubbles;
-  final ChunkMap? chunkMap;
+  final BiomeMap? biomeMap;
 
   static const double _dotSpacing = 150.0;
   static const double _dotDriftAmount = 100.0;
@@ -171,8 +171,8 @@ class BackgroundPainter extends CustomPainter {
         final driftY = cos(i * 0.5 + j * 0.7 + blobT * 1.2) * _blobDriftAmount;
         final wx = i * _blobSpacing + driftX;
         final wy = j * _blobSpacing + driftY;
-        if (chunkMap != null) {
-          final c = chunkMap!.blendedColorAt(wx, wy);
+        if (biomeMap != null) {
+          final c = biomeMap!.blendedColorAt(wx, wy);
           blobFill.color = c.withValues(alpha:_blobFillOpacity);
           blobRim.color = c.withValues(alpha:_blobRimOpacity);
           blobPrimary.color = c.withValues(alpha:_blobPrimaryOpacity);
@@ -236,8 +236,8 @@ class BackgroundPainter extends CustomPainter {
             cos(i * 0.7 + j * 0.9 + bubbleT * 1.1) * _bubbleDriftAmount;
         final wx = i * _bubbleSpacing + driftX;
         final wy = j * _bubbleSpacing + driftY;
-        if (chunkMap != null) {
-          final c = chunkMap!.blendedColorAt(wx, wy);
+        if (biomeMap != null) {
+          final c = biomeMap!.blendedColorAt(wx, wy);
           bubbleFill.color = c.withValues(alpha:_bubbleFillOpacity);
           bubbleRim.color = c.withValues(alpha:_bubbleRimOpacity);
           bubblePrimary.color = c.withValues(alpha:_bubblePrimaryOpacity);
@@ -288,8 +288,8 @@ class BackgroundPainter extends CustomPainter {
         final driftY = cos(i * 0.9 + j * 1.3 + t * 0.8) * _dotDriftAmount;
         final wx = i * _dotSpacing + driftX;
         final wy = j * _dotSpacing + driftY;
-        if (chunkMap != null) {
-          dotPaint.color = chunkMap!.blendedColorAt(wx, wy).withValues(alpha:_dotOpacity);
+        if (biomeMap != null) {
+          dotPaint.color = biomeMap!.blendedColorAt(wx, wy).withValues(alpha:_dotOpacity);
         }
         final px = dotSx(wx);
         final py = dotSy(wy);
@@ -309,5 +309,5 @@ class BackgroundPainter extends CustomPainter {
       oldDelegate.timeSeconds != timeSeconds ||
       oldDelegate.parallaxBlobs != parallaxBlobs ||
       oldDelegate.parallaxBubbles != parallaxBubbles ||
-      oldDelegate.chunkMap != chunkMap;
+      oldDelegate.biomeMap != biomeMap;
 }

@@ -16,6 +16,9 @@
 - **Size progression:** Not only spine length — body mass, segment width, overall scale.
 - **Eyes:** Can increase viewpoint (e.g. wider or longer sight range / cone).
 
+## Staging / progression
+- **Staged introduction of biomes:** Start with no biomes — e.g. just “fresh water” everywhere. When the organism “grows” (in quotes: nothing need actually change; can be an implied largening), then either (a) introduce the *concept* of biomes (e.g. regions start to look different), or (b) let biomes start to *have an effect* (spawns, hazards, rewards, etc.). Design choice: do biomes appear only after a growth stage, or are they always there and only start to matter later?
+
 ## Systems
 - **Traits / components / breeding:** Customisation and heredity (traits, modular parts, mating/offspring).
 - **Editor:** Creature editor (e.g. Spore-style) for building and tuning creatures, traits, and components.

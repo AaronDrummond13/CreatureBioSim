@@ -7,10 +7,12 @@ import 'creature.dart' show Creature, CaudalFinType;
 import 'input/simulation_gesture_region.dart';
 import 'render/background_painter.dart'
     show BackgroundPainter, SolidBackgroundPainter;
+import 'render/food_painter.dart';
 import 'render/spine_painter.dart';
 import 'simulation/spine.dart';
 import 'simulation_view_state.dart';
-import 'world/chunk_map.dart';
+import 'world/biome_map.dart';
+import 'world/food.dart';
 
 /// Screen that runs the spine simulation. Hold and drag on the screen:
 /// the head moves toward the touch point; drag to change direction.
@@ -60,7 +62,9 @@ class _SimulationScreenState extends State<SimulationScreen>
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
 
   final Spawner _spawner = Spawner(spawnInterval: 10.0);
-  final ChunkMap _chunkMap = ChunkMap();
+  final BiomeMap _biomeMap = BiomeMap();
+  final FoodStore _foodStore = FoodStore();
+  bool _foodGenerated = false;
 
   /// Single background creature: big, blurred, slow, drawn behind the dots.
   late final Creature _bgCreature;
@@ -151,16 +155,30 @@ class _SimulationScreenState extends State<SimulationScreen>
       for (final e in _spawner.entities) {
         e.botController.tick();
       }
+      final r = _viewState.viewWidthWorld;
+      _foodStore.deleteFar(_viewState.cameraX, _viewState.cameraY, r);
+      _foodStore.ensureChunkGenerated(_viewState.cameraX, _viewState.cameraY, r);
     }
     if (mounted) setState(() {});
   }
 
   List<Widget> _buildViewStack(Size size) {
     _viewState.setViewSize(size);
+    if (!_foodGenerated) {
+      final r = _viewState.viewWidthWorld;
+      if (r >= 50) {
+        _foodStore.generateInArea(
+          _viewState.cameraX,
+          _viewState.cameraY,
+          r,
+        );
+        _foodGenerated = true;
+      }
+    }
     final cameraView = _viewState.cameraView;
     final bgView = _viewState.backgroundCameraView();
     final t = _viewState.timeSeconds;
-    final bgColor = _chunkMap.blendedColorAt(
+    final bgColor = _biomeMap.blendedColorAt(
       _viewState.cameraX,
       _viewState.cameraY,
     );
@@ -186,7 +204,16 @@ class _SimulationScreenState extends State<SimulationScreen>
           painter: BackgroundPainter(
             view: cameraView,
             timeSeconds: t,
-            chunkMap: _chunkMap,
+            biomeMap: _biomeMap,
+          ),
+        ),
+      ),
+      Positioned.fill(
+        child: CustomPaint(
+          painter: FoodPainter(
+            view: cameraView,
+            items: _foodStore.items,
+            foodRadiusWorld: _foodStore.radiusWorld,
           ),
         ),
       ),

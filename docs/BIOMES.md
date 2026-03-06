@@ -14,6 +14,9 @@ World is divided into **chunks** (5000 units by default). Chunks form a **10×10
 
 **Blending:** At any world position we blend the colours of the 4 neighbouring chunk corners (bilinear) so boundaries are smooth.
 
+## Staging (see IDEAS.md)
+- Start with no biomes (e.g. fresh water everywhere). When the organism “grows” (implied scale), either introduce biomes as a concept or turn on biome effects. TBD.
+
 ## Not done yet (ideas)
 
 - **Creature schematics** – which creatures/spawns appear per biome
