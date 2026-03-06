@@ -12,12 +12,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        body: Container(
-          color: const Color(0xFF556688),
-          child: const SimulationScreen(),
-        ),
-      ),
+      home: const Scaffold(body: SimulationScreen()),
     );
   }
 }

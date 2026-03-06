@@ -3,9 +3,11 @@ import 'dart:math' show sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 
+import 'controller/bot_controller.dart';
 import 'controller/spawner.dart';
 import 'creature.dart' show Creature, CaudalFinType;
-import 'render/background_painter.dart';
+import 'render/background_painter.dart'
+    show BackgroundPainter, SolidBackgroundPainter, kSimulationBackground;
 import 'render/spine_painter.dart';
 import 'render/view.dart' show CameraView;
 import 'simulation/spine.dart';
@@ -58,6 +60,11 @@ class _SimulationScreenState extends State<SimulationScreen>
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
 
   final Spawner _spawner = Spawner(spawnInterval: 10.0);
+
+  /// Single background creature: big, blurred, slow, drawn behind the dots.
+  late final Creature _bgCreature;
+  late final Spine _bgSpine;
+  late final BotController _bgController;
   double _viewWidthWorld = 800.0;
   double _viewHeightWorld = 600.0;
 
@@ -76,7 +83,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   static const double _arrivalThreshold = 4.0;
 
   /// View zoom: 1 = 1:1, < 1 = zoom out (see more world), > 1 = zoom in. Creature size in world unchanged.
-  static const double _viewZoom = 1;
+  static const double _viewZoom = .5;
 
   @override
   void initState() {
@@ -95,6 +102,16 @@ class _SimulationScreenState extends State<SimulationScreen>
     }
     _ticker = createTicker(_onTick);
     _ticker.start();
+
+    final bg = _spawner.createRandomAt(0, 0);
+    _bgCreature = bg.$1;
+    _bgSpine = bg.$2;
+    _bgController = BotController(
+      spine: _bgSpine,
+      wanderRadius: 1400,
+      ticksPerNewTarget: 420,
+      speed: 0.9,
+    );
   }
 
   @override
@@ -133,6 +150,7 @@ class _SimulationScreenState extends State<SimulationScreen>
       _cameraY = head.y;
     }
     _timeSeconds = elapsed.inMilliseconds / 1000.0;
+    _bgController.tick();
     if (_viewWidthWorld > 0 && _viewHeightWorld > 0) {
       _spawner.tick(
         _timeSeconds,
@@ -171,8 +189,31 @@ class _SimulationScreenState extends State<SimulationScreen>
       zoom: _viewZoom,
     );
 
+    // Parallax: background creature uses a fraction of camera position so it moves
+    // more slowly and stays visible when the main creature moves.
+    const double bgParallaxFactor = 0.25;
+    final bgView = CameraView(
+      cameraX: _cameraX * bgParallaxFactor,
+      cameraY: _cameraY * bgParallaxFactor,
+      zoom: _viewZoom * 5.0,
+    );
+
     return Stack(
       children: [
+        Positioned.fill(child: CustomPaint(painter: SolidBackgroundPainter())),
+        Positioned.fill(
+          child: CustomPaint(
+            painter: CreaturePainter(
+              creature: _bgCreature,
+              spine: _bgSpine,
+              view: bgView,
+              timeSeconds: _timeSeconds,
+              blurSigma: 5,
+              layerOpacity: 0.35,
+              blurLayerBackgroundColor: kSimulationBackground,
+            ),
+          ),
+        ),
         Positioned.fill(
           child: CustomPaint(
             painter: BackgroundPainter(

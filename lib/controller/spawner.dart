@@ -92,6 +92,14 @@ class Spawner {
     ));
   }
 
+  /// Creates a random creature and spine positioned at [headX], [headY]. Does not add to entities.
+  (Creature, Spine) createRandomAt(double headX, double headY) {
+    final creature = _randomCreature();
+    final spine = Spine(segmentCount: creature.segmentCount);
+    _positionSpineHeadAt(spine, headX, headY);
+    return (creature, spine);
+  }
+
   /// 1/8 chance for each tail type including none.
   CaudalFinType? _randomTailFin() {
     switch (_rng.nextInt(8)) {

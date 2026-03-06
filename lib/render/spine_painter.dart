@@ -1,4 +1,5 @@
 import 'dart:math' show cos, pi, sin;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
@@ -19,6 +20,12 @@ class CreaturePainter extends CustomPainter {
   /// Time in seconds for background dot drift (optional).
   final double timeSeconds;
 
+  /// When set, creature is drawn as a blurred background layer (e.g. sigma 10, opacity 0.2).
+  final double? blurSigma;
+  final double? layerOpacity;
+  /// Fill color for the blur layer so transparent pixels don't composite as black. Use simulation background color.
+  final Color? blurLayerBackgroundColor;
+
   static const double dorsalFinHeight = 18.0;
   static const double dorsalFinBaseFrac = 0.3;
   static const double caudalFinBaseFrac = 0.2;
@@ -31,6 +38,9 @@ class CreaturePainter extends CustomPainter {
     required this.spine,
     required this.view,
     this.timeSeconds = 0.0,
+    this.blurSigma,
+    this.layerOpacity,
+    this.blurLayerBackgroundColor,
   });
 
   // Set during paint() for use by _drawTailFin, _drawBody, _drawDorsalFins, _drawEyes.
@@ -54,6 +64,26 @@ class CreaturePainter extends CustomPainter {
     final segmentAngles = spine.segmentAngles;
     if (positions.length < 2 || segmentAngles.isEmpty) return;
 
+    final useBlurLayer = blurSigma != null;
+    if (useBlurLayer) {
+      // Skia/backend can reject large sigma (e.g. >20); clamp to avoid Invalid argument.
+      final sigma = blurSigma!.clamp(0.0, 10.0);
+      canvas.saveLayer(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        Paint()
+          ..imageFilter = ImageFilter.blur(sigmaX: sigma, sigmaY: sigma)
+          ..color = (layerOpacity != null
+              ? Colors.white.withOpacity(layerOpacity!)
+              : Colors.white)
+          ..blendMode = BlendMode.modulate,
+      );
+      // Fill layer with background color so transparent pixels don't composite as black.
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        Paint()..color = blurLayerBackgroundColor ?? Colors.white,
+      );
+    }
+
     _paintCenterX = size.width / 2;
     _paintCenterY = size.height / 2;
     _paintZ = view.zoom;
@@ -63,6 +93,8 @@ class CreaturePainter extends CustomPainter {
     _paintN = positions.length - 1;
 
     _drawCreature(canvas);
+
+    if (useBlurLayer) canvas.restore();
   }
 
   /// Draw order: tail fin (under body) → lateral fins → body → dorsal fins → eyes.
@@ -121,8 +153,10 @@ class CreaturePainter extends CustomPainter {
     final rightScale = outerScale + (innerScale - outerScale) * (1.0 - t);
     final rootScale = caudalFinBaseFrac + (1.0 - caudalFinBaseFrac) * ratio;
     final rootHalfW = rootW * rootScale;
-    final leftMax = (maxW * leftScale).clamp(rootHalfW, maxW);
-    final rightMax = (maxW * rightScale).clamp(rootHalfW, maxW);
+    final lo = rootHalfW < maxW ? rootHalfW : maxW;
+    final hi = rootHalfW > maxW ? rootHalfW : maxW;
+    final leftMax = (maxW * leftScale).clamp(lo, hi);
+    final rightMax = (maxW * rightScale).clamp(lo, hi);
 
     final leftDirX = sin(tailA);
     final leftDirY = -cos(tailA);
@@ -496,5 +530,8 @@ class CreaturePainter extends CustomPainter {
       oldDelegate.creature != creature ||
       oldDelegate.spine != spine ||
       oldDelegate.view != view ||
-      oldDelegate.timeSeconds != timeSeconds;
+      oldDelegate.timeSeconds != timeSeconds ||
+      oldDelegate.blurSigma != blurSigma ||
+      oldDelegate.layerOpacity != layerOpacity ||
+      oldDelegate.blurLayerBackgroundColor != blurLayerBackgroundColor;
 }
