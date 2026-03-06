@@ -65,9 +65,10 @@ class CreaturePainter extends CustomPainter {
     _drawCreature(canvas);
   }
 
-  /// Draw order: tail fin (under body) → body → dorsal fins → eyes.
+  /// Draw order: tail fin (under body) → lateral fins → body → dorsal fins → eyes.
   void _drawCreature(Canvas canvas) {
     _drawTailFin(canvas);
+    _drawLateralFins(canvas);
     _drawBody(canvas);
     _drawDorsalFins(canvas);
     _drawEyes(canvas);
@@ -241,6 +242,66 @@ class CreaturePainter extends CustomPainter {
       ..strokeWidth = (2.0 * _paintZ).clamp(1.0, 2.0);
     canvas.drawPath(path, finPaint);
     canvas.drawPath(path, strokePaint);
+  }
+
+  /// Lateral fins: ellipses under the body, attached at segment vertices.
+  /// Angle locked to the segment closer to the head (seg+1). Neutral flare ~45° from inline.
+  void _drawLateralFins(Canvas canvas) {
+    final fins = creature.lateralFins;
+    if (fins == null || fins.isEmpty) return;
+    final positions = _paintPositions;
+    final segmentAngles = _paintSegmentAngles;
+    final n = _paintN;
+    double sx(double wx) => _paintCenterX + (wx - view.cameraX) * _paintZ;
+    double sy(double wy) => _paintCenterY + (wy - view.cameraY) * _paintZ;
+    final finColor = creature.finColor != null
+        ? Color(creature.finColor!)
+        : Color.lerp(_paintFillColor, Colors.white, 0.12)!;
+    final fillPaint = Paint()
+      ..color = finColor
+      ..style = PaintingStyle.fill;
+    final strokePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = (2.0 * _paintZ).clamp(1.0, 2.0);
+    const flareRad = 35.0 * pi / 180.0; // 35° from inline when neutral
+    for (final seg in fins) {
+      if (seg < 0 || seg >= n) continue;
+      final segW = _widthAt(seg);
+      final len = segW * 1.5;
+      final wid = len / 3.0;
+      final lenScreen = len * _paintZ;
+      final widScreen = wid * _paintZ;
+      final rect = Rect.fromCenter(
+        center: Offset.zero,
+        width: lenScreen,
+        height: widScreen,
+      );
+      final aAttach = segmentAngles[seg < segmentAngles.length ? seg : seg - 1];
+      final segHead = seg + 1 < segmentAngles.length ? seg + 1 : seg;
+      final aLock = segmentAngles[segHead];
+      final halfW = segW;
+      final px = positions[seg].x;
+      final py = positions[seg].y;
+      final leftCx = px + sin(aAttach) * halfW;
+      final leftCy = py - cos(aAttach) * halfW;
+      final rightCx = px - sin(aAttach) * halfW;
+      final rightCy = py + cos(aAttach) * halfW;
+      final leftAngle = aLock + flareRad;
+      final rightAngle = aLock - flareRad;
+      canvas.save();
+      canvas.translate(sx(leftCx), sy(leftCy));
+      canvas.rotate(leftAngle);
+      canvas.drawOval(rect, fillPaint);
+      canvas.drawOval(rect, strokePaint);
+      canvas.restore();
+      canvas.save();
+      canvas.translate(sx(rightCx), sy(rightCy));
+      canvas.rotate(rightAngle);
+      canvas.drawOval(rect, fillPaint);
+      canvas.drawOval(rect, strokePaint);
+      canvas.restore();
+    }
   }
 
   void _drawBody(Canvas canvas) {

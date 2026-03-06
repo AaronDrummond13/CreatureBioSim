@@ -37,6 +37,10 @@ class Creature {
   /// Caudal (tail) fin type. Null = no tail fin. Rendered under the body.
   final CaudalFinType? tailFin;
 
+  /// Lateral fins (pectoral, pelvic, anal, etc.): vertex indices where a fin is attached.
+  /// Rendered under the body as rotated ellipses. Only indices < segmentCount (not head) are valid.
+  final List<int>? lateralFins;
+
   /// Number of spine segments (vertexWidths.length - 1).
   int get segmentCount => vertexWidths.length - 1;
 
@@ -45,6 +49,7 @@ class Creature {
     this.dorsalFins,
     this.finColor,
     this.tailFin,
+    this.lateralFins,
     this.color = 0xFF2E7D32,
   }) : vertexWidths = vertexWidths.map((w) => w.clamp(minVertexWidth, maxVertexWidth)).toList();
 
@@ -56,6 +61,7 @@ class Creature {
     List<(List<int>, double?)>? dorsalFins,
     int? finColor,
     CaudalFinType? tailFin,
+    List<int>? lateralFins,
   }) {
     final w = width.clamp(minVertexWidth, maxVertexWidth);
     return Creature(
@@ -63,6 +69,7 @@ class Creature {
       dorsalFins: dorsalFins,
       finColor: finColor,
       tailFin: tailFin,
+      lateralFins: lateralFins,
       color: color,
     );
   }
