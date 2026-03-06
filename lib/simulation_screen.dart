@@ -1,16 +1,15 @@
 import 'dart:math' show sqrt;
-
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
-
 import 'controller/bot_controller.dart';
 import 'controller/spawner.dart';
 import 'creature.dart' show Creature, CaudalFinType;
+import 'input/simulation_gesture_region.dart';
 import 'render/background_painter.dart'
     show BackgroundPainter, SolidBackgroundPainter, kSimulationBackground;
 import 'render/spine_painter.dart';
-import 'render/view.dart' show CameraView;
 import 'simulation/spine.dart';
+import 'simulation_view_state.dart';
 
 /// Screen that runs the spine simulation. Hold and drag on the screen:
 /// the head moves toward the touch point; drag to change direction.
@@ -65,30 +64,12 @@ class _SimulationScreenState extends State<SimulationScreen>
   late final Creature _bgCreature;
   late final Spine _bgSpine;
   late final BotController _bgController;
-  double _viewWidthWorld = 800.0;
-  double _viewHeightWorld = 600.0;
 
-  double _touchX = 120;
-  double _touchY = 0;
-  int _pointerCount = 0;
-
-  /// Camera: world position at screen center. Does not affect creature positions; only the view.
-  double _cameraX = 0;
-  double _cameraY = 0;
-  double _timeSeconds = 0;
+  final SimulationViewState _viewState = SimulationViewState();
   late Ticker _ticker;
 
   static const double _headMoveSpeed = 4.0;
-
-  /// Dead zone: if head is within this distance of target, do not move (stops spasms).
   static const double _arrivalThreshold = 4.0;
-
-  /// View zoom: 1 = 1:1, < 1 = zoom out, > 1 = zoom in. Updated by pinch; creature size in world unchanged.
-  double _viewZoom = 1.0;
-  double? _pinchStartZoom;
-
-  static const double _minZoom = 0.4;
-  static const double _maxZoom = 2.5;
 
   @override
   void initState() {
@@ -96,14 +77,16 @@ class _SimulationScreenState extends State<SimulationScreen>
     final pos = _spine.positions;
     if (pos.isNotEmpty) {
       final head = pos.last;
-      _touchX = head.x;
-      _touchY = head.y;
-      _cameraX = head.x;
-      _cameraY = head.y;
+      _viewState.touchX = head.x;
+      _viewState.touchY = head.y;
+      _viewState.cameraX = head.x;
+      _viewState.cameraY = head.y;
     } else {
-      _touchX = _spine.segmentCount * 40.0;
-      _cameraX = _touchX;
-      _cameraY = _touchY;
+      final x = _spine.segmentCount * 40.0;
+      _viewState.touchX = x;
+      _viewState.touchY = 0;
+      _viewState.cameraX = x;
+      _viewState.cameraY = 0;
     }
     _ticker = createTicker(_onTick);
     _ticker.start();
@@ -126,19 +109,18 @@ class _SimulationScreenState extends State<SimulationScreen>
   }
 
   void _onTick(Duration elapsed) {
-    // User creature: head toward touch target.
     final positions = _spine.positions;
     if (positions.isNotEmpty) {
       final head = positions.last;
-      final dx = _touchX - head.x;
-      final dy = _touchY - head.y;
+      final dx = _viewState.touchX - head.x;
+      final dy = _viewState.touchY - head.y;
       final len = sqrt(dx * dx + dy * dy);
       if (len <= _arrivalThreshold) {
         _spine.resolve(
           head.x,
           head.y,
-          intendedTargetX: _touchX,
-          intendedTargetY: _touchY,
+          intendedTargetX: _viewState.touchX,
+          intendedTargetY: _viewState.touchY,
         );
       } else {
         final step = _headMoveSpeed / len;
@@ -147,22 +129,22 @@ class _SimulationScreenState extends State<SimulationScreen>
         _spine.resolve(
           nx,
           ny,
-          intendedTargetX: _touchX,
-          intendedTargetY: _touchY,
+          intendedTargetX: _viewState.touchX,
+          intendedTargetY: _viewState.touchY,
         );
       }
-      _cameraX = head.x;
-      _cameraY = head.y;
+      _viewState.cameraX = head.x;
+      _viewState.cameraY = head.y;
     }
-    _timeSeconds = elapsed.inMilliseconds / 1000.0;
+    _viewState.timeSeconds = elapsed.inMilliseconds / 1000.0;
     _bgController.tick();
-    if (_viewWidthWorld > 0 && _viewHeightWorld > 0) {
+    if (_viewState.viewWidthWorld > 0 && _viewState.viewHeightWorld > 0) {
       _spawner.tick(
-        _timeSeconds,
-        _cameraX,
-        _cameraY,
-        _viewWidthWorld,
-        _viewHeightWorld,
+        _viewState.timeSeconds,
+        _viewState.cameraX,
+        _viewState.cameraY,
+        _viewState.viewWidthWorld,
+        _viewState.viewHeightWorld,
       );
       for (final e in _spawner.entities) {
         e.botController.tick();
@@ -171,140 +153,93 @@ class _SimulationScreenState extends State<SimulationScreen>
     if (mounted) setState(() {});
   }
 
-  /// Convert screen point to world using current camera (camera does not move creatures).
-  void _updateTouchFromLocal(
-    Size screenSize,
-    Offset local,
-    double cameraX,
-    double cameraY,
-  ) {
-    _touchX = cameraX + (local.dx - screenSize.width / 2) / _viewZoom;
-    _touchY = cameraY + (local.dy - screenSize.height / 2) / _viewZoom;
+  List<Widget> _buildViewStack(Size size) {
+    _viewState.setViewSize(size);
+    final cameraView = _viewState.cameraView;
+    final bgView = _viewState.backgroundCameraView();
+    final t = _viewState.timeSeconds;
+    return [
+      Positioned.fill(child: CustomPaint(painter: SolidBackgroundPainter())),
+      Positioned.fill(
+        child: CustomPaint(
+          painter: CreaturePainter(
+            creature: _bgCreature,
+            spine: _bgSpine,
+            view: bgView,
+            timeSeconds: t,
+            blurSigma: 5,
+            layerOpacity: 0.35,
+            blurLayerBackgroundColor: kSimulationBackground,
+          ),
+        ),
+      ),
+      Positioned.fill(
+        child: CustomPaint(
+          painter: BackgroundPainter(view: cameraView, timeSeconds: t),
+        ),
+      ),
+      ..._spawner.entities.map(
+        (e) => Positioned.fill(
+          child: CustomPaint(
+            painter: CreaturePainter(
+              creature: e.creature,
+              spine: e.spine,
+              view: cameraView,
+              timeSeconds: t,
+            ),
+          ),
+        ),
+      ),
+      Positioned.fill(
+        child: CustomPaint(
+          painter: CreaturePainter(
+            creature: _creature,
+            spine: _spine,
+            view: cameraView,
+            timeSeconds: t,
+          ),
+        ),
+      ),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    _viewWidthWorld = size.width / _viewZoom;
-    _viewHeightWorld = size.height / _viewZoom;
-
-    final cameraView = CameraView(
-      cameraX: _cameraX,
-      cameraY: _cameraY,
-      zoom: _viewZoom,
-    );
-
-    // Parallax: background creature uses a fraction of camera position so it moves
-    // more slowly and stays visible when the main creature moves.
-    const double bgParallaxFactor = 0.25;
-    final bgView = CameraView(
-      cameraX: _cameraX * bgParallaxFactor,
-      cameraY: _cameraY * bgParallaxFactor,
-      zoom: _viewZoom * 5.0,
-    );
-
     return Stack(
       children: [
-        Positioned.fill(child: CustomPaint(painter: SolidBackgroundPainter())),
-        Positioned.fill(
-          child: CustomPaint(
-            painter: CreaturePainter(
-              creature: _bgCreature,
-              spine: _bgSpine,
-              view: bgView,
-              timeSeconds: _timeSeconds,
-              blurSigma: 5,
-              layerOpacity: 0.35,
-              blurLayerBackgroundColor: kSimulationBackground,
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: CustomPaint(
-            painter: BackgroundPainter(
-              view: cameraView,
-              timeSeconds: _timeSeconds,
-            ),
-          ),
-        ),
-        ..._spawner.entities.map(
-          (e) => Positioned.fill(
-            child: CustomPaint(
-              painter: CreaturePainter(
-                creature: e.creature,
-                spine: e.spine,
-                view: cameraView,
-                timeSeconds: _timeSeconds,
-              ),
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: CustomPaint(
-            painter: CreaturePainter(
-              creature: _creature,
-              spine: _spine,
-              view: cameraView,
-              timeSeconds: _timeSeconds,
-            ),
-          ),
-        ),
+        ..._buildViewStack(size),
         Positioned.fill(
           child: LayoutBuilder(
             builder: (context, contextConstraints) {
-              final size = contextConstraints.biggest;
-              if (size.width < 1 || size.height < 1) {
+              final layerSize = contextConstraints.biggest;
+              if (layerSize.width < 1 || layerSize.height < 1) {
                 return const SizedBox.expand();
               }
-              return Listener(
-                behavior: HitTestBehavior.opaque,
-                onPointerDown: (e) {
-                  _pointerCount++;
-                  if (_pointerCount == 1) {
-                    _updateTouchFromLocal(
-                      size,
-                      e.localPosition,
-                      _cameraX,
-                      _cameraY,
-                    );
+              return SimulationGestureRegion(
+                onSinglePointerDown: (local) {
+                  _viewState.updateTouchFromLocal(layerSize, local);
+                  setState(() {});
+                },
+                onSinglePointerMove: (local) {
+                  _viewState.updateTouchFromLocal(layerSize, local);
+                },
+                onScaleStart: () {
+                  _viewState.pinchStartZoom = _viewState.zoom;
+                },
+                onScaleUpdate: (scale) {
+                  if (_viewState.pinchStartZoom == null) return;
+                  final z = _viewState.clampZoom(
+                    _viewState.pinchStartZoom! * scale,
+                  );
+                  if (z != _viewState.zoom) {
+                    _viewState.zoom = z;
                     setState(() {});
                   }
                 },
-                onPointerMove: (e) {
-                  if (_pointerCount == 1) {
-                    _updateTouchFromLocal(
-                      size,
-                      e.localPosition,
-                      _cameraX,
-                      _cameraY,
-                    );
-                  }
+                onScaleEnd: () {
+                  _viewState.pinchStartZoom = null;
                 },
-                onPointerUp: (_) {
-                  _pointerCount = (_pointerCount - 1).clamp(0, 10);
-                },
-                onPointerCancel: (_) {
-                  _pointerCount = (_pointerCount - 1).clamp(0, 10);
-                },
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onScaleStart: (_) {
-                    _pinchStartZoom = _viewZoom;
-                  },
-                  onScaleUpdate: (details) {
-                    if (_pinchStartZoom == null) return;
-                    final z = (_pinchStartZoom! * details.scale)
-                        .clamp(_minZoom, _maxZoom);
-                    if (z != _viewZoom) {
-                      _viewZoom = z;
-                      setState(() {});
-                    }
-                  },
-                  onScaleEnd: (_) {
-                    _pinchStartZoom = null;
-                  },
-                  child: const SizedBox.expand(),
-                ),
               );
             },
           ),

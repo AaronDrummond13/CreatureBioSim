@@ -1,7 +1,5 @@
 import 'dart:math' show cos, sin;
-
 import 'package:flutter/material.dart';
-
 import 'view.dart';
 
 /// Full bubble: fill, rim, primary and optional secondary highlight.

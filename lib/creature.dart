@@ -1,19 +1,19 @@
 /// Tail (caudal) fin shape. Rendered under the body, flaring out behind the tail.
 enum CaudalFinType {
-  /// Straight trailing edge, paddle-like.
+  /// Straight trailing edge, paddle-like (tip at ~80% length).
   truncate,
   /// Rounded trailing edge (extra nodes at tip/arc and taper).
   rounded,
-  ///
+  /// Slightly notched trailing edge; tip inset (e.g. ~65% length).
   emarginate,
-  ///
+  /// Crescent-shaped; narrow at base, broad lobes (lunate = moon-shaped).
   lunate,
-  ///
+  /// Deeply notched; two long lobes, tip well inset (~35% length).
   forked,
-  ///
+  /// Single point at full length; no notch or lobes.
   pointed,
-  ///
-  rhomboid
+  /// Diamond-shaped; pointed tip at full length with angled sides.
+  rhomboid,
 }
 
 /// Creature definition: identity and appearance, outside engine and renderer.
@@ -52,25 +52,4 @@ class Creature {
     this.lateralFins,
     this.color = 0xFF2E7D32,
   }) : vertexWidths = vertexWidths.map((w) => w.clamp(minVertexWidth, maxVertexWidth)).toList();
-
-  /// Creature with [segmentCount] segments and uniform width (clamped to min/max).
-  factory Creature.withSegments(
-    int segmentCount, {
-    int color = 0xFF2E7D32,
-    double width = 30.0,
-    List<(List<int>, double?)>? dorsalFins,
-    int? finColor,
-    CaudalFinType? tailFin,
-    List<int>? lateralFins,
-  }) {
-    final w = width.clamp(minVertexWidth, maxVertexWidth);
-    return Creature(
-      vertexWidths: List.filled(segmentCount + 1, w),
-      dorsalFins: dorsalFins,
-      finColor: finColor,
-      tailFin: tailFin,
-      lateralFins: lateralFins,
-      color: color,
-    );
-  }
 }

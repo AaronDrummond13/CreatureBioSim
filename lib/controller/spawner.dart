@@ -231,8 +231,8 @@ class Spawner {
     final n = spine.headIndex;
     final len = spine.segmentLength;
     for (var i = 0; i <= n; i++) {
-      spine.particles[i].position.x = headX + (i - n) * len;
-      spine.particles[i].position.y = headY;
+      spine.nodes[i].position.x = headX + (i - n) * len;
+      spine.nodes[i].position.y = headY;
     }
   }
 }

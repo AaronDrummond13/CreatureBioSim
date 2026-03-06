@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'angle_util.dart';
-import 'particle.dart';
+import 'spine_node.dart';
 import 'vector.dart';
 
 /// Spine simulation engine: head-driven kinematic resolve, angle constraints,
@@ -16,7 +16,7 @@ class Spine {
   final double segmentLength;
   final double maxJointAngleRad;
 
-  final List<Particle> particles = [];
+  final List<SpineNode> nodes = [];
   final List<double> _segmentAngles = [];
 
   Spine({
@@ -29,14 +29,14 @@ class Spine {
          maxMaxJointAngleRad,
        ) {
     for (var i = 0; i <= segmentCount; i++) {
-      particles.add(Particle(i * segmentLength, 0));
+      nodes.add(SpineNode(i * segmentLength, 0));
     }
     for (var i = 0; i < segmentCount; i++) {
       _segmentAngles.add(0.0);
     }
   }
 
-  int get headIndex => particles.length - 1;
+  int get headIndex => nodes.length - 1;
 
   /// Kinematic resolve: set head to target, propagate toward base, clamp bends,
   /// then spread curve. Uses [intendedTargetX/Y] for reverse check when provided.
@@ -50,7 +50,7 @@ class Spine {
     final checkX = intendedTargetX ?? targetX;
     final checkY = intendedTargetY ?? targetY;
     if (n >= 1) {
-      final neck = particles[n - 1].position;
+      final neck = nodes[n - 1].position;
       final headDir = _segmentAngles[n - 1];
       final dx = checkX - neck.x;
       final dy = checkY - neck.y;
@@ -64,12 +64,12 @@ class Spine {
         }
       }
     }
-    particles[n].position.x = targetX;
-    particles[n].position.y = targetY;
+    nodes[n].position.x = targetX;
+    nodes[n].position.y = targetY;
 
     for (var i = n - 1; i >= 0; i--) {
-      final next = particles[i + 1];
-      final cur = particles[i];
+      final next = nodes[i + 1];
+      final cur = nodes[i];
       final dx = next.position.x - cur.position.x;
       final dy = next.position.y - cur.position.y;
       final curAngle = math.atan2(dy, dx);
@@ -78,9 +78,9 @@ class Spine {
           : (n > 1 ? _segmentAngles[1] : curAngle);
       final newAngle = constrainAngle(curAngle, anchor, maxJointAngleRad);
       _segmentAngles[i] = newAngle;
-      particles[i].position.x =
+      nodes[i].position.x =
           next.position.x - math.cos(newAngle) * segmentLength;
-      particles[i].position.y =
+      nodes[i].position.y =
           next.position.y - math.sin(newAngle) * segmentLength;
     }
 
@@ -124,17 +124,17 @@ class Spine {
     }
     // Rebuild positions from clamped angles (head fixed at target).
     for (var i = n - 1; i >= 0; i--) {
-      final next = particles[i + 1];
-      particles[i].position.x =
+      final next = nodes[i + 1];
+      nodes[i].position.x =
           next.position.x - math.cos(_segmentAngles[i]) * segmentLength;
-      particles[i].position.y =
+      nodes[i].position.y =
           next.position.y - math.sin(_segmentAngles[i]) * segmentLength;
     }
   }
 
   /// Ordered positions for rendering: [base, ..., head].
   List<Vector2> get positions =>
-      particles.map((p) => Vector2(p.position.x, p.position.y)).toList();
+      nodes.map((p) => Vector2(p.position.x, p.position.y)).toList();
 
   /// Segment directions for rendering (angle of segment i is from vertex i toward i+1).
   List<double> get segmentAngles => List<double>.from(_segmentAngles);

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'simulation_screen.dart';
 
 void main() {
@@ -11,8 +10,6 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: const Scaffold(body: SimulationScreen()),
-    );
+    return MaterialApp(home: const Scaffold(body: SimulationScreen()));
   }
 }
