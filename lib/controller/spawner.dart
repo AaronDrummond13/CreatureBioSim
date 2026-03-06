@@ -168,11 +168,11 @@ class Spawner {
     return widths;
   }
 
-  /// 0–3 fins, each at least 3 segments, non-overlapping.
+  /// Up to 2 fins, each at least 3 segments, non-overlapping and not connected (gap of ≥1 segment).
   List<(List<int>, double?)>? _randomDorsalFins(int segmentCount) {
     if (segmentCount < 3) return null;
     const minFinSegments = 3;
-    const maxFins = 3;
+    const maxFins = 2;
     final numFins = _rng.nextInt(maxFins + 1);
     if (numFins == 0) return null;
 
@@ -196,6 +196,8 @@ class Spawner {
       if (candidates.isEmpty) break;
       final start = candidates[_rng.nextInt(candidates.length)];
       for (var j = start; j < start + len; j++) used.add(j);
+      if (start > 0) used.add(start - 1);
+      if (start + len < segmentCount) used.add(start + len);
       final segments = List<int>.generate(len, (i) => start + i);
       final height = _rng.nextBool() ? 12.0 + _rng.nextDouble() * 14.0 : null;
       fins.add((segments, height));
