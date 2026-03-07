@@ -9,6 +9,7 @@ import 'vector.dart';
 class Spine {
   static const double minSegmentLength = 5.0;
   static const double maxSegmentLength = 30.0;
+  static const int maxSegmentCount = 15;
   static const double minMaxJointAngleRad = 0.2;
   static const double maxMaxJointAngleRad = 0.6;
 
@@ -20,18 +21,19 @@ class Spine {
   final List<double> _segmentAngles = [];
 
   Spine({
-    this.segmentCount = 1,
+    int segmentCount = 1,
     double segmentLength = 10.0,
     double maxJointAngleRad = 0.4,
-  }) : segmentLength = segmentLength.clamp(minSegmentLength, maxSegmentLength),
+  }) : segmentCount = segmentCount.clamp(1, maxSegmentCount),
+       segmentLength = segmentLength.clamp(minSegmentLength, maxSegmentLength),
        maxJointAngleRad = maxJointAngleRad.clamp(
          minMaxJointAngleRad,
          maxMaxJointAngleRad,
        ) {
-    for (var i = 0; i <= segmentCount; i++) {
+    for (var i = 0; i <= this.segmentCount; i++) {
       nodes.add(SpineNode(i * segmentLength, 0));
     }
-    for (var i = 0; i < segmentCount; i++) {
+    for (var i = 0; i < this.segmentCount; i++) {
       _segmentAngles.add(0.0);
     }
   }

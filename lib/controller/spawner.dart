@@ -42,7 +42,7 @@ class Spawner {
   }
 
   Creature _randomCreature() {
-    final segmentCount = 5 + _rng.nextInt(14);
+    final segmentCount = 1 + _rng.nextInt(14);
     final vertexCount = segmentCount + 1;
     final widths = _smoothVertexWidths(vertexCount);
     final color = 0xFF000000 | _rng.nextInt(0xFFFFFF);
@@ -52,9 +52,13 @@ class Spawner {
     return Creature(
       vertexWidths: widths,
       color: color,
-      dorsalFins: (dorsalFins == null || dorsalFins.isEmpty) ? null : dorsalFins,
+      dorsalFins: (dorsalFins == null || dorsalFins.isEmpty)
+          ? null
+          : dorsalFins,
       tailFin: tailFin,
-      lateralFins: (lateralFins == null || lateralFins.isEmpty) ? null : lateralFins,
+      lateralFins: (lateralFins == null || lateralFins.isEmpty)
+          ? null
+          : lateralFins,
     );
   }
 
@@ -75,8 +79,10 @@ class Spawner {
     if (vertexCount <= numKeys) {
       return List<double>.generate(
         vertexCount,
-        (_) => Creature.minVertexWidth +
-            _rng.nextDouble() * (Creature.maxVertexWidth - Creature.minVertexWidth),
+        (_) =>
+            Creature.minVertexWidth +
+            _rng.nextDouble() *
+                (Creature.maxVertexWidth - Creature.minVertexWidth),
       );
     }
     final keyIndices = <int>[0];
@@ -87,7 +93,8 @@ class Spawner {
 
     final keyWidths = keyIndices.map((_) {
       return Creature.minVertexWidth +
-          _rng.nextDouble() * (Creature.maxVertexWidth - Creature.minVertexWidth);
+          _rng.nextDouble() *
+              (Creature.maxVertexWidth - Creature.minVertexWidth);
     }).toList();
 
     final widths = <double>[];

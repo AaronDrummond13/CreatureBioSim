@@ -17,10 +17,11 @@ enum CaudalFinType {
 }
 
 /// Creature definition: identity and appearance, outside engine and renderer.
-/// Spine length is implied by [vertexWidths] (segmentCount = vertexWidths.length - 1).
+/// Spine length is implied by [vertexWidths] (segmentCount = vertexWidths.length - 1). Capped at [maxSegmentCount].
 class Creature {
   static const double minVertexWidth = 10.0;
   static const double maxVertexWidth = 50.0;
+  static const int maxSegmentCount = 15;
 
   /// Fill colour as 0xAARRGGBB. Renderer uses this when drawing.
   final int color;
@@ -41,7 +42,7 @@ class Creature {
   /// Rendered under the body as rotated ellipses. Only indices < segmentCount (not head) are valid.
   final List<int>? lateralFins;
 
-  /// Number of spine segments (vertexWidths.length - 1).
+  /// Number of spine segments (vertexWidths.length - 1), capped at [maxSegmentCount].
   int get segmentCount => vertexWidths.length - 1;
 
   Creature({
@@ -51,5 +52,8 @@ class Creature {
     this.tailFin,
     this.lateralFins,
     this.color = 0xFF2E7D32,
-  }) : vertexWidths = vertexWidths.map((w) => w.clamp(minVertexWidth, maxVertexWidth)).toList();
+  }) : vertexWidths = vertexWidths
+      .take(maxSegmentCount + 1)
+      .map((w) => w.clamp(minVertexWidth, maxVertexWidth))
+      .toList();
 }
