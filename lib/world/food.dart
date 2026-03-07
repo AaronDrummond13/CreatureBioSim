@@ -23,7 +23,7 @@ class FoodItem {
 /// Mutable chunk state: plant cells (food). Chunk-based generation and culling; uses [World] chunk grid (500 units).
 class FoodStore {
   FoodStore({
-    this.targetDensity = 1 / 115200.0,
+    this.targetDensity = 1 / 230400.0,
     this.radiusWorld = 14.0,
     Random? random,
   }) : _random = random ?? Random();

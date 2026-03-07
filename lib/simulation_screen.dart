@@ -29,27 +29,20 @@ class _SimulationScreenState extends State<SimulationScreen>
   final Creature _creature = Creature(
     vertexWidths: [
       // tail → head (index 0 = tail, last = head)
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
       10,
       10,
-      10,
-      10,
-      10,
-      15,
       20,
       30,
       30,
-      30,
-      35,
-      35,
-      30,
-      30,
-      30,
-      20,
-      20,
-      30,
-      30,
-      30,
-      20,
     ],
     dorsalFins: [
       ([14, 15, 16, 17, 18, 19], 8.0),
@@ -57,7 +50,7 @@ class _SimulationScreenState extends State<SimulationScreen>
     ],
     color: 0xFF2E7D32,
     finColor: 0xFF5EAD62,
-    tailFin: CaudalFinType.truncate,
+    tailFin: CaudalFinType.lunate,
     lateralFins: [17],
   );
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
@@ -162,8 +155,16 @@ class _SimulationScreenState extends State<SimulationScreen>
       for (final e in _spawner.entities) {
         e.botController.tick();
       }
-      _foodStore.deleteFar(_viewState.cameraX, _viewState.cameraY, kFoodActiveRadiusWorld);
-      _foodStore.ensureChunkGenerated(_viewState.cameraX, _viewState.cameraY, kFoodActiveRadiusWorld);
+      _foodStore.deleteFar(
+        _viewState.cameraX,
+        _viewState.cameraY,
+        kFoodActiveRadiusWorld,
+      );
+      _foodStore.ensureChunkGenerated(
+        _viewState.cameraX,
+        _viewState.cameraY,
+        kFoodActiveRadiusWorld,
+      );
     }
     _foodStore.tick(_viewState.timeSeconds);
     if (mounted) setState(() {});
