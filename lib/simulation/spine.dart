@@ -22,7 +22,7 @@ class Spine {
   Spine({
     this.segmentCount = 1,
     double segmentLength = 10.0,
-    double maxJointAngleRad = 0.25,
+    double maxJointAngleRad = 0.4,
   }) : segmentLength = segmentLength.clamp(minSegmentLength, maxSegmentLength),
        maxJointAngleRad = maxJointAngleRad.clamp(
          minMaxJointAngleRad,
