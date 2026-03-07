@@ -2,7 +2,7 @@ import 'dart:math' show cos, pi, Random, sin, sqrt;
 
 import 'world.dart';
 
-/// Single food item in world space.
+/// A plant cell (food) in world space. Rendered as a hollow curved hexagon; see [FoodPainter].
 class FoodItem {
   FoodItem(this.x, this.y);
 
@@ -10,10 +10,10 @@ class FoodItem {
   final double y;
 }
 
-/// Mutable chunk state: food. Chunk-based generation and culling; uses [World] chunk grid (500 units).
+/// Mutable chunk state: plant cells (food). Chunk-based generation and culling; uses [World] chunk grid (500 units).
 class FoodStore {
   FoodStore({
-    this.targetDensity = 1 / 57600.0,
+    this.targetDensity = 1 / 115200.0,
     this.radiusWorld = 14.0,
     Random? random,
   }) : _random = random ?? Random();
@@ -152,6 +152,28 @@ class FoodStore {
     final dx = px < x0 ? x0 - px : (px > x1 ? px - x1 : 0.0);
     final dy = py < y0 ? y0 - py : (py > y1 ? py - y1 : 0.0);
     return dx * dx + dy * dy;
+  }
+
+  /// Drift speed in world units per second. Applied in [tick].
+  static const double driftSpeed = 18.0;
+
+  double _lastTimeSeconds = 0;
+
+  /// Update plant cell positions with a slow drift (time-based field). Call each frame with current time in seconds.
+  void tick(double timeSeconds) {
+    if (_items.isEmpty) return;
+    var dt = timeSeconds - _lastTimeSeconds;
+    _lastTimeSeconds = timeSeconds;
+    if (dt <= 0 || dt > 0.1) dt = 1 / 60.0;
+    final t = timeSeconds;
+    final newItems = _items.map((item) {
+      final dx = driftSpeed * (sin(t * 0.3) + 0.4 * sin(t + item.x * 0.015)) * dt;
+      final dy = driftSpeed * (cos(t * 0.4) + 0.4 * cos(t + item.y * 0.015)) * dt;
+      return FoodItem(item.x + dx, item.y + dy);
+    }).toList();
+    _items
+      ..clear()
+      ..addAll(newItems);
   }
 
   /// Ensure every chunk that overlaps the circle of [radius] around (cx, cy) has food generated.

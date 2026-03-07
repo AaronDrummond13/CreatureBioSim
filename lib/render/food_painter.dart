@@ -5,14 +5,15 @@ import 'package:flutter/material.dart';
 import '../world/food.dart';
 import 'view.dart';
 
-/// Paints food as smooth curved hollow hexagons (ring: outer and inner path, green between).
+/// Paints plant cells (food) as smooth curved hollow hexagons (ring: outer and inner path, green fill between).
+/// See docs/BIOMES.md for world context.
 class FoodPainter extends CustomPainter {
   FoodPainter({
     required this.view,
     required this.items,
     this.foodRadiusWorld = 14.0,
     this.fillColor = const Color(0xFF4A7C59),
-    this.innerRadiusFrac = 0.5,
+    this.innerRadiusFrac = 0.68,
   });
 
   final CameraView view;
@@ -35,8 +36,15 @@ class FoodPainter extends CustomPainter {
       ..color = Colors.white
       ..style = PaintingStyle.stroke
       ..strokeWidth = (2.0 * z).clamp(1.0, 2.0);
+    final innerStrokePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = (2.0 * z).clamp(1.0, 2.0);
     final fillPaint = Paint()
       ..color = fillColor
+      ..style = PaintingStyle.fill;
+    final innerFillPaint = Paint()
+      ..color = fillColor.withValues(alpha: 0.5)
       ..style = PaintingStyle.fill;
 
     for (final food in items) {
@@ -45,8 +53,10 @@ class FoodPainter extends CustomPainter {
       final outer = _smoothHexagonPath(cx, cy, rScreen);
       final inner = _smoothHexagonPath(cx, cy, rScreen * innerRadiusFrac.clamp(0.01, 0.99));
       final ring = Path.combine(PathOperation.difference, outer, inner);
+      canvas.drawPath(inner, innerFillPaint);
       canvas.drawPath(ring, fillPaint);
       canvas.drawPath(outer, strokePaint);
+      canvas.drawPath(inner, innerStrokePaint);
     }
   }
 

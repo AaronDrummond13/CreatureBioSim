@@ -160,6 +160,7 @@ class _SimulationScreenState extends State<SimulationScreen>
       _foodStore.deleteFar(_viewState.cameraX, _viewState.cameraY, r);
       _foodStore.ensureChunkGenerated(_viewState.cameraX, _viewState.cameraY, r);
     }
+    _foodStore.tick(_viewState.timeSeconds);
     if (mounted) setState(() {});
   }
 

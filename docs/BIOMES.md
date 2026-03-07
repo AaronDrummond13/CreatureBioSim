@@ -14,6 +14,10 @@ World is divided into **chunks** (5000 units by default). Chunks form a **10×10
 
 **Blending:** At any world position we blend the colours of the 4 neighbouring chunk corners (bilinear) so boundaries are smooth.
 
+## Plant cells (food)
+
+The green collectibles are **plant cells**: chunk-based, generated and culled like world state (see `lib/world/food.dart`). They are rendered as smooth curved hollow hexagons (ring + inner fill) in `lib/render/food_painter.dart`. Herbivores are intended to collect these (IDEAS.md).
+
 ## Staging (see IDEAS.md)
 - Start with no biomes (e.g. fresh water everywhere). When the organism “grows” (implied scale), either introduce biomes as a concept or turn on biome effects. TBD.
 
