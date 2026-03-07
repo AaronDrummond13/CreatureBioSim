@@ -53,14 +53,17 @@ class _SimulationScreenState extends State<SimulationScreen>
     color: 0xFF2E7D32,
     finColor: 0xFF5EAD62,
     tailFin: CaudalFinType.lunate,
-    lateralFins: [17],
+    lateralFins: [4],
   );
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
 
   final Spawner _spawner = Spawner();
   late final CreatureStore _creatureStore = CreatureStore(spawner: _spawner);
   final FoodStore _foodStore = FoodStore();
-  late final ChunkManager _chunkManager = ChunkManager(foodStore: _foodStore, creatureStore: _creatureStore);
+  late final ChunkManager _chunkManager = ChunkManager(
+    foodStore: _foodStore,
+    creatureStore: _creatureStore,
+  );
   final BiomeMap _biomeMap = BiomeMap();
   bool _chunksInitialized = false;
 
@@ -144,7 +147,12 @@ class _SimulationScreenState extends State<SimulationScreen>
           ? _creature.vertexWidths.last
           : _foodStore.radiusWorld;
       final consumeRadius = _foodStore.radiusWorld + headSize;
-      _foodStore.consumeNear(head.x, head.y, consumeRadius, _viewState.timeSeconds);
+      _foodStore.consumeNear(
+        head.x,
+        head.y,
+        consumeRadius,
+        _viewState.timeSeconds,
+      );
     }
     _viewState.timeSeconds = elapsed.inMilliseconds / 1000.0;
     _bgController.tick();
