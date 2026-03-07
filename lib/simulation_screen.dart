@@ -13,6 +13,7 @@ import 'render/spine_painter.dart';
 import 'simulation/spine.dart';
 import 'simulation_view_state.dart';
 import 'world/biome_map.dart';
+import 'world/chunk_manager.dart';
 import 'world/food.dart';
 import 'world/world.dart' show kFoodActiveRadiusWorld;
 
@@ -58,9 +59,10 @@ class _SimulationScreenState extends State<SimulationScreen>
 
   final Spawner _spawner = Spawner();
   late final CreatureStore _creatureStore = CreatureStore(spawner: _spawner);
-  final BiomeMap _biomeMap = BiomeMap();
   final FoodStore _foodStore = FoodStore();
-  bool _foodGenerated = false;
+  late final ChunkManager _chunkManager = ChunkManager(foodStore: _foodStore, creatureStore: _creatureStore);
+  final BiomeMap _biomeMap = BiomeMap();
+  bool _chunksInitialized = false;
 
   /// Single background creature: big, blurred, slow, drawn behind the dots.
   late final Creature _bgCreature;
@@ -147,22 +149,12 @@ class _SimulationScreenState extends State<SimulationScreen>
     _viewState.timeSeconds = elapsed.inMilliseconds / 1000.0;
     _bgController.tick();
     if (_viewState.viewWidthWorld > 0 && _viewState.viewHeightWorld > 0) {
-      _creatureStore.update(
+      _chunkManager.update(
         _viewState.cameraX,
         _viewState.cameraY,
         kFoodActiveRadiusWorld,
       );
       _creatureStore.tick();
-      _foodStore.deleteFar(
-        _viewState.cameraX,
-        _viewState.cameraY,
-        kFoodActiveRadiusWorld,
-      );
-      _foodStore.ensureChunkGenerated(
-        _viewState.cameraX,
-        _viewState.cameraY,
-        kFoodActiveRadiusWorld,
-      );
     }
     _foodStore.tick(_viewState.timeSeconds);
     if (mounted) setState(() {});
@@ -170,13 +162,13 @@ class _SimulationScreenState extends State<SimulationScreen>
 
   List<Widget> _buildViewStack(Size size) {
     _viewState.setViewSize(size);
-    if (!_foodGenerated) {
-      _foodStore.generateInArea(
+    if (!_chunksInitialized) {
+      _chunkManager.update(
         _viewState.cameraX,
         _viewState.cameraY,
         kFoodActiveRadiusWorld,
       );
-      _foodGenerated = true;
+      _chunksInitialized = true;
     }
     final cameraView = _viewState.cameraView;
     final bgView = _viewState.backgroundCameraView();

@@ -51,3 +51,10 @@ int wrapBiomeRegion(int value) {
 
 /// Stable string key for chunk (cx, cy). Use for sets/maps of generated chunks, etc.
 String chunkKey(int cx, int cy) => '$cx,$cy';
+
+/// Squared distance from point (px, py) to AABB [x0,x1]×[y0,y1]. 0 if point inside.
+double distSqToAabb(double px, double py, double x0, double x1, double y0, double y1) {
+  final dx = px < x0 ? x0 - px : (px > x1 ? px - x1 : 0.0);
+  final dy = py < y0 ? y0 - py : (py > y1 ? py - y1 : 0.0);
+  return dx * dx + dy * dy;
+}
