@@ -2,12 +2,22 @@ import 'dart:math' show cos, pi, Random, sin, sqrt;
 
 import 'world.dart';
 
-/// A plant cell (food) in world space. Rendered as a hollow curved hexagon; see [FoodPainter].
+/// Cell type for food items. Plant = green hexagon; animal = red circle.
+enum CellType { plant, animal }
+
+/// A plant or animal cell (food) in world space. See [FoodPainter].
+/// [nucleusOffsetX] and [nucleusOffsetY] place the nucleus near the centre (random per cell).
 class FoodItem {
-  FoodItem(this.x, this.y);
+  FoodItem(this.x, this.y,
+      {this.nucleusOffsetX = 0,
+      this.nucleusOffsetY = 0,
+      this.cellType = CellType.plant});
 
   final double x;
   final double y;
+  final double nucleusOffsetX;
+  final double nucleusOffsetY;
+  final CellType cellType;
 }
 
 /// Mutable chunk state: plant cells (food). Chunk-based generation and culling; uses [World] chunk grid (500 units).
@@ -63,7 +73,10 @@ class FoodStore {
       final x = cx + r * cos(theta);
       final y = cy + r * sin(theta);
       if (!_tooCloseToExisting(x, y, minDist)) {
-        _items.add(FoodItem(x, y));
+        final nux = (_random.nextDouble() * 2 - 1) * radiusWorld * 0.12;
+        final nuy = (_random.nextDouble() * 2 - 1) * radiusWorld * 0.12;
+        final type = _random.nextInt(8) == 0 ? CellType.animal : CellType.plant;
+        _items.add(FoodItem(x, y, nucleusOffsetX: nux, nucleusOffsetY: nuy, cellType: type));
       }
       attempts++;
     }
@@ -139,7 +152,10 @@ class FoodStore {
       final y = centerY + r * sin(theta);
       if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <= r2 &&
           !_tooCloseToExisting(x, y, minDist)) {
-        _items.add(FoodItem(x, y));
+        final nux = (_random.nextDouble() * 2 - 1) * radiusWorld * 0.12;
+        final nuy = (_random.nextDouble() * 2 - 1) * radiusWorld * 0.12;
+        final type = _random.nextInt(8) == 0 ? CellType.animal : CellType.plant;
+        _items.add(FoodItem(x, y, nucleusOffsetX: nux, nucleusOffsetY: nuy, cellType: type));
         added++;
       }
       attempts++;
@@ -169,7 +185,13 @@ class FoodStore {
     final newItems = _items.map((item) {
       final dx = driftSpeed * (sin(t * 0.3) + 0.4 * sin(t + item.x * 0.015)) * dt;
       final dy = driftSpeed * (cos(t * 0.4) + 0.4 * cos(t + item.y * 0.015)) * dt;
-      return FoodItem(item.x + dx, item.y + dy);
+      return FoodItem(
+        item.x + dx,
+        item.y + dy,
+        nucleusOffsetX: item.nucleusOffsetX,
+        nucleusOffsetY: item.nucleusOffsetY,
+        cellType: item.cellType,
+      );
     }).toList();
     _items
       ..clear()

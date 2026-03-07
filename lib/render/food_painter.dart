@@ -2,17 +2,17 @@ import 'dart:math' show cos, pi, sin;
 
 import 'package:flutter/material.dart';
 
-import '../world/food.dart';
+import '../world/food.dart' show CellType, FoodItem;
 import 'view.dart';
 
-/// Paints plant cells (food) as smooth curved hollow hexagons (ring: outer and inner path, green fill between).
-/// See docs/BIOMES.md for world context.
+/// Paints plant cells (green hollow hexagon) and animal cells (red hollow circle). See docs/BIOMES.md.
 class FoodPainter extends CustomPainter {
   FoodPainter({
     required this.view,
     required this.items,
     this.foodRadiusWorld = 14.0,
     this.fillColor = const Color(0xFF4A7C59),
+    this.animalCellColor = const Color(0xFFb83c3c),
     this.innerRadiusFrac = 0.68,
   });
 
@@ -20,6 +20,7 @@ class FoodPainter extends CustomPainter {
   final List<FoodItem> items;
   final double foodRadiusWorld;
   final Color fillColor;
+  final Color animalCellColor;
   /// Inner radius as fraction of outer (0..1). Ring = area between outer and inner.
   final double innerRadiusFrac;
 
@@ -47,16 +48,48 @@ class FoodPainter extends CustomPainter {
       ..color = fillColor.withValues(alpha: 0.5)
       ..style = PaintingStyle.fill;
 
+    final animalFillPaint = Paint()
+      ..color = animalCellColor
+      ..style = PaintingStyle.fill;
+    final animalInnerFillPaint = Paint()
+      ..color = animalCellColor.withValues(alpha: 0.5)
+      ..style = PaintingStyle.fill;
+
+    final nucleusRadiusFrac = 0.22;
+    final nucleusPaint = Paint()
+      ..color = const Color(0xFF3d2914)
+      ..style = PaintingStyle.fill;
+    final nucleusStrokePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.35)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = (1.0 * z).clamp(0.5, 1.5);
+
     for (final food in items) {
       final cx = sx(food.x);
       final cy = sy(food.y);
-      final outer = _smoothHexagonPath(cx, cy, rScreen);
-      final inner = _smoothHexagonPath(cx, cy, rScreen * innerRadiusFrac.clamp(0.01, 0.99));
-      final ring = Path.combine(PathOperation.difference, outer, inner);
-      canvas.drawPath(inner, innerFillPaint);
-      canvas.drawPath(ring, fillPaint);
-      canvas.drawPath(outer, strokePaint);
-      canvas.drawPath(inner, innerStrokePaint);
+      final rInner = rScreen * innerRadiusFrac.clamp(0.01, 0.99);
+      if (food.cellType == CellType.animal) {
+        final outer = Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: rScreen));
+        final inner = Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: rInner));
+        final ring = Path.combine(PathOperation.difference, outer, inner);
+        canvas.drawPath(inner, animalInnerFillPaint);
+        canvas.drawPath(ring, animalFillPaint);
+        canvas.drawPath(outer, strokePaint);
+        canvas.drawPath(inner, innerStrokePaint);
+      } else {
+        final outer = _smoothHexagonPath(cx, cy, rScreen);
+        final inner = _smoothHexagonPath(cx, cy, rInner);
+        final ring = Path.combine(PathOperation.difference, outer, inner);
+        canvas.drawPath(inner, innerFillPaint);
+        canvas.drawPath(ring, fillPaint);
+        canvas.drawPath(outer, strokePaint);
+        canvas.drawPath(inner, innerStrokePaint);
+      }
+      final nx = sx(food.x + food.nucleusOffsetX);
+      final ny = sy(food.y + food.nucleusOffsetY);
+      final nr = rScreen * nucleusRadiusFrac;
+      canvas.drawCircle(Offset(nx, ny), nr, nucleusPaint);
+      canvas.drawCircle(Offset(nx, ny), nr, nucleusStrokePaint);
     }
   }
 
@@ -92,5 +125,6 @@ class FoodPainter extends CustomPainter {
       oldDelegate.items != items ||
       oldDelegate.foodRadiusWorld != foodRadiusWorld ||
       oldDelegate.fillColor != fillColor ||
+      oldDelegate.animalCellColor != animalCellColor ||
       oldDelegate.innerRadiusFrac != innerRadiusFrac;
 }
