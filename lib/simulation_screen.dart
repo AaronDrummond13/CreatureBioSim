@@ -144,7 +144,7 @@ class _SimulationScreenState extends State<SimulationScreen>
           ? _creature.vertexWidths.last
           : _foodStore.radiusWorld;
       final consumeRadius = _foodStore.radiusWorld + headSize;
-      _foodStore.consumeNear(head.x, head.y, consumeRadius);
+      _foodStore.consumeNear(head.x, head.y, consumeRadius, _viewState.timeSeconds);
     }
     _viewState.timeSeconds = elapsed.inMilliseconds / 1000.0;
     _bgController.tick();
@@ -208,6 +208,8 @@ class _SimulationScreenState extends State<SimulationScreen>
           painter: FoodPainter(
             view: cameraView,
             items: _foodStore.items,
+            consumedRemnants: _foodStore.consumedRemnants,
+            timeSeconds: t,
             foodRadiusWorld: _foodStore.radiusWorld,
           ),
         ),

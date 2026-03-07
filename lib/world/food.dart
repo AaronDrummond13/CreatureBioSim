@@ -6,6 +6,24 @@ import 'world.dart';
 enum CellType { plant, animal }
 
 /// A plant or animal cell (food) in world space. See [FoodPainter].
+/// Remnant after consumption: nucleus stays, drifts away from [headX, headY], and fades over 5s; body "burst" drawn for ~0.3s.
+class ConsumedRemnant {
+  ConsumedRemnant({
+    required this.x,
+    required this.y,
+    required this.nucleusOffsetX,
+    required this.nucleusOffsetY,
+    required this.cellType,
+    required this.consumedAt,
+    required this.headX,
+    required this.headY,
+  });
+  final double x, y, nucleusOffsetX, nucleusOffsetY;
+  final CellType cellType;
+  final double consumedAt;
+  final double headX, headY;
+}
+
 /// Linked to chunk [chunkCx], [chunkCy] for culling (stays linked even if it drifts out of chunk).
 class FoodItem {
   FoodItem(this.x, this.y, this.chunkCx, this.chunkCy,
@@ -39,18 +57,35 @@ class FoodStore {
   final List<FoodItem> _items = [];
   List<FoodItem> get items => _items;
 
+  final List<ConsumedRemnant> _consumedRemnants = [];
+  List<ConsumedRemnant> get consumedRemnants => _consumedRemnants;
+
   /// Minimum distance between food centres so they don't overlap (default 2× radius).
   double get minSpacing => 2.0 * radiusWorld;
 
-  /// Remove any food whose centre is within [radius] of (headX, headY). Call each tick with head position.
-  void consumeNear(double headX, double headY, [double? radius]) {
+  /// Remove any food whose centre is within [radius] of (headX, headY). If [timeSeconds] is set, adds a [ConsumedRemnant] for rendering burst + fading nucleus.
+  void consumeNear(double headX, double headY, [double? radius, double? timeSeconds]) {
     final r = radius ?? radiusWorld;
     final r2 = r * r;
     for (var i = _items.length - 1; i >= 0; i--) {
       final item = _items[i];
       final dx = item.x - headX;
       final dy = item.y - headY;
-      if (dx * dx + dy * dy <= r2) _items.removeAt(i);
+      if (dx * dx + dy * dy <= r2) {
+        if (timeSeconds != null) {
+          _consumedRemnants.add(ConsumedRemnant(
+            x: item.x,
+            y: item.y,
+            nucleusOffsetX: item.nucleusOffsetX,
+            nucleusOffsetY: item.nucleusOffsetY,
+            cellType: item.cellType,
+            consumedAt: timeSeconds,
+            headX: headX,
+            headY: headY,
+          ));
+        }
+        _items.removeAt(i);
+      }
     }
   }
 
@@ -109,8 +144,11 @@ class FoodStore {
 
   double _lastTimeSeconds = 0;
 
-  /// Update plant cell positions with a slow drift (time-based field). Call each frame with current time in seconds.
+  static const double remnantLifetimeSeconds = 7.5;
+
+  /// Update plant cell positions with a slow drift; prune consumed remnants older than [remnantLifetimeSeconds].
   void tick(double timeSeconds) {
+    _consumedRemnants.removeWhere((r) => timeSeconds - r.consumedAt > remnantLifetimeSeconds);
     if (_items.isEmpty) return;
     var dt = timeSeconds - _lastTimeSeconds;
     _lastTimeSeconds = timeSeconds;
