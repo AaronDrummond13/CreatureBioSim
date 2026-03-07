@@ -25,11 +25,14 @@ class FoodStore {
   FoodStore({
     this.targetDensity = 1 / 230400.0,
     this.radiusWorld = 14.0,
+    this.chunkSpawnChance = 0.25,
     Random? random,
   }) : _random = random ?? Random();
 
   final double targetDensity;
   final double radiusWorld;
+  /// Fraction of chunks that get any food (0..1). Only this fraction of in-range chunks will contain items.
+  final double chunkSpawnChance;
   final Random _random;
 
   final List<FoodItem> _items = [];
@@ -75,7 +78,7 @@ class FoodStore {
     _generatedChunks.clear();
     if (radius < 1) return;
     final area = pi * radius * radius;
-    final count = (area * targetDensity).round().clamp(0, 0x7FFFFFFF);
+    final count = (area * targetDensity * chunkSpawnChance).round().clamp(0, 0x7FFFFFFF);
     final minDist = minSpacing;
     var attempts = 0;
     const maxAttemptsPerItem = 500;
@@ -154,6 +157,10 @@ class FoodStore {
   }
 
   void _generateForChunk(int i, int j) {
+    if (chunkSpawnChance < 1.0 && _random.nextDouble() >= chunkSpawnChance) {
+      _generatedChunks.add(chunkKey(i, j));
+      return;
+    }
     final cellSize = kChunkSizeWorld;
     final centerX = (i + 0.5) * cellSize;
     final centerY = (j + 0.5) * cellSize;

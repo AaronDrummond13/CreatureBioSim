@@ -2,97 +2,14 @@ import 'dart:math' show Random;
 
 import '../creature.dart';
 import '../simulation/spine.dart';
-import 'bot_controller.dart';
 
-/// A creature plus its spine and bot controller, spawned off-screen.
-class SpawnedEntity {
-  SpawnedEntity({
-    required this.creature,
-    required this.spine,
-    required this.botController,
-  });
-
-  final Creature creature;
-  final Spine spine;
-  final BotController botController;
-}
-
-/// Spawns random creatures just off the visible view every [spawnInterval] seconds.
+/// Factory for random creatures and spines. Use with [CreatureStore] for chunk-based spawning.
 class Spawner {
-  Spawner({
-    this.spawnInterval = 10.0,
-    this.offScreenMargin = 80.0,
-    this.maxEntities = 20,
-    int? seed,
-  }) : _rng = Random(seed);
-
-  final double spawnInterval;
-  final double offScreenMargin;
-  final int maxEntities;
+  Spawner({int? seed}) : _rng = Random(seed);
 
   final Random _rng;
-  double _lastSpawnTime = -999.0;
-  final List<SpawnedEntity> _entities = [];
 
-  List<SpawnedEntity> get entities => _entities;
-
-  /// Call each tick. Spawns a new creature when interval has elapsed.
-  void tick(
-    double timeSeconds,
-    double cameraX,
-    double cameraY,
-    double viewWidthWorld,
-    double viewHeightWorld,
-  ) {
-    if (_lastSpawnTime < 0) _lastSpawnTime = timeSeconds;
-    if (timeSeconds - _lastSpawnTime < spawnInterval) return;
-    if (_entities.length >= maxEntities) return;
-    _lastSpawnTime = timeSeconds;
-
-    final viewLeft = cameraX - viewWidthWorld / 2;
-    final viewRight = cameraX + viewWidthWorld / 2;
-    final viewTop = cameraY - viewHeightWorld / 2;
-    final viewBottom = cameraY + viewHeightWorld / 2;
-
-    final side = _rng.nextInt(4);
-    double spawnX;
-    double spawnY;
-    switch (side) {
-      case 0:
-        spawnX = viewLeft - offScreenMargin;
-        spawnY = viewTop + _rng.nextDouble() * viewHeightWorld;
-        break;
-      case 1:
-        spawnX = viewRight + offScreenMargin;
-        spawnY = viewTop + _rng.nextDouble() * viewHeightWorld;
-        break;
-      case 2:
-        spawnX = viewLeft + _rng.nextDouble() * viewWidthWorld;
-        spawnY = viewTop - offScreenMargin;
-        break;
-      default:
-        spawnX = viewLeft + _rng.nextDouble() * viewWidthWorld;
-        spawnY = viewBottom + offScreenMargin;
-    }
-
-    final creature = _randomCreature();
-    final spine = Spine(segmentCount: creature.segmentCount);
-    _positionSpineHeadAt(spine, spawnX, spawnY);
-
-    final botController = BotController(
-      spine: spine,
-      wanderRadius: 800.0 + _rng.nextDouble() * 1200.0,
-      ticksPerNewTarget: 80 + _rng.nextInt(100),
-    );
-
-    _entities.add(SpawnedEntity(
-      creature: creature,
-      spine: spine,
-      botController: botController,
-    ));
-  }
-
-  /// Creates a random creature and spine positioned at [headX], [headY]. Does not add to entities.
+  /// Creates a random creature and spine positioned at [headX], [headY].
   (Creature, Spine) createRandomAt(double headX, double headY) {
     final creature = _randomCreature();
     final spine = Spine(segmentCount: creature.segmentCount);

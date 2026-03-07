@@ -24,8 +24,8 @@ class SimulationViewState {
   /// True while user has two fingers down (pinch). Target is frozen so zoom doesn't move it and cause shaking.
   bool touchTargetFrozen = false;
 
-  static const double minZoom = 0.4;
-  static const double maxZoom = 2.5;
+  static const double minZoom = 0.7;
+  static const double maxZoom = 2.1;
 
   CameraView get cameraView =>
       CameraView(cameraX: cameraX, cameraY: cameraY, zoom: zoom);
@@ -34,12 +34,11 @@ class SimulationViewState {
   CameraView backgroundCameraView({
     double parallaxFactor = 0.25,
     double zoomScale = 5.0,
-  }) =>
-      CameraView(
-        cameraX: cameraX * parallaxFactor,
-        cameraY: cameraY * parallaxFactor,
-        zoom: zoom * zoomScale,
-      );
+  }) => CameraView(
+    cameraX: cameraX * parallaxFactor,
+    cameraY: cameraY * parallaxFactor,
+    zoom: zoom * zoomScale,
+  );
 
   void setViewSize(Size size) {
     viewWidthWorld = size.width / zoom;
@@ -74,6 +73,5 @@ class SimulationViewState {
   }
 
   /// Clamp [newZoom] to [minZoom]..[maxZoom].
-  double clampZoom(double newZoom) =>
-      newZoom.clamp(minZoom, maxZoom);
+  double clampZoom(double newZoom) => newZoom.clamp(minZoom, maxZoom);
 }

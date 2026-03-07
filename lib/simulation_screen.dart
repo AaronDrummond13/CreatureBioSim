@@ -2,6 +2,7 @@ import 'dart:math' show sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 import 'controller/bot_controller.dart';
+import 'controller/creature_store.dart';
 import 'controller/spawner.dart';
 import 'creature.dart' show Creature, CaudalFinType;
 import 'input/simulation_gesture_region.dart';
@@ -55,7 +56,8 @@ class _SimulationScreenState extends State<SimulationScreen>
   );
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
 
-  final Spawner _spawner = Spawner(spawnInterval: 10.0);
+  final Spawner _spawner = Spawner();
+  late final CreatureStore _creatureStore = CreatureStore(spawner: _spawner);
   final BiomeMap _biomeMap = BiomeMap();
   final FoodStore _foodStore = FoodStore();
   bool _foodGenerated = false;
@@ -145,16 +147,12 @@ class _SimulationScreenState extends State<SimulationScreen>
     _viewState.timeSeconds = elapsed.inMilliseconds / 1000.0;
     _bgController.tick();
     if (_viewState.viewWidthWorld > 0 && _viewState.viewHeightWorld > 0) {
-      _spawner.tick(
-        _viewState.timeSeconds,
+      _creatureStore.update(
         _viewState.cameraX,
         _viewState.cameraY,
-        _viewState.viewWidthWorld,
-        _viewState.viewHeightWorld,
+        kFoodActiveRadiusWorld,
       );
-      for (final e in _spawner.entities) {
-        e.botController.tick();
-      }
+      _creatureStore.tick();
       _foodStore.deleteFar(
         _viewState.cameraX,
         _viewState.cameraY,
@@ -222,7 +220,7 @@ class _SimulationScreenState extends State<SimulationScreen>
           ),
         ),
       ),
-      ..._spawner.entities.map(
+      ..._creatureStore.entities.map(
         (e) => Positioned.fill(
           child: CustomPaint(
             painter: CreaturePainter(
