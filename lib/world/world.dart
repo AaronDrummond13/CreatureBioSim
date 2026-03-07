@@ -20,6 +20,9 @@ const double kBiomeRegionSizeWorld = kChunkSizeWorld * kBiomeRegionChunks;
 /// Biome grid size (wrap). 10×10 biome regions that wrap.
 const int kBiomeGridSize = 10;
 
+/// Radius (world units) for food generation/culling around the camera. Fixed; not tied to zoom or screen.
+const double kFoodActiveRadiusWorld = 6000.0;
+
 /// Chunk index for world x (unbounded).
 int chunkIndexX(double worldX) => (worldX / kChunkSizeWorld).floor();
 

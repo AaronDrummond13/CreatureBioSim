@@ -13,6 +13,7 @@ import 'simulation/spine.dart';
 import 'simulation_view_state.dart';
 import 'world/biome_map.dart';
 import 'world/food.dart';
+import 'world/world.dart' show kFoodActiveRadiusWorld;
 
 /// Screen that runs the spine simulation. Hold and drag on the screen:
 /// the head moves toward the touch point; drag to change direction.
@@ -142,6 +143,11 @@ class _SimulationScreenState extends State<SimulationScreen>
       }
       _viewState.cameraX = head.x;
       _viewState.cameraY = head.y;
+      final headSize = _creature.vertexWidths.isNotEmpty
+          ? _creature.vertexWidths.last
+          : _foodStore.radiusWorld;
+      final consumeRadius = _foodStore.radiusWorld + headSize;
+      _foodStore.consumeNear(head.x, head.y, consumeRadius);
     }
     _viewState.timeSeconds = elapsed.inMilliseconds / 1000.0;
     _bgController.tick();
@@ -156,9 +162,8 @@ class _SimulationScreenState extends State<SimulationScreen>
       for (final e in _spawner.entities) {
         e.botController.tick();
       }
-      final r = _viewState.viewWidthWorld;
-      _foodStore.deleteFar(_viewState.cameraX, _viewState.cameraY, r);
-      _foodStore.ensureChunkGenerated(_viewState.cameraX, _viewState.cameraY, r);
+      _foodStore.deleteFar(_viewState.cameraX, _viewState.cameraY, kFoodActiveRadiusWorld);
+      _foodStore.ensureChunkGenerated(_viewState.cameraX, _viewState.cameraY, kFoodActiveRadiusWorld);
     }
     _foodStore.tick(_viewState.timeSeconds);
     if (mounted) setState(() {});
@@ -167,15 +172,12 @@ class _SimulationScreenState extends State<SimulationScreen>
   List<Widget> _buildViewStack(Size size) {
     _viewState.setViewSize(size);
     if (!_foodGenerated) {
-      final r = _viewState.viewWidthWorld;
-      if (r >= 50) {
-        _foodStore.generateInArea(
-          _viewState.cameraX,
-          _viewState.cameraY,
-          r,
-        );
-        _foodGenerated = true;
-      }
+      _foodStore.generateInArea(
+        _viewState.cameraX,
+        _viewState.cameraY,
+        kFoodActiveRadiusWorld,
+      );
+      _foodGenerated = true;
     }
     final cameraView = _viewState.cameraView;
     final bgView = _viewState.backgroundCameraView();

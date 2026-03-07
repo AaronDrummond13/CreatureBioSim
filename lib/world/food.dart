@@ -43,6 +43,18 @@ class FoodStore {
   /// Minimum distance between food centres so they don't overlap (default 2× radius).
   double get minSpacing => 2.0 * radiusWorld;
 
+  /// Remove any food whose centre is within [radius] of (headX, headY). Call each tick with head position.
+  void consumeNear(double headX, double headY, [double? radius]) {
+    final r = radius ?? radiusWorld;
+    final r2 = r * r;
+    for (var i = _items.length - 1; i >= 0; i--) {
+      final item = _items[i];
+      final dx = item.x - headX;
+      final dy = item.y - headY;
+      if (dx * dx + dy * dy <= r2) _items.removeAt(i);
+    }
+  }
+
   static (int, int) _chunkAt(double x, double y) => chunkIndex(x, y);
 
   bool _tooCloseToExisting(double x, double y, double minDist) {
@@ -119,6 +131,9 @@ class FoodStore {
         _generatedChunks.remove(key);
       }
     }
+    // Allow empty (eaten) chunks to be regenerated only when they are far from camera (outer part of view).
+    // So eaten areas stay empty while nearby; when we leave and chunk is far, we clear it so revisiting refills.
+    final allowRegenDist2 = (radius * 0.6) * (radius * 0.6);
     for (final key in List<String>.from(_generatedChunks)) {
       final parts = key.split(',');
       if (parts.length != 2) continue;
@@ -129,7 +144,12 @@ class FoodStore {
         final (ii, jj) = _chunkAt(item.x, item.y);
         return ii == ci && jj == cj;
       });
-      if (!hasFood) _generatedChunks.remove(key);
+      if (hasFood) continue;
+      final chunkCx = (ci + 0.5) * cellSize;
+      final chunkCy = (cj + 0.5) * cellSize;
+      final dcx = cx - chunkCx;
+      final dcy = cy - chunkCy;
+      if (dcx * dcx + dcy * dcy > allowRegenDist2) _generatedChunks.remove(key);
     }
   }
 
