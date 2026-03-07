@@ -21,6 +21,9 @@ class SimulationViewState {
   Offset? lastTouchLocal;
   Size? lastTouchScreenSize;
 
+  /// True while user has two fingers down (pinch). Target is frozen so zoom doesn't move it and cause shaking.
+  bool touchTargetFrozen = false;
+
   static const double minZoom = 0.4;
   static const double maxZoom = 2.5;
 
@@ -43,25 +46,31 @@ class SimulationViewState {
     viewHeightWorld = size.height / zoom;
   }
 
+  /// Use zoom at touch start (pinchStartZoom) when set so target is independent of zoom during the gesture.
   void updateTouchFromLocal(Size screenSize, Offset local) {
-    touchX = cameraX + (local.dx - screenSize.width / 2) / zoom;
-    touchY = cameraY + (local.dy - screenSize.height / 2) / zoom;
+    if (touchTargetFrozen) return;
+    final z = pinchStartZoom ?? zoom;
+    touchX = cameraX + (local.dx - screenSize.width / 2) / z;
+    touchY = cameraY + (local.dy - screenSize.height / 2) / z;
     lastTouchLocal = local;
     lastTouchScreenSize = screenSize;
   }
 
-  /// Recompute touch target from stored screen position using current camera/zoom. Call each tick while finger is down.
+  /// Recompute touch target from stored screen position. No-op if pinching (target frozen).
   void refreshTouchFromStoredLocal() {
+    if (touchTargetFrozen) return;
     final local = lastTouchLocal;
     final size = lastTouchScreenSize;
     if (local == null || size == null) return;
-    touchX = cameraX + (local.dx - size.width / 2) / zoom;
-    touchY = cameraY + (local.dy - size.height / 2) / zoom;
+    final z = pinchStartZoom ?? zoom;
+    touchX = cameraX + (local.dx - size.width / 2) / z;
+    touchY = cameraY + (local.dy - size.height / 2) / z;
   }
 
   void clearLastTouch() {
     lastTouchLocal = null;
     lastTouchScreenSize = null;
+    touchTargetFrozen = false;
   }
 
   /// Clamp [newZoom] to [minZoom]..[maxZoom].

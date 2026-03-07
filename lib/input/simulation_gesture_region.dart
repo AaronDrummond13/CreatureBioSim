@@ -10,6 +10,9 @@ class SimulationGestureRegion extends StatefulWidget {
   /// Called when the single pointer moves. [local] is in local coordinates.
   final void Function(Offset local) onSinglePointerMove;
 
+  /// Called when the last pointer goes up (was single finger). Use to clear touch so creature stops at lift-off target.
+  final VoidCallback? onSinglePointerUp;
+
   /// Called when pinch starts. Use [ScaleStartDetails.localFocalPoint] for touch target; store zoom for scale updates.
   final void Function(ScaleStartDetails details) onScaleStart;
 
@@ -23,6 +26,7 @@ class SimulationGestureRegion extends StatefulWidget {
     super.key,
     required this.onSinglePointerDown,
     required this.onSinglePointerMove,
+    this.onSinglePointerUp,
     required this.onScaleStart,
     required this.onScaleUpdate,
     required this.onScaleEnd,
@@ -51,10 +55,14 @@ class _SimulationGestureRegionState extends State<SimulationGestureRegion> {
         }
       },
       onPointerUp: (_) {
+        final hadOne = _pointerCount == 1;
         _pointerCount = (_pointerCount - 1).clamp(0, 10);
+        if (hadOne) widget.onSinglePointerUp?.call();
       },
       onPointerCancel: (_) {
+        final hadOne = _pointerCount == 1;
         _pointerCount = (_pointerCount - 1).clamp(0, 10);
+        if (hadOne) widget.onSinglePointerUp?.call();
       },
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,

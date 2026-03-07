@@ -264,13 +264,16 @@ class _SimulationScreenState extends State<SimulationScreen>
                 onSinglePointerMove: (local) {
                   _viewState.updateTouchFromLocal(layerSize, local);
                 },
+                onSinglePointerUp: () {
+                  _viewState.clearLastTouch();
+                },
                 onScaleStart: (details) {
                   _viewState.pinchStartZoom = _viewState.zoom;
-                  _viewState.updateTouchFromLocal(layerSize, details.localFocalPoint);
+                  _viewState.touchTargetFrozen = details.pointerCount >= 2;
                   setState(() {});
                 },
                 onScaleUpdate: (details) {
-                  _viewState.updateTouchFromLocal(layerSize, details.localFocalPoint);
+                  _viewState.touchTargetFrozen = details.pointerCount >= 2;
                   if (_viewState.pinchStartZoom != null) {
                     final z = _viewState.clampZoom(
                       _viewState.pinchStartZoom! * details.scale,

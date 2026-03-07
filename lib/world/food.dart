@@ -2,13 +2,12 @@ import 'dart:math' show cos, pi, Random, sin, sqrt;
 
 import 'world.dart';
 
-/// Single food item in world space. [isInitial] true = first generation (green), false = later (blue).
+/// Single food item in world space.
 class FoodItem {
-  FoodItem(this.x, this.y, {this.isInitial = false});
+  FoodItem(this.x, this.y);
 
   final double x;
   final double y;
-  final bool isInitial;
 }
 
 /// Mutable chunk state: food. Chunk-based generation and culling; uses [World] chunk grid (500 units).
@@ -46,7 +45,7 @@ class FoodStore {
     return false;
   }
 
-  /// Fill the circle centered at (cx, cy) with radius [radius]. All items [isInitial] true (green).
+  /// Fill the circle centered at (cx, cy) with radius [radius].
   /// Call once on start. Marks the camera chunk as generated only if we actually added food.
   /// No-op if [radius] < 1 (avoids division by zero and avoids marking empty as generated).
   void generateInArea(double cx, double cy, double radius) {
@@ -64,7 +63,7 @@ class FoodStore {
       final x = cx + r * cos(theta);
       final y = cy + r * sin(theta);
       if (!_tooCloseToExisting(x, y, minDist)) {
-        _items.add(FoodItem(x, y, isInitial: true));
+        _items.add(FoodItem(x, y));
       }
       attempts++;
     }
@@ -140,7 +139,7 @@ class FoodStore {
       final y = centerY + r * sin(theta);
       if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <= r2 &&
           !_tooCloseToExisting(x, y, minDist)) {
-        _items.add(FoodItem(x, y, isInitial: false));
+        _items.add(FoodItem(x, y));
         added++;
       }
       attempts++;
@@ -155,7 +154,7 @@ class FoodStore {
     return dx * dx + dy * dy;
   }
 
-  /// Ensure every chunk that overlaps the circle of [radius] around (cx, cy) is generated (blue).
+  /// Ensure every chunk that overlaps the circle of [radius] around (cx, cy) has food generated.
   /// Uses same overlap test as clearing: chunk AABB within [radius] of (cx, cy).
   void ensureChunkGenerated(double cx, double cy, double radius) {
     if (radius < 1) return;
