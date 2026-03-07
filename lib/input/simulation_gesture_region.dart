@@ -10,11 +10,11 @@ class SimulationGestureRegion extends StatefulWidget {
   /// Called when the single pointer moves. [local] is in local coordinates.
   final void Function(Offset local) onSinglePointerMove;
 
-  /// Called when pinch starts. Parent should store current zoom for the coming scale updates.
-  final VoidCallback onScaleStart;
+  /// Called when pinch starts. Use [ScaleStartDetails.localFocalPoint] for touch target; store zoom for scale updates.
+  final void Function(ScaleStartDetails details) onScaleStart;
 
-  /// [scale] is the cumulative scale since [onScaleStart]. Parent: newZoom = startZoom * scale, then clamp and setState.
-  final void Function(double scale) onScaleUpdate;
+  /// [details.scale] = cumulative scale since start; [details.localFocalPoint] for touch target.
+  final void Function(ScaleUpdateDetails details) onScaleUpdate;
 
   /// Called when pinch ends. Parent can clear stored start zoom.
   final VoidCallback onScaleEnd;
@@ -58,8 +58,8 @@ class _SimulationGestureRegionState extends State<SimulationGestureRegion> {
       },
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
-        onScaleStart: (_) => widget.onScaleStart(),
-        onScaleUpdate: (details) => widget.onScaleUpdate(details.scale),
+        onScaleStart: (d) => widget.onScaleStart(d),
+        onScaleUpdate: (d) => widget.onScaleUpdate(d),
         onScaleEnd: (_) => widget.onScaleEnd(),
         child: const SizedBox.expand(),
       ),

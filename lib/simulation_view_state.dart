@@ -17,6 +17,10 @@ class SimulationViewState {
   /// Transient: set on pinch start, used in scale update, cleared on end.
   double? pinchStartZoom;
 
+  /// While the user is touching, store screen position so we can refresh touch target each frame (camera moves).
+  Offset? lastTouchLocal;
+  Size? lastTouchScreenSize;
+
   static const double minZoom = 0.4;
   static const double maxZoom = 2.5;
 
@@ -42,6 +46,22 @@ class SimulationViewState {
   void updateTouchFromLocal(Size screenSize, Offset local) {
     touchX = cameraX + (local.dx - screenSize.width / 2) / zoom;
     touchY = cameraY + (local.dy - screenSize.height / 2) / zoom;
+    lastTouchLocal = local;
+    lastTouchScreenSize = screenSize;
+  }
+
+  /// Recompute touch target from stored screen position using current camera/zoom. Call each tick while finger is down.
+  void refreshTouchFromStoredLocal() {
+    final local = lastTouchLocal;
+    final size = lastTouchScreenSize;
+    if (local == null || size == null) return;
+    touchX = cameraX + (local.dx - size.width / 2) / zoom;
+    touchY = cameraY + (local.dy - size.height / 2) / zoom;
+  }
+
+  void clearLastTouch() {
+    lastTouchLocal = null;
+    lastTouchScreenSize = null;
   }
 
   /// Clamp [newZoom] to [minZoom]..[maxZoom].

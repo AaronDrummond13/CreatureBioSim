@@ -115,6 +115,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   }
 
   void _onTick(Duration elapsed) {
+    _viewState.refreshTouchFromStoredLocal();
     final positions = _spine.positions;
     if (positions.isNotEmpty) {
       final head = positions.last;
@@ -263,21 +264,26 @@ class _SimulationScreenState extends State<SimulationScreen>
                 onSinglePointerMove: (local) {
                   _viewState.updateTouchFromLocal(layerSize, local);
                 },
-                onScaleStart: () {
+                onScaleStart: (details) {
                   _viewState.pinchStartZoom = _viewState.zoom;
+                  _viewState.updateTouchFromLocal(layerSize, details.localFocalPoint);
+                  setState(() {});
                 },
-                onScaleUpdate: (scale) {
-                  if (_viewState.pinchStartZoom == null) return;
-                  final z = _viewState.clampZoom(
-                    _viewState.pinchStartZoom! * scale,
-                  );
-                  if (z != _viewState.zoom) {
-                    _viewState.zoom = z;
-                    setState(() {});
+                onScaleUpdate: (details) {
+                  _viewState.updateTouchFromLocal(layerSize, details.localFocalPoint);
+                  if (_viewState.pinchStartZoom != null) {
+                    final z = _viewState.clampZoom(
+                      _viewState.pinchStartZoom! * details.scale,
+                    );
+                    if (z != _viewState.zoom) {
+                      _viewState.zoom = z;
+                    }
                   }
+                  setState(() {});
                 },
                 onScaleEnd: () {
                   _viewState.pinchStartZoom = null;
+                  _viewState.clearLastTouch();
                 },
               );
             },
