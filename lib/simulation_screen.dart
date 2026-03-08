@@ -24,31 +24,15 @@ import 'world/world.dart'
 /// Screen that runs the spine simulation. Hold and drag on the screen:
 /// the head moves toward the touch point; drag to change direction.
 class SimulationScreen extends StatefulWidget {
-  const SimulationScreen({super.key});
+  const SimulationScreen({super.key, this.initialCreature});
 
-  @override
-  State<SimulationScreen> createState() => _SimulationScreenState();
-}
+  /// When provided, used as the player creature (simulation restarts with it).
+  final Creature? initialCreature;
 
-class _SimulationScreenState extends State<SimulationScreen>
-    with SingleTickerProviderStateMixin {
-  final Creature _creature = Creature(
+  /// Default creature when [initialCreature] is null (e.g. first run).
+  static Creature defaultCreature() => Creature(
     vertexWidths: [
-      // tail → head (index 0 = tail, last = head)
-      20,
-      20,
-      20,
-      20,
-      20,
-      20,
-      20,
-      20,
-      20,
-      10,
-      10,
-      20,
-      30,
-      30,
+      20, 20, 20, 20, 20, 20, 20, 20, 20, 10, 10, 20, 30, 30,
     ],
     dorsalFins: [
       ([14, 15, 16, 17, 18, 19], 8.0),
@@ -59,7 +43,15 @@ class _SimulationScreenState extends State<SimulationScreen>
     tailFin: CaudalFinType.lunate,
     lateralFins: [4],
   );
-  late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
+
+  @override
+  State<SimulationScreen> createState() => _SimulationScreenState();
+}
+
+class _SimulationScreenState extends State<SimulationScreen>
+    with SingleTickerProviderStateMixin {
+  late final Creature _creature;
+  late final Spine _spine;
 
   final Spawner _spawner = Spawner();
   late final CreatureStore _creatureStore;
@@ -103,6 +95,8 @@ class _SimulationScreenState extends State<SimulationScreen>
   @override
   void initState() {
     super.initState();
+    _creature = widget.initialCreature ?? SimulationScreen.defaultCreature();
+    _spine = Spine(segmentCount: _creature.segmentCount);
     _foodStore = FoodStore(biomeMap: _biomeMap);
     _creatureStore = CreatureStore(spawner: _spawner, biomeMap: _biomeMap);
     final pos = _spine.positions;
