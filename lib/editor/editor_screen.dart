@@ -1,4 +1,4 @@
-import 'dart:math' show cos, pi, sin, sqrt;
+import 'dart:math' show atan2, cos, pi, sin, sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 import '../creature.dart';
@@ -6,6 +6,7 @@ import '../render/background_painter.dart';
 import '../render/creature_painter.dart';
 import '../render/tail_painter.dart';
 import '../render/view.dart';
+import '../simulation/angle_util.dart' show relativeAngleDiff;
 import '../simulation/spine.dart';
 import '../simulation/vector.dart';
 
@@ -101,18 +102,20 @@ class _SliderPainter extends CustomPainter {
 }
 
 /// Full-screen creature editor: left (or bottom) panel for properties, right (or top) for live preview.
-/// [onPlay] is called with the current creature when user starts play (e.g. overlay or in-editor Play button).
+/// Play and Test/Edit buttons are drawn inside the editor (top-right).
 class EditorScreen extends StatefulWidget {
   const EditorScreen({
     super.key,
     required this.initialCreature,
     required this.onPlay,
     required this.panelClosed,
+    required this.onTogglePanel,
   });
 
   final Creature initialCreature;
   final void Function(Creature creature) onPlay;
   final bool panelClosed;
+  final VoidCallback onTogglePanel;
 
   @override
   State<EditorScreen> createState() => EditorScreenState();
@@ -207,11 +210,59 @@ class EditorScreenState extends State<EditorScreen> {
     }
 
     return SafeArea(
-      child: content,
       top: !panelClosed,
       bottom: !panelClosed,
       left: !panelClosed,
       right: !panelClosed,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          content,
+          Positioned(
+            top: 10,
+            right: 10,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _editorTopButton(label: 'Play', onTap: () => widget.onPlay(_creature)),
+                const SizedBox(height: 8),
+                _editorTopButton(
+                  label: panelClosed ? 'Edit' : 'Test',
+                  onTap: widget.onTogglePanel,
+                  selected: !panelClosed,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _editorTopButton({
+    required String label,
+    required VoidCallback onTap,
+    bool selected = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? _EditorStyle.selected : _EditorStyle.fill,
+          borderRadius: BorderRadius.circular(_EditorStyle.radius),
+          border: Border.all(color: _EditorStyle.stroke, width: _EditorStyle.strokeWidth),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: _EditorStyle.text,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
     );
   }
 
@@ -1626,8 +1677,6 @@ class _EditorPreview extends StatefulWidget {
 
 class _EditorPreviewState extends State<_EditorPreview> with SingleTickerProviderStateMixin {
   late Spine _spine;
-  double _targetX = 0;
-  double _targetY = 0;
   double _dragTargetX = 0;
   double _dragTargetY = 0;
   double _zoom = 1.0;
@@ -1644,6 +1693,7 @@ class _EditorPreviewState extends State<_EditorPreview> with SingleTickerProvide
   double _lastPanY = 0;
   double _panStartX = 0;
   double _panStartY = 0;
+  double? _pinchStartZoom;
   Size _lastPreviewSize = Size.zero;
   double _lastCameraX = 0;
   double _lastCameraY = 0;
@@ -1694,8 +1744,10 @@ class _EditorPreviewState extends State<_EditorPreview> with SingleTickerProvide
   static const double _minZoom = 0.4;
   static const double _maxZoom = 2.5;
   static const double _zoomStep = 0.15;
-  /// Lerp per step so creature curls slowly toward drag point (not instant).
-  static const double _targetLerp = 0.025;
+  /// Same as SimulationScreen: fixed distance per step so speed is constant.
+  static const double _headMoveSpeed = 6.0;
+  static const double _arrivalThreshold = 10.0;
+  static const double _kGlobalTurnNudge = 0.02;
   /// Fixed sim step so editor movement matches play mode speed (60 steps/sec).
   static const double _kFixedDt = 1 / 60.0;
   static const int _kMaxStepsPerFrame = 5;
@@ -1707,8 +1759,6 @@ class _EditorPreviewState extends State<_EditorPreview> with SingleTickerProvide
     _positionSpineHeadAtOrigin();
     final head = _spine.positions.isNotEmpty ? _spine.positions.last : null;
     if (head != null) {
-      _targetX = head.x;
-      _targetY = head.y;
       _dragTargetX = head.x;
       _dragTargetY = head.y;
     }
@@ -1723,8 +1773,6 @@ class _EditorPreviewState extends State<_EditorPreview> with SingleTickerProvide
       _positionSpineHeadAtOrigin();
       final head = _spine.positions.isNotEmpty ? _spine.positions.last : null;
       if (head != null) {
-        _targetX = head.x;
-        _targetY = head.y;
         _dragTargetX = head.x;
         _dragTargetY = head.y;
       }
@@ -1760,14 +1808,44 @@ class _EditorPreviewState extends State<_EditorPreview> with SingleTickerProvide
         if (head != null) {
           _dragTargetX = head.x;
           _dragTargetY = head.y;
-          _targetX = head.x;
-          _targetY = head.y;
         }
-      } else {
-        _targetX += (_dragTargetX - _targetX) * _targetLerp;
-        _targetY += (_dragTargetY - _targetY) * _targetLerp;
       }
-      if (head != null) _spine.resolve(_targetX, _targetY);
+      if (head != null) {
+        final dx = _dragTargetX - head.x;
+        final dy = _dragTargetY - head.y;
+        final len = sqrt(dx * dx + dy * dy);
+        if (len <= _arrivalThreshold) {
+          _spine.resolve(
+            head.x,
+            head.y,
+            intendedTargetX: _dragTargetX,
+            intendedTargetY: _dragTargetY,
+          );
+          // No global nudge when arrived — avoids spazzing from rotating in place.
+        } else {
+          final step = _headMoveSpeed / len;
+          final nx = head.x + dx * step;
+          final ny = head.y + dy * step;
+          _spine.resolve(
+            nx,
+            ny,
+            intendedTargetX: _dragTargetX,
+            intendedTargetY: _dragTargetY,
+          );
+          if (_spine.segmentCount >= 2) {
+            final headPos = _spine.positions.last;
+            final headDir = _spine.segmentAngles.last;
+            final towardTouch = atan2(_dragTargetY - headPos.y, _dragTargetX - headPos.x);
+            final turn = relativeAngleDiff(headDir, towardTouch);
+            if (turn.abs() > _spine.maxJointAngleRad) {
+              final nudge = turn.abs() < _kGlobalTurnNudge
+                  ? turn
+                  : (turn > 0 ? _kGlobalTurnNudge : -_kGlobalTurnNudge);
+              _spine.rotateAroundBase(nudge);
+            }
+          }
+        }
+      }
     }
     _editorSimTimeSeconds += steps * _kFixedDt;
     if (steps > 0) setState(() {});
@@ -1971,54 +2049,66 @@ class _EditorPreviewState extends State<_EditorPreview> with SingleTickerProvide
               height: h,
               child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                onPanStart: (d) {
-                  _panStartX = d.localPosition.dx;
-                  _panStartY = d.localPosition.dy;
-                  _lastPanX = _panStartX;
-                  _lastPanY = _panStartY;
-                  if (isBodyEdit) {
-                    final node = _hitBodyNode(d.localPosition.dx, d.localPosition.dy);
-                    if (node != null && widget.onSegmentCountChanged != null) {
-                      _bodyDraggingNode = node;
-                    } else if (node == null && widget.onSegmentWidthDelta != null) {
-                      _bodyWidthDragSeg = segmentAtScreen(d.localPosition.dx, d.localPosition.dy).clamp(0, _spine.segmentCount - 1);
-                      final seg = _bodyWidthDragSeg!;
-                      final pos = _spine.positions;
-                      if (seg < pos.length - 1) {
-                        final cx = (pos[seg].x + pos[seg + 1].x) / 2;
-                        final cy = (pos[seg].y + pos[seg + 1].y) / 2;
-                        final centerX = w / 2;
-                        final centerY = h / 2;
-                        final sx = centerX + (cx - cameraX) * _zoom;
-                        final sy = centerY + (cy - cameraY) * _zoom;
-                        _bodyWidthDragLastDist = sqrt((d.localPosition.dx - sx) * (d.localPosition.dx - sx) + (d.localPosition.dy - sy) * (d.localPosition.dy - sy));
+                onScaleStart: (d) {
+                  final lx = d.localFocalPoint.dx;
+                  final ly = d.localFocalPoint.dy;
+                  if (d.pointerCount >= 2) {
+                    _pinchStartZoom = _zoom;
+                  } else {
+                    _panStartX = lx;
+                    _panStartY = ly;
+                    _lastPanX = lx;
+                    _lastPanY = ly;
+                    if (isBodyEdit) {
+                      final node = _hitBodyNode(lx, ly);
+                      if (node != null && widget.onSegmentCountChanged != null) {
+                        _bodyDraggingNode = node;
+                      } else if (node == null && widget.onSegmentWidthDelta != null) {
+                        _bodyWidthDragSeg = segmentAtScreen(lx, ly).clamp(0, _spine.segmentCount - 1);
+                        final seg = _bodyWidthDragSeg!;
+                        final pos = _spine.positions;
+                        if (seg < pos.length - 1) {
+                          final cx = (pos[seg].x + pos[seg + 1].x) / 2;
+                          final cy = (pos[seg].y + pos[seg + 1].y) / 2;
+                          final sx = centerX + (cx - cameraX) * _zoom;
+                          final sy = centerY + (cy - cameraY) * _zoom;
+                          _bodyWidthDragLastDist = sqrt((lx - sx) * (lx - sx) + (ly - sy) * (ly - sy));
+                        }
+                      } else if (node == null) {
+                        final worldX = (lx - centerX) / _zoom + cameraX;
+                        final worldY = (ly - centerY) / _zoom + cameraY;
+                        setState(() { _dragTargetX = worldX; _dragTargetY = worldY; });
                       }
-                    } else if (node == null) {
-                      final worldX = (d.localPosition.dx - centerX) / _zoom + cameraX;
-                      final worldY = (d.localPosition.dy - centerY) / _zoom + cameraY;
+                    } else if (isDorsalEdit && widget.selectedDorsalFinIndex != null) {
+                      final node = _hitDorsalNode(lx, ly);
+                      if (node != null) {
+                        _dorsalDraggingNode = node;
+                      } else if (_isTapOnDorsalFin(lx, ly)) {
+                        _dorsalDragFromFin = true;
+                      }
+                    } else if (isLateralEdit) {
+                      final seg = segmentAtScreen(lx, ly);
+                      final lateralSeg = _lateralSegNearScreen(lx, ly);
+                      _lateralPanStartSeg = lateralSeg ?? seg;
+                      if (widget.onLateralMoved != null && lateralSeg != null) _lateralDragFromSeg = lateralSeg;
+                    } else if (!isSpineLocked) {
+                      final worldX = (lx - centerX) / _zoom + cameraX;
+                      final worldY = (ly - centerY) / _zoom + cameraY;
                       setState(() { _dragTargetX = worldX; _dragTargetY = worldY; });
                     }
-                  } else if (isDorsalEdit && widget.selectedDorsalFinIndex != null) {
-                    final node = _hitDorsalNode(d.localPosition.dx, d.localPosition.dy);
-                    if (node != null) {
-                      _dorsalDraggingNode = node;
-                    } else if (_isTapOnDorsalFin(d.localPosition.dx, d.localPosition.dy)) {
-                      _dorsalDragFromFin = true;
-                    }
-                  } else if (isLateralEdit) {
-                    final seg = segmentAtScreen(d.localPosition.dx, d.localPosition.dy);
-                    final lateralSeg = _lateralSegNearScreen(d.localPosition.dx, d.localPosition.dy);
-                    _lateralPanStartSeg = lateralSeg ?? seg;
-                    if (widget.onLateralMoved != null && lateralSeg != null) _lateralDragFromSeg = lateralSeg;
-                  } else if (!isSpineLocked) {
-                    final worldX = (d.localPosition.dx - centerX) / _zoom + cameraX;
-                    final worldY = (d.localPosition.dy - centerY) / _zoom + cameraY;
-                    setState(() { _dragTargetX = worldX; _dragTargetY = worldY; });
                   }
                 },
-                onPanUpdate: (d) {
-                  _lastPanX = d.localPosition.dx;
-                  _lastPanY = d.localPosition.dy;
+                onScaleUpdate: (d) {
+                  final lx = d.localFocalPoint.dx;
+                  final ly = d.localFocalPoint.dy;
+                  if (_pinchStartZoom != null && d.pointerCount >= 2) {
+                    setState(() {
+                      _zoom = (_pinchStartZoom! * d.scale).clamp(_minZoom, _maxZoom);
+                    });
+                    return;
+                  }
+                  _lastPanX = lx;
+                  _lastPanY = ly;
                   if (_bodyDraggingNode != null && widget.onSegmentCountChanged != null) {
                     widget.onSegmentCountChanged!(_segmentCountFromTailDrag(centerX, centerY, cameraX, cameraY, positions));
                     setState(() {});
@@ -2065,14 +2155,15 @@ class _EditorPreviewState extends State<_EditorPreview> with SingleTickerProvide
                   }
                   if (_bodyDraggingNode != null || _dorsalDragFromFin || _dorsalDragStartSeg != null || _lateralDragFromSeg != null) return;
                   if (isSpineLocked) return;
-                  final worldX = (d.localPosition.dx - centerX) / _zoom + cameraX;
-                  final worldY = (d.localPosition.dy - centerY) / _zoom + cameraY;
+                  final worldX = (lx - centerX) / _zoom + cameraX;
+                  final worldY = (ly - centerY) / _zoom + cameraY;
                   setState(() {
                     _dragTargetX = worldX;
                     _dragTargetY = worldY;
                   });
                 },
-                onPanEnd: (_) {
+                onScaleEnd: (_) {
+                  _pinchStartZoom = null;
                   if (_bodyWidthDragSeg != null) {
                     setState(() => _bodyWidthDragSeg = null);
                     return;
@@ -2139,8 +2230,6 @@ class _EditorPreviewState extends State<_EditorPreview> with SingleTickerProvide
                     setState(() {
                       _dragTargetX = head.x;
                       _dragTargetY = head.y;
-                      _targetX = head.x;
-                      _targetY = head.y;
                     });
                   }
                 },

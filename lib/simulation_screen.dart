@@ -24,10 +24,12 @@ import 'world/world.dart'
 /// Screen that runs the spine simulation. Hold and drag on the screen:
 /// the head moves toward the touch point; drag to change direction.
 class SimulationScreen extends StatefulWidget {
-  const SimulationScreen({super.key, this.initialCreature});
+  const SimulationScreen({super.key, this.initialCreature, this.onEdit});
 
   /// When provided, used as the player creature (simulation restarts with it).
   final Creature? initialCreature;
+  /// When provided, an Edit button is shown (top-right) that calls this.
+  final VoidCallback? onEdit;
 
   /// Default creature when [initialCreature] is null (e.g. first run).
   static Creature defaultCreature() => Creature(
@@ -436,6 +438,11 @@ class _SimulationScreenState extends State<SimulationScreen>
     ];
   }
 
+  static const Color _kEditBtnStroke = Color(0xFF6b8a9e);
+  static const Color _kEditBtnFill = Color(0xFF2e3d4d);
+  static const Color _kEditBtnText = Color(0xFFe8eef2);
+  static const double _kEditBtnRadius = 8.0;
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -533,6 +540,31 @@ class _SimulationScreenState extends State<SimulationScreen>
             },
           ),
         ),
+        if (widget.onEdit != null)
+          Positioned(
+            top: MediaQuery.paddingOf(context).top + 10,
+            right: MediaQuery.paddingOf(context).right + 10,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: widget.onEdit,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _kEditBtnFill,
+                  borderRadius: BorderRadius.circular(_kEditBtnRadius),
+                  border: Border.all(color: _kEditBtnStroke, width: 1.5),
+                ),
+                child: const Text(
+                  'Edit',
+                  style: TextStyle(
+                    color: _kEditBtnText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
