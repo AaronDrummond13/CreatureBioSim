@@ -77,11 +77,17 @@ class CreatureStore {
 
     final doGroup = _random.nextInt(groupSpawnChanceOneIn) == 0;
     if (doGroup) {
+      const compositions = [
+        [false, false],             // 2 adults
+        [false, false, false],      // 3 adults
+        [false, false, true],       // 2 adults, 1 kid
+        [false, true, true, true],  // 1 adult, 3 kids
+      ];
+      final babyFlags = compositions[_random.nextInt(4)];
       final (creature, group) = spawner.createGroupAt(
         centerX,
         centerY,
-        count: 5,
-        babyChance: 0.4,
+        babyFlags: babyFlags,
       );
       for (final (spine, isBaby) in group) {
         final botController = BotController(

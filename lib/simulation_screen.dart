@@ -291,7 +291,7 @@ class _SimulationScreenState extends State<SimulationScreen>
             view: bgView,
             timeSeconds: t,
             blurSigma: 5,
-            layerOpacity: 0.35,
+            layerOpacity: .5,
           ),
         ),
       ),

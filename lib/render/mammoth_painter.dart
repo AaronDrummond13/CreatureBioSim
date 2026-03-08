@@ -27,9 +27,14 @@ class MammothPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (mammoths.isEmpty) return;
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    canvas.saveLayer(
+      rect,
+      Paint()..color = Colors.white.withValues(alpha: layerOpacity),
+    );
     final sigma = blurSigma.clamp(0.0, _maxBlurSigma);
     canvas.saveLayer(
-      Rect.fromLTWH(0, 0, size.width, size.height),
+      rect,
       Paint()..imageFilter = ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
     );
     for (final mammoth in mammoths) {
@@ -40,6 +45,7 @@ class MammothPainter extends CustomPainter {
         timeSeconds: timeSeconds,
       ).paint(canvas, size);
     }
+    canvas.restore();
     canvas.restore();
   }
 
