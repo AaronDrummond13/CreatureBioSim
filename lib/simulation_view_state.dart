@@ -45,6 +45,13 @@ class SimulationViewState {
     viewHeightWorld = size.height / zoom;
   }
 
+  /// Render rect in world coords with buffer so things don't pop at edges. (left, right, top, bottom).
+  (double, double, double, double) renderRectWithBuffer([double bufferFrac = 0.15]) {
+    final w = viewWidthWorld * (0.5 + bufferFrac);
+    final h = viewHeightWorld * (0.5 + bufferFrac);
+    return (cameraX - w, cameraX + w, cameraY - h, cameraY + h);
+  }
+
   /// Use zoom at touch start (pinchStartZoom) when set so target is independent of zoom during the gesture.
   void updateTouchFromLocal(Size screenSize, Offset local) {
     if (touchTargetFrozen) return;

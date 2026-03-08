@@ -58,3 +58,17 @@ double distSqToAabb(double px, double py, double x0, double x1, double y0, doubl
   final dy = py < y0 ? y0 - py : (py > y1 ? py - y1 : 0.0);
   return dx * dx + dy * dy;
 }
+
+/// True if circle (cx, cy, r) overlaps axis-aligned rect [left, right]×[top, bottom].
+bool circleOverlapsRect(
+  double cx, double cy, double r,
+  double left, double right, double top, double bottom,
+) =>
+    !(cx + r < left || cx - r > right || cy + r < top || cy - r > bottom);
+
+/// True if AABB [minX, maxX]×[minY, maxY] overlaps rect [left, right]×[top, bottom].
+bool aabbOverlapsRect(
+  double minX, double maxX, double minY, double maxY,
+  double left, double right, double top, double bottom,
+) =>
+    !(maxX < left || minX > right || maxY < top || minY > bottom);

@@ -15,7 +15,7 @@ import 'simulation_view_state.dart';
 import 'world/biome_map.dart';
 import 'world/chunk_manager.dart';
 import 'world/food.dart';
-import 'world/world.dart' show kFoodActiveRadiusWorld;
+import 'world/world.dart' show aabbOverlapsRect, circleOverlapsRect, kFoodActiveRadiusWorld;
 
 /// Screen that runs the spine simulation. Hold and drag on the screen:
 /// the head moves toward the touch point; drag to change direction.
@@ -185,6 +185,32 @@ class _SimulationScreenState extends State<SimulationScreen>
       _viewState.cameraX,
       _viewState.cameraY,
     );
+    final (left, right, top, bottom) = _viewState.renderRectWithBuffer(0.15);
+    final r = _foodStore.radiusWorld;
+    final visibleItems = _foodStore.items
+        .where((i) => circleOverlapsRect(i.x, i.y, r, left, right, top, bottom))
+        .toList();
+    const remnantRadius = 220.0;
+    final visibleRemnants = _foodStore.consumedRemnants
+        .where((r) => circleOverlapsRect(r.x, r.y, remnantRadius, left, right, top, bottom))
+        .toList();
+    const creatureMargin = 50.0;
+    final visibleEntities = _creatureStore.entities.where((e) {
+      final pos = e.spine.positions;
+      if (pos.isEmpty) return false;
+      var minX = pos[0].x, maxX = pos[0].x, minY = pos[0].y, maxY = pos[0].y;
+      for (final p in pos) {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      }
+      return aabbOverlapsRect(
+        minX - creatureMargin, maxX + creatureMargin,
+        minY - creatureMargin, maxY + creatureMargin,
+        left, right, top, bottom,
+      );
+    }).toList();
     return [
       Positioned.fill(
         child: CustomPaint(painter: SolidBackgroundPainter(color: bgColor)),
@@ -215,14 +241,14 @@ class _SimulationScreenState extends State<SimulationScreen>
         child: CustomPaint(
           painter: FoodPainter(
             view: cameraView,
-            items: _foodStore.items,
-            consumedRemnants: _foodStore.consumedRemnants,
+            items: visibleItems,
+            consumedRemnants: visibleRemnants,
             timeSeconds: t,
             foodRadiusWorld: _foodStore.radiusWorld,
           ),
         ),
       ),
-      ..._creatureStore.entities.map(
+      ...visibleEntities.map(
         (e) => Positioned.fill(
           child: CustomPaint(
             painter: CreaturePainter(
@@ -250,7 +276,7 @@ class _SimulationScreenState extends State<SimulationScreen>
           painter: InnerBodyCloudPainter(
             view: cameraView,
             spine: _spine,
-            consumedRemnants: _foodStore.consumedRemnants,
+            consumedRemnants: visibleRemnants,
             timeSeconds: t,
             bodyClipPath: CreaturePainter.buildBodyPath(
               _creature,
