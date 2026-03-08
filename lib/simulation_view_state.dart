@@ -8,7 +8,7 @@ import 'render/view.dart';
 class SimulationViewState extends ChangeNotifier {
   double cameraX = 0;
   double cameraY = 0;
-  double zoom = 1.0;
+  double zoom = 0.7;
   double touchX = 0;
   double touchY = 0;
   double timeSeconds = 0;
@@ -25,8 +25,8 @@ class SimulationViewState extends ChangeNotifier {
   /// True while user has two fingers down (pinch). Target is frozen so zoom doesn't move it and cause shaking.
   bool touchTargetFrozen = false;
 
-  static const double minZoom = 0.3;
-  static const double maxZoom = 2.5;
+  static const double minZoom = 0.4;
+  static const double maxZoom = 1;
 
   CameraView get cameraView =>
       CameraView(cameraX: cameraX, cameraY: cameraY, zoom: zoom);

@@ -84,6 +84,13 @@ class _SimulationScreenState extends State<SimulationScreen>
   /// Fraction of head (vertex) size used for head/mouth collision (epic touch and consume radius).
   static const double _kHeadMouthSizeFrac = 0.8;
 
+  /// Fixed simulation timestep (seconds). Game logic runs at this rate regardless of display FPS.
+  static const double _kSimFixedDt = 1 / 60.0;
+  static const int _kMaxSimStepsPerFrame = 5;
+
+  double _simTimeSeconds = 0;
+  double? _lastRealTimeSeconds;
+
   @override
   void initState() {
     super.initState();
@@ -114,7 +121,25 @@ class _SimulationScreenState extends State<SimulationScreen>
   }
 
   void _onTick(Duration elapsed) {
-    _viewState.timeSeconds = elapsed.inMilliseconds / 1000.0;
+    final realTimeSeconds = elapsed.inMilliseconds / 1000.0;
+    _lastRealTimeSeconds ??= realTimeSeconds;
+    final realDt = realTimeSeconds - _lastRealTimeSeconds!;
+    _lastRealTimeSeconds = realTimeSeconds;
+
+    final steps = (realDt / _kSimFixedDt).round().clamp(
+      0,
+      _kMaxSimStepsPerFrame,
+    );
+    for (var i = 0; i < steps; i++) {
+      _simTimeSeconds += _kSimFixedDt;
+      _viewState.timeSeconds = _simTimeSeconds;
+      _runSimulationStep();
+    }
+
+    if (mounted) _viewState.onTick();
+  }
+
+  void _runSimulationStep() {
     _viewState.refreshTouchFromStoredLocal();
     final positions = _spine.positions;
     if (positions.isNotEmpty && !_isDead) {
@@ -214,7 +239,6 @@ class _SimulationScreenState extends State<SimulationScreen>
       _creatureStore.tick();
     }
     _foodStore.tick(_viewState.timeSeconds);
-    if (mounted) _viewState.onTick();
   }
 
   List<Widget> _buildViewStack(Size size) {
