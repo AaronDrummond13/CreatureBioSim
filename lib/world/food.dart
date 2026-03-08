@@ -7,9 +7,9 @@ import 'world.dart';
 /// Target counts per chunk per food type. Adjust per biome below.
 class BiomeFoodConfig {
   const BiomeFoodConfig({
-    this.plantPerChunk = 1,
-    this.animalPerChunk = 1,
-    this.bubblePerChunk = 1,
+    this.plantPerChunk = 0.2,
+    this.animalPerChunk = 0.2,
+    this.bubblePerChunk = 0.2,
   });
   final double plantPerChunk;
   final double animalPerChunk;
@@ -26,11 +26,7 @@ BiomeFoodConfig biomeFoodConfig(Biome biome) {
         bubblePerChunk: 0.3,
       );
     case Biome.deep:
-      return const BiomeFoodConfig(
-        plantPerChunk: 0.2,
-        animalPerChunk: 0.2,
-        bubblePerChunk: 0.2,
-      );
+      return const BiomeFoodConfig();
     case Biome.algae:
       return const BiomeFoodConfig(
         plantPerChunk: 0.3,

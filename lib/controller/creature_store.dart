@@ -2,9 +2,28 @@ import 'dart:math' show Random;
 
 import '../creature.dart';
 import '../simulation/spine.dart';
+import '../world/biome.dart';
+import '../world/biome_map.dart';
+import '../world/world.dart';
 import 'bot_controller.dart';
 import 'spawner.dart';
-import '../world/world.dart';
+
+/// Per-chunk creature spawn targets per biome. Edit values to tune (fractional = chance, e.g. 0.3 = 30% of 1).
+class BiomeCreatureConfig {
+  const BiomeCreatureConfig({
+    this.groupsPerChunk = 0.01,
+    this.singlesPerChunk = 0.05,
+    this.epicsPerChunk = 0.005,
+  });
+  final double groupsPerChunk;
+  final double singlesPerChunk;
+  final double epicsPerChunk;
+}
+
+/// Creature rates per biome. For now all biomes use default; add switch later for per-biome tuning.
+BiomeCreatureConfig biomeCreatureConfig(Biome biome) {
+  return const BiomeCreatureConfig();
+}
 
 /// A creature plus spine and bot controller, tied to a chunk for culling.
 class StoredCreature {
@@ -28,21 +47,51 @@ class StoredCreature {
 }
 
 /// Creatures linked to chunks. Generation/clear is driven by [ChunkManager].
-/// Supports single spawn or group spawn (5 identical, some babies).
+/// Spawn counts per chunk from [biomeCreatureConfig] (groupsPerChunk, singlesPerChunk, epicsPerChunk).
 class CreatureStore {
-  CreatureStore({
-    required this.spawner,
-    this.spawnChanceOneIn = 10,
-    this.groupSpawnChanceOneIn = 2,
-    this.epicSpawnChanceOneIn = 10,
-    Random? random,
-  }) : _random = random ?? Random();
+  CreatureStore({required this.spawner, this.biomeMap, Random? random})
+    : _random = random ?? Random();
 
   final Spawner spawner;
-  final int spawnChanceOneIn;
-  final int groupSpawnChanceOneIn;
-  final int epicSpawnChanceOneIn;
+  final BiomeMap? biomeMap;
   final Random _random;
+
+  int _countFromRate(double rate) {
+    if (rate <= 0) return 0;
+    final floor = rate.floor();
+    final frac = rate - floor;
+    final extra = frac > 0 && _random.nextDouble() < frac ? 1 : 0;
+    return (floor + extra).clamp(0, 0x7FFFFFFF);
+  }
+
+  static const double _botWanderRadius = 500.0;
+  static const int _botTicksPerNewTarget = 80;
+
+  void _addCreature(
+    List<StoredCreature> list,
+    int chunkCx,
+    int chunkCy,
+    Creature creature,
+    Spine spine, {
+    bool isBaby = false,
+    bool isEpic = false,
+  }) {
+    list.add(
+      StoredCreature(
+        chunkCx: chunkCx,
+        chunkCy: chunkCy,
+        creature: creature,
+        spine: spine,
+        botController: BotController(
+          spine: spine,
+          wanderRadius: _botWanderRadius,
+          ticksPerNewTarget: _botTicksPerNewTarget,
+        ),
+        isBaby: isBaby,
+        isEpic: isEpic,
+      ),
+    );
+  }
 
   final Map<String, List<StoredCreature>> _byChunk = {};
 
@@ -65,65 +114,54 @@ class CreatureStore {
   void generateForChunk(int i, int j) {
     final key = chunkKey(i, j);
     if (_byChunk.containsKey(key)) return;
-    if (_random.nextInt(spawnChanceOneIn) != 0) return;
 
     final cellSize = kChunkSizeWorld;
     final x0 = i * cellSize;
     final y0 = j * cellSize;
-    final centerX = x0 + _random.nextDouble() * cellSize;
-    final centerY = y0 + _random.nextDouble() * cellSize;
+    final centerX = (i + 0.5) * cellSize;
+    final centerY = (j + 0.5) * cellSize;
+    final biome = biomeMap != null
+        ? biomeMap!.biomeAt(centerX, centerY)
+        : Biome.clear;
+    final config = biomeCreatureConfig(biome);
+
+    final numGroups = _countFromRate(config.groupsPerChunk);
+    final numSingles = _countFromRate(config.singlesPerChunk);
+    final numEpics = _countFromRate(config.epicsPerChunk);
+    if (numGroups == 0 && numSingles == 0 && numEpics == 0) return;
 
     final list = <StoredCreature>[];
+    const compositions = [
+      [false, false], // 2 adults
+      [false, false, false], // 3 adults
+      [false, false, true], // 2 adults, 1 kid
+      [false, true, true, true], // 1 adult, 3 kids
+    ];
 
-    final doGroup = _random.nextInt(groupSpawnChanceOneIn) == 0;
-    if (doGroup) {
-      const compositions = [
-        [false, false],             // 2 adults
-        [false, false, false],      // 3 adults
-        [false, false, true],       // 2 adults, 1 kid
-        [false, true, true, true],  // 1 adult, 3 kids
-      ];
+    for (var g = 0; g < numGroups; g++) {
+      final cx = x0 + _random.nextDouble() * cellSize;
+      final cy = y0 + _random.nextDouble() * cellSize;
       final babyFlags = compositions[_random.nextInt(4)];
       final (creature, group) = spawner.createGroupAt(
-        centerX,
-        centerY,
+        cx,
+        cy,
         babyFlags: babyFlags,
       );
       for (final (spine, isBaby) in group) {
-        final botController = BotController(
-          spine: spine,
-          wanderRadius: 400.0 + _random.nextDouble() * 400.0,
-          ticksPerNewTarget: 60 + _random.nextInt(80),
-        );
-        list.add(
-          StoredCreature(
-            chunkCx: i,
-            chunkCy: j,
-            creature: creature,
-            spine: spine,
-            botController: botController,
-            isBaby: isBaby,
-          ),
-        );
+        _addCreature(list, i, j, creature, spine, isBaby: isBaby);
       }
-    } else {
-      final (creature, spine) = spawner.createRandomAt(centerX, centerY);
-      final botController = BotController(
-        spine: spine,
-        wanderRadius: 600.0 + _random.nextDouble() * 800.0,
-        ticksPerNewTarget: 80 + _random.nextInt(120),
-      );
-      final isEpic = _random.nextInt(epicSpawnChanceOneIn) == 0;
-      list.add(
-        StoredCreature(
-          chunkCx: i,
-          chunkCy: j,
-          creature: creature,
-          spine: spine,
-          botController: botController,
-          isEpic: isEpic,
-        ),
-      );
+    }
+    for (var s = 0; s < numSingles; s++) {
+      final cx = x0 + _random.nextDouble() * cellSize;
+      final cy = y0 + _random.nextDouble() * cellSize;
+      final (creature, spine) = spawner.createRandomAt(cx, cy);
+      _addCreature(list, i, j, creature, spine);
+    }
+    for (var e = 0; e < numEpics; e++) {
+      final cx = x0 + _random.nextDouble() * cellSize;
+      final cy = y0 + _random.nextDouble() * cellSize;
+      final (creature, spine) = spawner.createRandomAt(cx, cy);
+      _addCreature(list, i, j, creature, spine, isEpic: true);
     }
 
     _byChunk[key] = list;

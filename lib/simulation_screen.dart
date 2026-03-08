@@ -60,7 +60,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   late final Spine _spine = Spine(segmentCount: _creature.segmentCount);
 
   final Spawner _spawner = Spawner();
-  late final CreatureStore _creatureStore = CreatureStore(spawner: _spawner);
+  late final CreatureStore _creatureStore;
   final BiomeMap _biomeMap = BiomeMap();
   late final FoodStore _foodStore;
   late final MammothStore _mammothStore = MammothStore(
@@ -87,6 +87,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   void initState() {
     super.initState();
     _foodStore = FoodStore(biomeMap: _biomeMap);
+    _creatureStore = CreatureStore(spawner: _spawner, biomeMap: _biomeMap);
     final pos = _spine.positions;
     if (pos.isNotEmpty) {
       final head = pos.last;
