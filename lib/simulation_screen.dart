@@ -1,4 +1,4 @@
-import 'dart:math' show atan2, sqrt;
+import 'dart:math' show atan2, cos, sin, sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 import 'controller/mammoth_store.dart';
@@ -11,7 +11,7 @@ import 'render/background_painter.dart'
     show BackgroundPainter, SolidBackgroundPainter;
 import 'render/food_painter.dart';
 import 'render/spine_painter.dart';
-import 'simulation/angle_util.dart';
+import 'simulation/angle_util.dart' show relativeAngleDiff;
 import 'simulation/spine.dart';
 import 'simulation_view_state.dart';
 import 'world/biome_map.dart';
@@ -92,6 +92,11 @@ class _SimulationScreenState extends State<SimulationScreen>
   /// When neck is at bend limit, nudge whole creature this much (rad) toward touch per step. Only tuning for tight turns.
   static const double _kGlobalTurnNudge = 0.02;
 
+  /// Fixed target distance from head when using joystick (angle only).
+  static const double _kJoystickTargetDistance = 120.0;
+
+  static const double _kJoystickPadding = 24.0;
+
   double _simTimeSeconds = 0;
   double? _lastRealTimeSeconds;
 
@@ -146,6 +151,21 @@ class _SimulationScreenState extends State<SimulationScreen>
   void _runSimulationStep() {
     _viewState.refreshTouchFromStoredLocal();
     final positions = _spine.positions;
+    if (positions.isNotEmpty &&
+        _viewState.isJoystickActive &&
+        _viewState.joystickOffset != null) {
+      final head = positions.last;
+      final off = _viewState.joystickOffset!;
+      final len = off.distance;
+      if (len > 1e-6) {
+        final angle = atan2(off.dy, off.dx);
+        _viewState.touchX = head.x + _kJoystickTargetDistance * cos(angle);
+        _viewState.touchY = head.y + _kJoystickTargetDistance * sin(angle);
+      } else {
+        _viewState.touchX = head.x;
+        _viewState.touchY = head.y;
+      }
+    }
     if (positions.isNotEmpty && !_isDead) {
       final head = positions.last;
       final headSize = _creature.vertexWidths.isNotEmpty
@@ -440,17 +460,52 @@ class _SimulationScreenState extends State<SimulationScreen>
               if (layerSize.width < 1 || layerSize.height < 1) {
                 return const SizedBox.expand();
               }
-              return SimulationGestureRegion(
-                onSinglePointerDown: (local) {
-                  _viewState.updateTouchFromLocal(layerSize, local);
-                  _viewState.onTouchDown();
-                },
-                onSinglePointerMove: (local) {
-                  _viewState.updateTouchFromLocal(layerSize, local);
-                },
-                onSinglePointerUp: () {
-                  _viewState.clearLastTouch();
-                },
+              final joystickCenter = Offset(
+                _kJoystickPadding + _viewState.joystickMaxRadius,
+                layerSize.height - _kJoystickPadding - _viewState.joystickMaxRadius,
+              );
+              final joystickZoneRadius = _viewState.joystickMaxRadius;
+              bool isInJoystickZone(Offset local) {
+                final dx = local.dx - joystickCenter.dx;
+                final dy = local.dy - joystickCenter.dy;
+                return dx * dx + dy * dy <= joystickZoneRadius * joystickZoneRadius;
+              }
+
+              return Stack(
+                children: [
+                  SimulationGestureRegion(
+                    onSinglePointerDown: (local) {
+                      if (isInJoystickZone(local)) {
+                        _viewState.startJoystick(joystickCenter, local);
+                      } else {
+                        _viewState.updateTouchFromLocal(layerSize, local);
+                        _viewState.onTouchDown();
+                      }
+                    },
+                    onSinglePointerMove: (local) {
+                      if (_viewState.isJoystickActive) {
+                        _viewState.updateJoystick(local);
+                      } else {
+                        _viewState.updateTouchFromLocal(layerSize, local);
+                      }
+                    },
+                    onSinglePointerUp: () {
+                      if (_viewState.isJoystickActive) {
+                        final head = _spine.positions.isNotEmpty
+                            ? _spine.positions.last
+                            : null;
+                        if (head != null) {
+                          _viewState.endJoystick(head.x, head.y);
+                        } else {
+                          _viewState.endJoystick(
+                            _viewState.cameraX,
+                            _viewState.cameraY,
+                          );
+                        }
+                      } else {
+                        _viewState.clearLastTouch();
+                      }
+                    },
                 onScaleStart: (details) {
                   _viewState.startPinch(details.pointerCount >= 2);
                 },
@@ -465,6 +520,21 @@ class _SimulationScreenState extends State<SimulationScreen>
                 onScaleEnd: () {
                   _viewState.endPinch();
                 },
+              ),
+              IgnorePointer(
+                child: ListenableBuilder(
+                  listenable: _viewState,
+                  builder: (context, _) => CustomPaint(
+                    size: layerSize,
+                    painter: _JoystickOverlayPainter(
+                      viewState: _viewState,
+                      layerSize: layerSize,
+                      knobRadius: 20.0,
+                    ),
+                  ),
+                ),
+              ),
+                ],
               );
             },
           ),
@@ -472,4 +542,60 @@ class _SimulationScreenState extends State<SimulationScreen>
       ],
     );
   }
+}
+
+/// Faint white joystick circles: outer always visible (hint when inactive, slightly more when active). Knob when active.
+class _JoystickOverlayPainter extends CustomPainter {
+  _JoystickOverlayPainter({
+    required this.viewState,
+    required this.layerSize,
+    this.knobRadius = 20.0,
+  });
+
+  final SimulationViewState viewState;
+  final Size layerSize;
+  final double knobRadius;
+
+  static const double _joystickPadding = 24.0;
+  static const double _strokeWidth = 1.5;
+  static const double _fillOpacity = 0.22;
+  static const double _strokeOpacity = 0.5;
+  static const double _outerActiveStrokeOpacity = 0.2;
+  static const double _hintStrokeOpacity = 0.08;
+
+  Offset get _zoneCenter => Offset(
+        _joystickPadding + viewState.joystickMaxRadius,
+        layerSize.height - _joystickPadding - viewState.joystickMaxRadius,
+      );
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = viewState.isJoystickActive ? viewState.joystickCenter : _zoneCenter;
+    final outerOpacity = viewState.isJoystickActive ? _outerActiveStrokeOpacity : _hintStrokeOpacity;
+    final outerPaint = Paint()
+      ..color = Colors.white.withValues(alpha: outerOpacity)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _strokeWidth;
+    canvas.drawCircle(center, viewState.joystickMaxRadius, outerPaint);
+
+    // Knob: only when joystick active
+    if (viewState.isJoystickActive) {
+      final knobCenter = viewState.joystickOffset != null
+          ? center + viewState.joystickOffset!
+          : center;
+      final fillPaint = Paint()
+        ..color = Colors.white.withValues(alpha: _fillOpacity)
+        ..style = PaintingStyle.fill;
+      final strokePaint = Paint()
+        ..color = Colors.white.withValues(alpha: _strokeOpacity)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _strokeWidth;
+      canvas.drawCircle(knobCenter, knobRadius, fillPaint);
+      canvas.drawCircle(knobCenter, knobRadius, strokePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _JoystickOverlayPainter old) =>
+      old.viewState != viewState || old.layerSize != layerSize;
 }

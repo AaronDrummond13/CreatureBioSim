@@ -25,6 +25,13 @@ class SimulationViewState extends ChangeNotifier {
   /// True while user has two fingers down (pinch). Target is frozen so zoom doesn't move it and cause shaking.
   bool touchTargetFrozen = false;
 
+  /// Joystick: active when touch is in bottom-left zone. Target is head + (joystick direction × distance).
+  bool isJoystickActive = false;
+  Offset? joystickOffset;
+  Offset joystickCenter = Offset.zero;
+  double joystickMaxRadius = 60.0;
+  double? joystickGrabTime;
+
   static const double minZoom = 0.4;
   static const double maxZoom = 1;
 
@@ -68,9 +75,9 @@ class SimulationViewState extends ChangeNotifier {
   /// Notify after touch down so view repaints; move repaints are handled by tick.
   void onTouchDown() => notifyListeners();
 
-  /// Recompute touch target from stored screen position. No-op if pinching (target frozen).
+  /// Recompute touch target from stored screen position. No-op if pinching or joystick (joystick target set in sim step).
   void refreshTouchFromStoredLocal() {
-    if (touchTargetFrozen) return;
+    if (touchTargetFrozen || isJoystickActive) return;
     final local = lastTouchLocal;
     final size = lastTouchScreenSize;
     if (local == null || size == null) return;
@@ -83,6 +90,45 @@ class SimulationViewState extends ChangeNotifier {
     lastTouchLocal = null;
     lastTouchScreenSize = null;
     touchTargetFrozen = false;
+    notifyListeners();
+  }
+
+  void startJoystick(Offset center, Offset localPosition) {
+    joystickCenter = center;
+    final offset = localPosition - center;
+    final len = offset.distance;
+    joystickOffset = len <= joystickMaxRadius
+        ? offset
+        : Offset(
+            offset.dx / len * joystickMaxRadius,
+            offset.dy / len * joystickMaxRadius,
+          );
+    joystickGrabTime = timeSeconds;
+    isJoystickActive = true;
+    notifyListeners();
+  }
+
+  void updateJoystick(Offset localPosition) {
+    if (!isJoystickActive) return;
+    final offset = localPosition - joystickCenter;
+    final len = offset.distance;
+    joystickOffset = len <= joystickMaxRadius
+        ? offset
+        : Offset(
+            offset.dx / len * joystickMaxRadius,
+            offset.dy / len * joystickMaxRadius,
+          );
+    notifyListeners();
+  }
+
+  void endJoystick(double headX, double headY) {
+    touchX = headX;
+    touchY = headY;
+    isJoystickActive = false;
+    joystickOffset = null;
+    joystickGrabTime = null;
+    lastTouchLocal = null;
+    lastTouchScreenSize = null;
     notifyListeners();
   }
 
