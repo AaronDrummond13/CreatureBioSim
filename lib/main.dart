@@ -3,20 +3,16 @@ import 'package:creature_bio_sim/creature.dart';
 import 'package:creature_bio_sim/editor/editor_screen.dart';
 import 'package:creature_bio_sim/simulation_screen.dart';
 
-void main() {
-  runApp(const MainApp());
-}
+void main() => runApp(const MainApp());
 
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(home: const _Shell());
-  }
+  Widget build(BuildContext context) => MaterialApp(home: const _Shell());
 }
 
-/// Switches between play and edit; no UI. Buttons live in EditorScreen and SimulationScreen.
+/// Play vs Edit shell; UI is inside [SimulationScreen] and [EditorScreen].
 class _Shell extends StatefulWidget {
   const _Shell();
 
@@ -25,8 +21,9 @@ class _Shell extends StatefulWidget {
 }
 
 class _ShellState extends State<_Shell> {
+  static const Color _editBg = Color.fromARGB(255, 28, 30, 54);
+
   bool _isEditMode = false;
-  bool _editorPanelClosed = false;
   late Creature _playerCreature;
 
   @override
@@ -40,22 +37,16 @@ class _ShellState extends State<_Shell> {
     setState(() => _isEditMode = false);
   }
 
-  void _switchToEdit() {
-    setState(() => _isEditMode = true);
-  }
+  void _switchToEdit() => setState(() => _isEditMode = true);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _isEditMode
-          ? const Color.fromARGB(255, 28, 30, 54)
-          : null,
+      backgroundColor: _isEditMode ? _editBg : null,
       body: _isEditMode
           ? EditorScreen(
               initialCreature: _playerCreature,
               onPlay: _switchToPlay,
-              panelClosed: _editorPanelClosed,
-              onTogglePanel: () => setState(() => _editorPanelClosed = !_editorPanelClosed),
             )
           : SimulationScreen(
               initialCreature: _playerCreature,

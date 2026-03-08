@@ -12,14 +12,10 @@ class EditorScreen extends StatefulWidget {
     super.key,
     required this.initialCreature,
     required this.onPlay,
-    required this.panelClosed,
-    required this.onTogglePanel,
   });
 
   final Creature initialCreature;
   final void Function(Creature creature) onPlay;
-  final bool panelClosed;
-  final VoidCallback onTogglePanel;
 
   @override
   State<EditorScreen> createState() => EditorScreenState();
@@ -27,6 +23,7 @@ class EditorScreen extends StatefulWidget {
 
 class EditorScreenState extends State<EditorScreen> {
   late Creature _creature;
+  bool _panelClosed = false;
 
   @override
   void initState() {
@@ -59,8 +56,6 @@ class EditorScreenState extends State<EditorScreen> {
         ? size.height * 0.42
         : (size.width > 600 ? 320.0 : size.width * 0.38);
 
-    final panelClosed = widget.panelClosed;
-
     Widget panel = EditorPanel(
       creature: _creature,
       onCreatureChanged: _updateCreature,
@@ -71,10 +66,10 @@ class EditorScreenState extends State<EditorScreen> {
     );
 
     Widget preview = EditorPreview(
-      key: ValueKey('preview_$panelClosed'),
+      key: ValueKey('preview_$_panelClosed'),
       creature: _creature,
-      editTabIndex: panelClosed ? null : _editorTabIndex,
-      panelClosed: panelClosed,
+      editTabIndex: _panelClosed ? null : _editorTabIndex,
+      panelClosed: _panelClosed,
       selectedDorsalFinIndex: _selectedDorsalFinIndex,
       onDorsalFinSelected: (i) => setState(() => _selectedDorsalFinIndex = i),
       onDorsalRangeChanged: _onDorsalRangeFromViewport,
@@ -90,7 +85,7 @@ class EditorScreenState extends State<EditorScreen> {
     );
 
     Widget content;
-    if (panelClosed) {
+    if (_panelClosed) {
       content = Stack(
         fit: StackFit.expand,
         children: [Positioned.fill(child: preview)],
@@ -112,10 +107,10 @@ class EditorScreenState extends State<EditorScreen> {
     }
 
     return SafeArea(
-      top: !panelClosed,
-      bottom: !panelClosed,
-      left: !panelClosed,
-      right: !panelClosed,
+      top: !_panelClosed,
+      bottom: !_panelClosed,
+      left: !_panelClosed,
+      right: !_panelClosed,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -130,9 +125,9 @@ class EditorScreenState extends State<EditorScreen> {
                 _editorTopButton(label: 'Play', onTap: () => widget.onPlay(_creature)),
                 const SizedBox(height: 8),
                 _editorTopButton(
-                  label: panelClosed ? 'Edit' : 'Test',
-                  onTap: widget.onTogglePanel,
-                  selected: !panelClosed,
+                  label: _panelClosed ? 'Edit' : 'Test',
+                  onTap: () => setState(() => _panelClosed = !_panelClosed),
+                  selected: !_panelClosed,
                 ),
               ],
             ),
