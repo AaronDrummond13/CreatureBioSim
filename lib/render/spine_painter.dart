@@ -33,7 +33,7 @@ class CreaturePainter extends CustomPainter {
   /// If true, draw only eyes (used after inner-body cloud for correct stacking).
   final bool eyesOnly;
 
-  /// When true, draw at 0.25 scale and no eyes (baby creature).
+  /// When true, draw at [kBabyRenderScale] (40%) and no eyes (baby creature).
   final bool isBaby;
 
   /// When true, draw at [kEpicRenderScale] (epic creature).

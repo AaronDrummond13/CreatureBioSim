@@ -9,7 +9,7 @@ import '../world/world.dart';
 
 /// Food items linked to chunks. Generation/clear is driven by [ChunkManager]. Spawn counts per chunk come from [biomeFoodConfig] for the chunk's biome.
 class FoodStore {
-  FoodStore({this.biomeMap, this.radiusWorld = 14.0, Random? random})
+  FoodStore({this.biomeMap, this.radiusWorld = 20.0, Random? random})
       : _random = random ?? Random();
 
   /// When set, chunk biome is used to look up [biomeFoodConfig]. When null, uses [Biome.clear] config.

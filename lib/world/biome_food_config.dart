@@ -25,7 +25,7 @@ BiomeFoodConfig biomeFoodConfig(Biome biome) {
       return const BiomeFoodConfig();
     case Biome.algae:
       return const BiomeFoodConfig(
-        plantPerChunk: 0.3,
+        plantPerChunk: 0.5,
         animalPerChunk: 0.2,
         bubblePerChunk: 0.1,
       );
@@ -38,7 +38,7 @@ BiomeFoodConfig biomeFoodConfig(Biome biome) {
     case Biome.dirty:
       return const BiomeFoodConfig(
         plantPerChunk: 0.2,
-        animalPerChunk: 0.3,
+        animalPerChunk: 0.4,
         bubblePerChunk: 0.1,
       );
   }

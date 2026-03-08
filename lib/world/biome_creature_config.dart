@@ -3,8 +3,8 @@ import 'biome.dart';
 /// Per-chunk creature spawn targets per biome. Edit values to tune (fractional = chance, e.g. 0.3 = 30% of 1).
 class BiomeCreatureConfig {
   const BiomeCreatureConfig({
-    this.groupsPerChunk = 0.01,
-    this.singlesPerChunk = 0.05,
+    this.groupsPerChunk = 0.07,
+    this.singlesPerChunk = 0.03,
     this.epicsPerChunk = 0.005,
   });
   final double groupsPerChunk;

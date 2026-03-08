@@ -16,7 +16,7 @@ class FoodPainter extends CustomPainter {
     required this.items,
     this.consumedRemnants = const [],
     this.timeSeconds = 0.0,
-    this.foodRadiusWorld = 14.0,
+    this.foodRadiusWorld = 20.0,
     this.fillColor = const Color(0xFF4A7C59),
     this.animalCellColor = const Color(0xFFb83c3c),
     this.innerRadiusFrac = 0.68,
