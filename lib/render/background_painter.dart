@@ -1,50 +1,8 @@
 import 'dart:math' show cos, sin;
 import 'package:flutter/material.dart';
 import '../world/biome_map.dart';
+import 'render_utils.dart';
 import 'view.dart';
-
-/// Full bubble: fill, rim, primary and optional secondary highlight.
-void _drawBubbleShape(
-  Canvas canvas,
-  Offset center,
-  double radius,
-  Paint fillPaint,
-  Paint rimPaint,
-  Paint primaryHighlightPaint,
-  Paint? secondaryHighlightPaint,
-) {
-  const primaryOffset = 0.30;
-  const primaryRadiusFrac = 0.36;
-  const secondaryOffset = 0.26;
-  const secondaryRadiusFrac = 0.24;
-  final rimWidth = radius < 4
-      ? (radius * 0.45)
-      : (radius > 20 ? (1.2 + (radius - 20) * 0.012).clamp(1.2, 2.8) : 1.2);
-  final rim = Paint()
-    ..color = rimPaint.color
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = rimWidth;
-  canvas.drawCircle(center, radius, fillPaint);
-  canvas.drawCircle(center, radius, rim);
-  canvas.drawCircle(
-    Offset(
-      center.dx - radius * primaryOffset,
-      center.dy - radius * primaryOffset,
-    ),
-    radius * primaryRadiusFrac,
-    primaryHighlightPaint,
-  );
-  if (secondaryHighlightPaint != null) {
-    canvas.drawCircle(
-      Offset(
-        center.dx + radius * secondaryOffset,
-        center.dy + radius * secondaryOffset,
-      ),
-      radius * secondaryRadiusFrac,
-      secondaryHighlightPaint,
-    );
-  }
-}
 
 /// Deterministic size variance from grid index: returns multiplier in [minFrac, 1].
 double _sizeVariance(int i, int j, {double minFrac = 0.65}) {
@@ -206,7 +164,7 @@ class BackgroundPainter extends CustomPainter {
             px <= size.width + r &&
             py >= -r &&
             py <= size.height + r) {
-          _drawBubbleShape(
+          drawBubbleShape(
             canvas,
             Offset(px, py),
             r,
@@ -287,7 +245,7 @@ class BackgroundPainter extends CustomPainter {
             px <= size.width + r &&
             py >= -r &&
             py <= size.height + r) {
-          _drawBubbleShape(
+          drawBubbleShape(
             canvas,
             Offset(px, py),
             r,

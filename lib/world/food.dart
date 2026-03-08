@@ -2,8 +2,8 @@ import 'dart:math' show cos, pi, Random, sin, sqrt;
 
 import 'world.dart';
 
-/// Cell type for food items. Plant = green hexagon; animal = red circle.
-enum CellType { plant, animal }
+/// Cell type for food items. Plant = green hexagon; animal = red circle; bubble = pop-able bubble (same look as background).
+enum CellType { plant, animal, bubble }
 
 /// A plant or animal cell (food) in world space. See [FoodPainter].
 /// Remnant after consumption: nucleus stays, drifts away from [headX, headY], and fades over 5s; body "burst" drawn for ~0.3s.
@@ -24,18 +24,25 @@ class ConsumedRemnant {
   final CellType cellType;
   final double consumedAt;
   final double headX, headY;
+
   /// One entry per bubble (1–3). Each value 0=small, 1=medium, 2=large.
   final List<int> bubbleSizes;
+
   /// Scale for drawing (e.g. 4.0 for player death remains).
   final double scale;
 }
 
 /// Linked to chunk [chunkCx], [chunkCy] for culling (stays linked even if it drifts out of chunk).
 class FoodItem {
-  FoodItem(this.x, this.y, this.chunkCx, this.chunkCy,
-      {this.nucleusOffsetX = 0,
-      this.nucleusOffsetY = 0,
-      this.cellType = CellType.plant});
+  FoodItem(
+    this.x,
+    this.y,
+    this.chunkCx,
+    this.chunkCy, {
+    this.nucleusOffsetX = 0,
+    this.nucleusOffsetY = 0,
+    this.cellType = CellType.plant,
+  });
 
   final double x;
   final double y;
@@ -70,7 +77,12 @@ class FoodStore {
   double get minSpacing => 2.0 * radiusWorld;
 
   /// Remove any food whose centre is within [radius] of (headX, headY). If [timeSeconds] is set, adds a [ConsumedRemnant] for rendering burst + fading nucleus.
-  void consumeNear(double headX, double headY, [double? radius, double? timeSeconds]) {
+  void consumeNear(
+    double headX,
+    double headY, [
+    double? radius,
+    double? timeSeconds,
+  ]) {
     final r = radius ?? radiusWorld;
     final r2 = r * r;
     for (var i = _items.length - 1; i >= 0; i--) {
@@ -81,17 +93,19 @@ class FoodStore {
         if (timeSeconds != null) {
           final n = _random.nextInt(3) + 1;
           final bubbleSizes = List<int>.generate(n, (_) => _random.nextInt(3));
-          _consumedRemnants.add(ConsumedRemnant(
-            x: item.x,
-            y: item.y,
-            nucleusOffsetX: item.nucleusOffsetX,
-            nucleusOffsetY: item.nucleusOffsetY,
-            cellType: item.cellType,
-            consumedAt: timeSeconds,
-            headX: headX,
-            headY: headY,
-            bubbleSizes: bubbleSizes,
-          ));
+          _consumedRemnants.add(
+            ConsumedRemnant(
+              x: item.x,
+              y: item.y,
+              nucleusOffsetX: item.nucleusOffsetX,
+              nucleusOffsetY: item.nucleusOffsetY,
+              cellType: item.cellType,
+              consumedAt: timeSeconds,
+              headX: headX,
+              headY: headY,
+              bubbleSizes: bubbleSizes,
+            ),
+          );
         }
         _items.removeAt(i);
       }
@@ -110,18 +124,20 @@ class FoodStore {
   }) {
     final n = _random.nextInt(3) + 1;
     final bubbleSizes = List<int>.generate(n, (_) => _random.nextInt(3));
-    _consumedRemnants.add(ConsumedRemnant(
-      x: x,
-      y: y,
-      nucleusOffsetX: 0,
-      nucleusOffsetY: 0,
-      cellType: cellType,
-      consumedAt: consumedAt,
-      headX: headX,
-      headY: headY,
-      bubbleSizes: bubbleSizes,
-      scale: scale,
-    ));
+    _consumedRemnants.add(
+      ConsumedRemnant(
+        x: x,
+        y: y,
+        nucleusOffsetX: 0,
+        nucleusOffsetY: 0,
+        cellType: cellType,
+        consumedAt: consumedAt,
+        headX: headX,
+        headY: headY,
+        bubbleSizes: bubbleSizes,
+        scale: scale,
+      ),
+    );
   }
 
   /// Only checks items in the same chunk (ci, cj).
@@ -139,13 +155,15 @@ class FoodStore {
   /// Remove all food linked to chunk (ci, cj). Called by [ChunkManager] when chunk goes out of range.
   void clearChunk(int ci, int cj) {
     for (var i = _items.length - 1; i >= 0; i--) {
-      if (_items[i].chunkCx == ci && _items[i].chunkCy == cj) _items.removeAt(i);
+      if (_items[i].chunkCx == ci && _items[i].chunkCy == cj)
+        _items.removeAt(i);
     }
   }
 
   /// Generate food for chunk (i, j). Called by [ChunkManager] when chunk comes into range.
   void generateForChunk(int i, int j) {
-    if (chunkSpawnChance < 1.0 && _random.nextDouble() >= chunkSpawnChance) return;
+    if (chunkSpawnChance < 1.0 && _random.nextDouble() >= chunkSpawnChance)
+      return;
     final cellSize = kChunkSizeWorld;
     final centerX = (i + 0.5) * cellSize;
     final centerY = (j + 0.5) * cellSize;
@@ -166,8 +184,21 @@ class FoodStore {
           !_tooCloseInChunk(i, j, x, y, minDist)) {
         final nux = (_random.nextDouble() * 2 - 1) * radiusWorld * 0.12;
         final nuy = (_random.nextDouble() * 2 - 1) * radiusWorld * 0.12;
-        final type = _random.nextInt(8) == 0 ? CellType.animal : CellType.plant;
-        _items.add(FoodItem(x, y, i, j, nucleusOffsetX: nux, nucleusOffsetY: nuy, cellType: type));
+        final r = _random.nextInt(3);
+        final CellType type = r == 0
+            ? CellType.bubble
+            : (r == 1 ? CellType.animal : CellType.plant);
+        _items.add(
+          FoodItem(
+            x,
+            y,
+            i,
+            j,
+            nucleusOffsetX: nux,
+            nucleusOffsetY: nuy,
+            cellType: type,
+          ),
+        );
         added++;
       }
       attempts++;
@@ -183,15 +214,19 @@ class FoodStore {
 
   /// Update plant cell positions with a slow drift; prune consumed remnants older than [remnantLifetimeSeconds].
   void tick(double timeSeconds) {
-    _consumedRemnants.removeWhere((r) => timeSeconds - r.consumedAt > remnantLifetimeSeconds);
+    _consumedRemnants.removeWhere(
+      (r) => timeSeconds - r.consumedAt > remnantLifetimeSeconds,
+    );
     if (_items.isEmpty) return;
     var dt = timeSeconds - _lastTimeSeconds;
     _lastTimeSeconds = timeSeconds;
     if (dt <= 0 || dt > 0.1) dt = 1 / 60.0;
     final t = timeSeconds;
     final newItems = _items.map((item) {
-      final dx = driftSpeed * (sin(t * 0.3) + 0.4 * sin(t + item.x * 0.015)) * dt;
-      final dy = driftSpeed * (cos(t * 0.4) + 0.4 * cos(t + item.y * 0.015)) * dt;
+      final dx =
+          driftSpeed * (sin(t * 0.3) + 0.4 * sin(t + item.x * 0.015)) * dt;
+      final dy =
+          driftSpeed * (cos(t * 0.4) + 0.4 * cos(t + item.y * 0.015)) * dt;
       return FoodItem(
         item.x + dx,
         item.y + dy,
@@ -206,5 +241,4 @@ class FoodStore {
       ..clear()
       ..addAll(newItems);
   }
-
 }
