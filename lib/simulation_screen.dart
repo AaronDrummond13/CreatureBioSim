@@ -64,12 +64,11 @@ class _SimulationScreenState extends State<SimulationScreen>
   final FoodStore _foodStore = FoodStore();
   late final BackgroundGiantStore _backgroundGiantStore = BackgroundGiantStore(
     spawner: _spawner,
-    spawnChanceOneIn: 5,
+    spawnChanceOneIn: 2,
   );
   late final ChunkManager _chunkManager = ChunkManager(
     foodStore: _foodStore,
     creatureStore: _creatureStore,
-    backgroundGiantStore: _backgroundGiantStore,
   );
   final BiomeMap _biomeMap = BiomeMap();
   bool _chunksInitialized = false;
@@ -149,6 +148,7 @@ class _SimulationScreenState extends State<SimulationScreen>
     _viewState.timeSeconds = elapsed.inMilliseconds / 1000.0;
     _backgroundGiantStore.tick();
     if (_viewState.viewWidthWorld > 0 && _viewState.viewHeightWorld > 0) {
+      _backgroundGiantStore.update(_viewState.cameraX, _viewState.cameraY);
       _chunkManager.update(
         _viewState.cameraX,
         _viewState.cameraY,
@@ -163,6 +163,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   List<Widget> _buildViewStack(Size size) {
     _viewState.setViewSize(size);
     if (!_chunksInitialized) {
+      _backgroundGiantStore.update(_viewState.cameraX, _viewState.cameraY);
       _chunkManager.update(
         _viewState.cameraX,
         _viewState.cameraY,
@@ -219,39 +220,12 @@ class _SimulationScreenState extends State<SimulationScreen>
         bottom,
       );
     }).toList();
-    // Cull giants by PARALLAX visible rect: they're drawn with bgView so only giants near (camera*0.25) appear on screen. Use a large buffer so we don't cut them off.
-    const double parallaxFactor = 0.25;
-    const double parallaxZoomScale = 5.0;
-    final px = _viewState.cameraX * parallaxFactor;
-    final py = _viewState.cameraY * parallaxFactor;
-    final parHalfW = ((_viewState.viewWidthWorld / parallaxZoomScale) * 4.0).clamp(600.0, 3000.0);
-    final parHalfH = ((_viewState.viewHeightWorld / parallaxZoomScale) * 4.0).clamp(600.0, 3000.0);
-    final pLeft = px - parHalfW;
-    final pRight = px + parHalfW;
-    final pTop = py - parHalfH;
-    final pBottom = py + parHalfH;
-    const giantMargin = 150.0;
-    final visibleGiants = _backgroundGiantStore.entities.where((g) {
-      final pos = g.spine.positions;
-      if (pos.isEmpty) return false;
-      var minX = pos[0].x, maxX = pos[0].x, minY = pos[0].y, maxY = pos[0].y;
-      for (final p in pos) {
-        if (p.x < minX) minX = p.x;
-        if (p.x > maxX) maxX = p.x;
-        if (p.y < minY) minY = p.y;
-        if (p.y > maxY) maxY = p.y;
-      }
-      return aabbOverlapsRect(
-        minX - giantMargin,
-        maxX + giantMargin,
-        minY - giantMargin,
-        maxY + giantMargin,
-        pLeft,
-        pRight,
-        pTop,
-        pBottom,
-      );
-    }).toList();
+    final visibleGiants = _backgroundGiantStore.getVisible(
+      _viewState.cameraX,
+      _viewState.cameraY,
+      _viewState.viewWidthWorld,
+      _viewState.viewHeightWorld,
+    );
     return [
       Positioned.fill(
         child: CustomPaint(painter: SolidBackgroundPainter(color: bgColor)),
