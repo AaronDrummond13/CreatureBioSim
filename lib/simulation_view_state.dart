@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'render/view.dart';
@@ -48,7 +47,9 @@ class SimulationViewState extends ChangeNotifier {
   }
 
   /// Render rect in world coords with buffer so things don't pop at edges. (left, right, top, bottom).
-  (double, double, double, double) renderRectWithBuffer([double bufferFrac = 0.15]) {
+  (double, double, double, double) renderRectWithBuffer([
+    double bufferFrac = 0.15,
+  ]) {
     final w = viewWidthWorld * (0.5 + bufferFrac);
     final h = viewHeightWorld * (0.5 + bufferFrac);
     return (cameraX - w, cameraX + w, cameraY - h, cameraY + h);
