@@ -15,6 +15,7 @@ class StoredMammoth {
     required this.creature,
     required this.spine,
     required this.botController,
+    required this.layerOpacity,
   });
 
   final int chunkCx;
@@ -22,11 +23,14 @@ class StoredMammoth {
   final Creature creature;
   final Spine spine;
   final BotController botController;
+
+  /// Per-mammoth opacity for rendering (e.g. 0.01–0.5).
+  final double layerOpacity;
 }
 
 /// Mammoths' universe: own chunk grid (same as main chunk 500×500), no biome coupling.
 /// Procedural only; when cleared, state is discarded ("moved away").
-double get _kParallaxChunkSize => kChunkSizeWorld; // 500
+double get _kParallaxChunkSize => 500; // 500
 const double _kParallaxRadius = 3000.0;
 const double _kParallaxFactor = 0.25;
 const double _kParallaxZoomScale = 5.0;
@@ -96,12 +100,14 @@ class MammothStore {
       ticksPerNewTarget: 350 + _random.nextInt(140),
       speed: 0.9,
     );
+    final layerOpacity = 0.01 + _random.nextDouble() * 0.49;
     _byChunk[key] = StoredMammoth(
       chunkCx: i,
       chunkCy: j,
       creature: creature,
       spine: spine,
       botController: botController,
+      layerOpacity: layerOpacity,
     );
     _generated.add(key);
   }
@@ -117,8 +123,14 @@ class MammothStore {
     final py = cameraY * _kParallaxFactor;
     // At least half a chunk so mammoths spawning anywhere in the center chunk are included.
     final halfChunk = _kParallaxChunkSize * 0.5;
-    final halfW = (viewWidthWorld / _kParallaxZoomScale * 4.0).clamp(halfChunk, 3500.0);
-    final halfH = (viewHeightWorld / _kParallaxZoomScale * 4.0).clamp(halfChunk, 3500.0);
+    final halfW = (viewWidthWorld / _kParallaxZoomScale * 4.0).clamp(
+      halfChunk,
+      3500.0,
+    );
+    final halfH = (viewHeightWorld / _kParallaxZoomScale * 4.0).clamp(
+      halfChunk,
+      3500.0,
+    );
     const margin = 150.0;
     final left = px - halfW;
     final right = px + halfW;

@@ -56,15 +56,14 @@ class FoodItem {
 /// Food items linked to chunks. Generation/clear is driven by [ChunkManager]; no distance-based add/remove.
 class FoodStore {
   FoodStore({
-    this.targetDensity = 1 / 230400.0,
+    this.targetFoodPerChunk = 3.0,
     this.radiusWorld = 14.0,
-    this.chunkSpawnChance = 0.25,
     Random? random,
   }) : _random = random ?? Random();
 
-  final double targetDensity;
+  /// Target number of food items to generate per chunk (rounded). If < 1, chunk gets no food.
+  final double targetFoodPerChunk;
   final double radiusWorld;
-  final double chunkSpawnChance;
   final Random _random;
 
   final List<FoodItem> _items = [];
@@ -161,15 +160,14 @@ class FoodStore {
   }
 
   /// Generate food for chunk (i, j). Called by [ChunkManager] when chunk comes into range.
+  /// Uses [targetFoodPerChunk]; if < 1, chunk gets no food. Otherwise places that many at random positions.
   void generateForChunk(int i, int j) {
-    if (chunkSpawnChance < 1.0 && _random.nextDouble() >= chunkSpawnChance)
-      return;
+    final count = targetFoodPerChunk.round().clamp(0, 0x7FFFFFFF);
+    if (count < 1) return;
     final cellSize = kChunkSizeWorld;
     final centerX = (i + 0.5) * cellSize;
     final centerY = (j + 0.5) * cellSize;
     final fillRadius = cellSize / 2;
-    final area = pi * fillRadius * fillRadius;
-    final count = (area * targetDensity).round().clamp(0, 0x7FFFFFFF);
     final minDist = minSpacing;
     final r2 = fillRadius * fillRadius;
     var attempts = 0;
