@@ -449,7 +449,7 @@ class CreaturePainter extends CustomPainter {
       ..color = Colors.white
       ..style = PaintingStyle.stroke
       ..strokeWidth = (2.0 * _paintZ).clamp(1.0, 2.0);
-    const flareRad = 35.0 * pi / 180.0; // 35° from inline when neutral
+    const flareRad = 45.0 * pi / 180.0; // 35° from inline when neutral
     for (final seg in fins) {
       if (seg < 0 || seg >= n) continue;
       final segW = _widthAt(seg);

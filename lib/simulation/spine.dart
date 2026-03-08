@@ -100,8 +100,8 @@ class Spine {
     }
     // Curve spread: when at the limit, ease toward midpoint of neighbors (blend per pass)
     const double atLimitThreshold = 0.7;
-    const int spreadPasses = 9;
-    const double spreadStep = 0.1;
+    const int spreadPasses = 4;
+    const double spreadStep = 0.2;
     for (var pass = 0; pass < spreadPasses; pass++) {
       for (var j = 1; j < n - 1; j++) {
         final aPrev = _segmentAngles[j - 1];
