@@ -165,7 +165,7 @@ class _SimulationScreenState extends State<SimulationScreen>
       _creatureStore.tick();
     }
     _foodStore.tick(_viewState.timeSeconds);
-    if (mounted) setState(() {});
+    if (mounted) _viewState.onTick();
   }
 
   List<Widget> _buildViewStack(Size size) {
@@ -306,7 +306,10 @@ class _SimulationScreenState extends State<SimulationScreen>
     final size = MediaQuery.sizeOf(context);
     return Stack(
       children: [
-        ..._buildViewStack(size),
+        ListenableBuilder(
+          listenable: _viewState,
+          builder: (context, _) => Stack(children: _buildViewStack(size)),
+        ),
         Positioned.fill(
           child: LayoutBuilder(
             builder: (context, contextConstraints) {
@@ -317,7 +320,7 @@ class _SimulationScreenState extends State<SimulationScreen>
               return SimulationGestureRegion(
                 onSinglePointerDown: (local) {
                   _viewState.updateTouchFromLocal(layerSize, local);
-                  setState(() {});
+                  _viewState.onTouchDown();
                 },
                 onSinglePointerMove: (local) {
                   _viewState.updateTouchFromLocal(layerSize, local);
@@ -326,25 +329,18 @@ class _SimulationScreenState extends State<SimulationScreen>
                   _viewState.clearLastTouch();
                 },
                 onScaleStart: (details) {
-                  _viewState.pinchStartZoom = _viewState.zoom;
-                  _viewState.touchTargetFrozen = details.pointerCount >= 2;
-                  setState(() {});
+                  _viewState.startPinch(details.pointerCount >= 2);
                 },
                 onScaleUpdate: (details) {
                   _viewState.touchTargetFrozen = details.pointerCount >= 2;
                   if (_viewState.pinchStartZoom != null) {
-                    final z = _viewState.clampZoom(
+                    _viewState.applyPinchZoom(
                       _viewState.pinchStartZoom! * details.scale,
                     );
-                    if (z != _viewState.zoom) {
-                      _viewState.zoom = z;
-                    }
                   }
-                  setState(() {});
                 },
                 onScaleEnd: () {
-                  _viewState.pinchStartZoom = null;
-                  _viewState.clearLastTouch();
+                  _viewState.endPinch();
                 },
               );
             },

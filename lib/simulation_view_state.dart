@@ -1,10 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'render/view.dart';
 
 /// Holds view/camera and touch state for the simulation screen.
 /// Camera = world position at screen center; zoom; touch target; time for drift/parallax.
-class SimulationViewState {
+/// Extends [ChangeNotifier] so only the view subtree rebuilds on tick/gesture; gesture region stays stable.
+class SimulationViewState extends ChangeNotifier {
   double cameraX = 0;
   double cameraY = 0;
   double zoom = 1.0;
@@ -62,6 +64,9 @@ class SimulationViewState {
     lastTouchScreenSize = screenSize;
   }
 
+  /// Notify after touch down so view repaints; move repaints are handled by tick.
+  void onTouchDown() => notifyListeners();
+
   /// Recompute touch target from stored screen position. No-op if pinching (target frozen).
   void refreshTouchFromStoredLocal() {
     if (touchTargetFrozen) return;
@@ -77,8 +82,34 @@ class SimulationViewState {
     lastTouchLocal = null;
     lastTouchScreenSize = null;
     touchTargetFrozen = false;
+    notifyListeners();
+  }
+
+  /// Apply pinch zoom; notifies only if [z] differs from current zoom.
+  void applyPinchZoom(double z) {
+    final clamped = clampZoom(z);
+    if (clamped != zoom) {
+      zoom = clamped;
+      notifyListeners();
+    }
+  }
+
+  /// Pinch started (2 fingers); freeze target and store baseline zoom.
+  void startPinch(bool twoFingers) {
+    pinchStartZoom = zoom;
+    touchTargetFrozen = twoFingers;
+    notifyListeners();
+  }
+
+  /// Pinch ended; clear baseline and touch so zoom/target don’t stick.
+  void endPinch() {
+    pinchStartZoom = null;
+    clearLastTouch();
   }
 
   /// Clamp [newZoom] to [minZoom]..[maxZoom].
   double clampZoom(double newZoom) => newZoom.clamp(minZoom, maxZoom);
+
+  /// Called each tick so the view subtree rebuilds; gesture region does not.
+  void onTick() => notifyListeners();
 }
