@@ -79,6 +79,7 @@ class _SimulationScreenState extends State<SimulationScreen>
 
   static const double _headMoveSpeed = 4.0;
   static const double _arrivalThreshold = 4.0;
+
   /// Fraction of head (vertex) size used for head/mouth collision (epic touch and consume radius).
   static const double _kHeadMouthSizeFrac = 0.8;
 
@@ -300,7 +301,7 @@ class _SimulationScreenState extends State<SimulationScreen>
             view: cameraView,
             timeSeconds: t,
             biomeMap: _biomeMap,
-            biomeTintFrac: 0.35,
+            biomeTintFrac: 0.7,
           ),
         ),
       ),
