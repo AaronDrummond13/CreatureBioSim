@@ -61,7 +61,8 @@ class _SimulationScreenState extends State<SimulationScreen>
 
   final Spawner _spawner = Spawner();
   late final CreatureStore _creatureStore = CreatureStore(spawner: _spawner);
-  final FoodStore _foodStore = FoodStore();
+  final BiomeMap _biomeMap = BiomeMap();
+  late final FoodStore _foodStore;
   late final MammothStore _mammothStore = MammothStore(
     spawner: _spawner,
     spawnChanceOneIn: 2,
@@ -70,7 +71,6 @@ class _SimulationScreenState extends State<SimulationScreen>
     foodStore: _foodStore,
     creatureStore: _creatureStore,
   );
-  final BiomeMap _biomeMap = BiomeMap();
   bool _chunksInitialized = false;
   bool _isDead = false;
 
@@ -86,6 +86,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   @override
   void initState() {
     super.initState();
+    _foodStore = FoodStore(biomeMap: _biomeMap);
     final pos = _spine.positions;
     if (pos.isNotEmpty) {
       final head = pos.last;

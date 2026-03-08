@@ -1,6 +1,56 @@
 import 'dart:math' show cos, pi, Random, sin, sqrt;
 
+import 'biome.dart';
+import 'biome_map.dart';
 import 'world.dart';
+
+/// Target counts per chunk per food type. Adjust per biome below.
+class BiomeFoodConfig {
+  const BiomeFoodConfig({
+    this.plantPerChunk = 1,
+    this.animalPerChunk = 1,
+    this.bubblePerChunk = 1,
+  });
+  final double plantPerChunk;
+  final double animalPerChunk;
+  final double bubblePerChunk;
+}
+
+/// Prefilled per-biome food targets. Edit these to tune spawns (e.g. algae = more plant, clear = more bubbles, poisoned = less plant).
+BiomeFoodConfig biomeFoodConfig(Biome biome) {
+  switch (biome) {
+    case Biome.clear:
+      return const BiomeFoodConfig(
+        plantPerChunk: 0.2,
+        animalPerChunk: 0.1,
+        bubblePerChunk: 0.3,
+      );
+    case Biome.deep:
+      return const BiomeFoodConfig(
+        plantPerChunk: 0.2,
+        animalPerChunk: 0.2,
+        bubblePerChunk: 0.2,
+      );
+    case Biome.algae:
+      return const BiomeFoodConfig(
+        plantPerChunk: 0.3,
+        animalPerChunk: 0.2,
+        bubblePerChunk: 0.1,
+      );
+    case Biome.poisoned:
+      return const BiomeFoodConfig(
+        plantPerChunk: 0.1,
+        animalPerChunk: 0.2,
+        bubblePerChunk: 0.3,
+      );
+    case Biome.dirty:
+      return const BiomeFoodConfig(
+        plantPerChunk: 0.2,
+        animalPerChunk: 0.3,
+        bubblePerChunk: 0.1,
+      );
+  }
+}
 
 /// Cell type for food items. Plant = green hexagon; animal = red circle; bubble = pop-able bubble (same look as background).
 enum CellType { plant, animal, bubble }
@@ -53,16 +103,13 @@ class FoodItem {
   final CellType cellType;
 }
 
-/// Food items linked to chunks. Generation/clear is driven by [ChunkManager]; no distance-based add/remove.
+/// Food items linked to chunks. Generation/clear is driven by [ChunkManager]. Spawn counts per chunk come from [biomeFoodConfig] for the chunk's biome.
 class FoodStore {
-  FoodStore({
-    this.targetFoodPerChunk = 3.0,
-    this.radiusWorld = 14.0,
-    Random? random,
-  }) : _random = random ?? Random();
+  FoodStore({this.biomeMap, this.radiusWorld = 14.0, Random? random})
+    : _random = random ?? Random();
 
-  /// Target number of food items to generate per chunk (rounded). If < 1, chunk gets no food.
-  final double targetFoodPerChunk;
+  /// When set, chunk biome is used to look up [biomeFoodConfig]. When null, uses [Biome.clear] config.
+  final BiomeMap? biomeMap;
   final double radiusWorld;
   final Random _random;
 
@@ -159,14 +206,37 @@ class FoodStore {
     }
   }
 
+  /// Fractional value → int: floor + chance for one more (e.g. 0.5 → 0 or 1 with 50% chance).
+  int _countFromRate(double rate) {
+    if (rate <= 0) return 0;
+    final floor = rate.floor();
+    final frac = rate - floor;
+    final extra = frac > 0 && _random.nextDouble() < frac ? 1 : 0;
+    return (floor + extra).clamp(0, 0x7FFFFFFF);
+  }
+
   /// Generate food for chunk (i, j). Called by [ChunkManager] when chunk comes into range.
-  /// Uses [targetFoodPerChunk]; if < 1, chunk gets no food. Otherwise places that many at random positions.
+  /// Uses [biomeFoodConfig] for the chunk's biome; builds plant/animal/bubble counts, shuffles, places at random positions.
+  /// Fractional rates (e.g. 0.5) give a chance of 1 item so low densities still spawn food.
   void generateForChunk(int i, int j) {
-    final count = targetFoodPerChunk.round().clamp(0, 0x7FFFFFFF);
-    if (count < 1) return;
     final cellSize = kChunkSizeWorld;
     final centerX = (i + 0.5) * cellSize;
     final centerY = (j + 0.5) * cellSize;
+    final biome = biomeMap != null
+        ? biomeMap!.biomeAt(centerX, centerY)
+        : Biome.clear;
+    final config = biomeFoodConfig(biome);
+    final plantCount = _countFromRate(config.plantPerChunk);
+    final animalCount = _countFromRate(config.animalPerChunk);
+    final bubbleCount = _countFromRate(config.bubblePerChunk);
+    final types = <CellType>[
+      ...List.filled(plantCount, CellType.plant),
+      ...List.filled(animalCount, CellType.animal),
+      ...List.filled(bubbleCount, CellType.bubble),
+    ];
+    if (types.isEmpty) return;
+    types.shuffle(_random);
+    final count = types.length;
     final fillRadius = cellSize / 2;
     final minDist = minSpacing;
     final r2 = fillRadius * fillRadius;
@@ -174,18 +244,14 @@ class FoodStore {
     const maxAttemptsPerItem = 500;
     var added = 0;
     while (added < count && attempts < count * maxAttemptsPerItem) {
-      final r = sqrt(_random.nextDouble()) * fillRadius;
+      final dist = sqrt(_random.nextDouble()) * fillRadius;
       final theta = _random.nextDouble() * 2 * pi;
-      final x = centerX + r * cos(theta);
-      final y = centerY + r * sin(theta);
+      final x = centerX + dist * cos(theta);
+      final y = centerY + dist * sin(theta);
       if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <= r2 &&
           !_tooCloseInChunk(i, j, x, y, minDist)) {
         final nux = (_random.nextDouble() * 2 - 1) * radiusWorld * 0.12;
         final nuy = (_random.nextDouble() * 2 - 1) * radiusWorld * 0.12;
-        final r = _random.nextInt(3);
-        final CellType type = r == 0
-            ? CellType.bubble
-            : (r == 1 ? CellType.animal : CellType.plant);
         _items.add(
           FoodItem(
             x,
@@ -194,7 +260,7 @@ class FoodStore {
             j,
             nucleusOffsetX: nux,
             nucleusOffsetY: nuy,
-            cellType: type,
+            cellType: types[added],
           ),
         );
         added++;
