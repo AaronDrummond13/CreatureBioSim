@@ -23,7 +23,7 @@ class Spine {
   Spine({
     int segmentCount = 1,
     double segmentLength = 10.0,
-    double maxJointAngleRad = 0.4,
+    double maxJointAngleRad = .5,
   }) : segmentCount = segmentCount.clamp(1, maxSegmentCount),
        segmentLength = segmentLength.clamp(minSegmentLength, maxSegmentLength),
        maxJointAngleRad = maxJointAngleRad.clamp(
@@ -99,8 +99,8 @@ class Spine {
       }
     }
     // Curve spread: when at the limit, ease toward midpoint of neighbors (blend per pass)
-    const double atLimitThreshold = 0.85;
-    const int spreadPasses = 3;
+    const double atLimitThreshold = 0.7;
+    const int spreadPasses = 9;
     const double spreadStep = 0.1;
     for (var pass = 0; pass < spreadPasses; pass++) {
       for (var j = 1; j < n - 1; j++) {
@@ -131,6 +131,26 @@ class Spine {
           next.position.x - math.cos(_segmentAngles[i]) * segmentLength;
       nodes[i].position.y =
           next.position.y - math.sin(_segmentAngles[i]) * segmentLength;
+    }
+  }
+
+  /// Rotates the entire creature around its base (first node) by [angleRad].
+  /// Updates both node positions and segment angles so state stays consistent.
+  /// Use when neck is at bend limit to "make up the difference" with global turn.
+  void rotateAroundBase(double angleRad) {
+    if (nodes.isEmpty) return;
+    final base = nodes[0].position;
+    final c = math.cos(angleRad);
+    final s = math.sin(angleRad);
+    for (var i = 1; i < nodes.length; i++) {
+      final p = nodes[i].position;
+      final dx = p.x - base.x;
+      final dy = p.y - base.y;
+      p.x = base.x + dx * c - dy * s;
+      p.y = base.y + dx * s + dy * c;
+    }
+    for (var i = 0; i < _segmentAngles.length; i++) {
+      _segmentAngles[i] = simplifyAngle(_segmentAngles[i] + angleRad);
     }
   }
 

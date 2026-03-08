@@ -1,4 +1,4 @@
-import 'dart:math' show sqrt;
+import 'dart:math' show atan2, sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 import 'controller/mammoth_store.dart';
@@ -11,6 +11,7 @@ import 'render/background_painter.dart'
     show BackgroundPainter, SolidBackgroundPainter;
 import 'render/food_painter.dart';
 import 'render/spine_painter.dart';
+import 'simulation/angle_util.dart';
 import 'simulation/spine.dart';
 import 'simulation_view_state.dart';
 import 'world/biome_map.dart';
@@ -78,8 +79,8 @@ class _SimulationScreenState extends State<SimulationScreen>
   final SimulationViewState _viewState = SimulationViewState();
   late Ticker _ticker;
 
-  static const double _headMoveSpeed = 4.0;
-  static const double _arrivalThreshold = 4.0;
+  static const double _headMoveSpeed = 6.0;
+  static const double _arrivalThreshold = 10.0;
 
   /// Fraction of head (vertex) size used for head/mouth collision (epic touch and consume radius).
   static const double _kHeadMouthSizeFrac = 0.8;
@@ -87,6 +88,9 @@ class _SimulationScreenState extends State<SimulationScreen>
   /// Fixed simulation timestep (seconds). Game logic runs at this rate regardless of display FPS.
   static const double _kSimFixedDt = 1 / 60.0;
   static const int _kMaxSimStepsPerFrame = 5;
+
+  /// When neck is at bend limit, nudge whole creature this much (rad) toward touch per step. Only tuning for tight turns.
+  static const double _kGlobalTurnNudge = 0.02;
 
   double _simTimeSeconds = 0;
   double? _lastRealTimeSeconds;
@@ -197,12 +201,31 @@ class _SimulationScreenState extends State<SimulationScreen>
             intendedTargetY: _viewState.touchY,
           );
         }
-        _viewState.cameraX = head.x;
-        _viewState.cameraY = head.y;
+
+        // When player asks for a turn sharper than one joint allows, nudge whole creature so we don't get stuck.
+        if (_spine.segmentCount >= 2) {
+          final headPos = _spine.positions.last;
+          final headDir = _spine.segmentAngles.last;
+          final towardTouch = atan2(
+            _viewState.touchY - headPos.y,
+            _viewState.touchX - headPos.x,
+          );
+          final turn = relativeAngleDiff(headDir, towardTouch);
+          if (turn.abs() > _spine.maxJointAngleRad) {
+            final nudge = turn.abs() < _kGlobalTurnNudge
+                ? turn
+                : (turn > 0 ? _kGlobalTurnNudge : -_kGlobalTurnNudge);
+            _spine.rotateAroundBase(nudge);
+          }
+        }
+
+        final headAfter = _spine.positions.last;
+        _viewState.cameraX = headAfter.x;
+        _viewState.cameraY = headAfter.y;
         final consumeRadius = _foodStore.radiusWorld + headCollision;
         _foodStore.consumeNear(
-          head.x,
-          head.y,
+          headAfter.x,
+          headAfter.y,
           consumeRadius,
           _viewState.timeSeconds,
         );
@@ -212,15 +235,15 @@ class _SimulationScreenState extends State<SimulationScreen>
           if (pos.isEmpty) continue;
           final bx = pos.last.x;
           final by = pos.last.y;
-          final bdx = head.x - bx;
-          final bdy = head.y - by;
+          final bdx = headAfter.x - bx;
+          final bdy = headAfter.y - by;
           if (bdx * bdx + bdy * bdy <= consumeRadius * consumeRadius) {
             _foodStore.addConsumedRemnantAt(
               bx,
               by,
               _viewState.timeSeconds,
-              head.x,
-              head.y,
+              headAfter.x,
+              headAfter.y,
               cellType: CellType.animal,
             );
             _creatureStore.removeCreature(e);
