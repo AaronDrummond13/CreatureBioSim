@@ -46,7 +46,7 @@ class CreaturePainter extends CustomPainter {
   static const double kEpicRenderScale = 3.0;
 
   /// Render scale for baby creatures.
-  static const double kBabyRenderScale = 0.25;
+  static const double kBabyRenderScale = 0.4;
 
   static const double dorsalFinHeight = 18.0;
   static const double dorsalFinBaseFrac = 0.3;
