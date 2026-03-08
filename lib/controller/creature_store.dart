@@ -14,6 +14,7 @@ class StoredCreature {
     required this.creature,
     required this.spine,
     required this.botController,
+    this.isBaby = false,
   });
 
   final int chunkCx;
@@ -21,56 +22,98 @@ class StoredCreature {
   final Creature creature;
   final Spine spine;
   final BotController botController;
+  final bool isBaby;
 }
 
-/// Creatures linked to chunks. Generation/clear is driven by [ChunkManager]; no distance-based add/remove.
+/// Creatures linked to chunks. Generation/clear is driven by [ChunkManager].
+/// Supports single spawn or group spawn (5 identical, some babies).
 class CreatureStore {
   CreatureStore({
     required this.spawner,
     this.spawnChanceOneIn = 10,
+    this.groupSpawnChanceOneIn = 2,
     Random? random,
   }) : _random = random ?? Random();
 
   final Spawner spawner;
   final int spawnChanceOneIn;
+  final int groupSpawnChanceOneIn;
   final Random _random;
 
-  final Map<String, StoredCreature> _byChunk = {};
-  List<StoredCreature> get entities => _byChunk.values.toList();
+  final Map<String, List<StoredCreature>> _byChunk = {};
 
-  /// Remove creature for chunk (ci, cj). Called by [ChunkManager] when chunk goes out of range.
+  List<StoredCreature> get entities =>
+      _byChunk.values.expand((list) => list).toList();
+
   void clearChunk(int ci, int cj) {
     _byChunk.remove(chunkKey(ci, cj));
   }
 
-  /// Generate creature for chunk (i, j) with 1 in [spawnChanceOneIn] chance. Called by [ChunkManager] when chunk comes into range.
+  void removeCreature(StoredCreature e) {
+    for (final entry in _byChunk.entries) {
+      if (entry.value.remove(e)) {
+        if (entry.value.isEmpty) _byChunk.remove(entry.key);
+        return;
+      }
+    }
+  }
+
   void generateForChunk(int i, int j) {
     final key = chunkKey(i, j);
     if (_byChunk.containsKey(key)) return;
     if (_random.nextInt(spawnChanceOneIn) != 0) return;
+
     final cellSize = kChunkSizeWorld;
     final x0 = i * cellSize;
     final y0 = j * cellSize;
-    final spawnX = x0 + _random.nextDouble() * cellSize;
-    final spawnY = y0 + _random.nextDouble() * cellSize;
-    final (creature, spine) = spawner.createRandomAt(spawnX, spawnY);
-    final botController = BotController(
-      spine: spine,
-      wanderRadius: 600.0 + _random.nextDouble() * 800.0,
-      ticksPerNewTarget: 80 + _random.nextInt(120),
-    );
-    _byChunk[key] = StoredCreature(
-      chunkCx: i,
-      chunkCy: j,
-      creature: creature,
-      spine: spine,
-      botController: botController,
-    );
+    final centerX = x0 + _random.nextDouble() * cellSize;
+    final centerY = y0 + _random.nextDouble() * cellSize;
+
+    final list = <StoredCreature>[];
+
+    final doGroup = _random.nextInt(groupSpawnChanceOneIn) == 0;
+    if (doGroup) {
+      final (creature, group) = spawner.createGroupAt(centerX, centerY,
+          count: 5, babyChance: 0.4);
+      for (final (spine, isBaby) in group) {
+        final botController = BotController(
+          spine: spine,
+          wanderRadius: 400.0 + _random.nextDouble() * 400.0,
+          ticksPerNewTarget: 60 + _random.nextInt(80),
+        );
+        list.add(StoredCreature(
+          chunkCx: i,
+          chunkCy: j,
+          creature: creature,
+          spine: spine,
+          botController: botController,
+          isBaby: isBaby,
+        ));
+      }
+    } else {
+      final (creature, spine) = spawner.createRandomAt(centerX, centerY);
+      final botController = BotController(
+        spine: spine,
+        wanderRadius: 600.0 + _random.nextDouble() * 800.0,
+        ticksPerNewTarget: 80 + _random.nextInt(120),
+      );
+      list.add(StoredCreature(
+        chunkCx: i,
+        chunkCy: j,
+        creature: creature,
+        spine: spine,
+        botController: botController,
+      ));
+    }
+
+    _byChunk[key] = list;
   }
 
   void tick() {
-    for (final e in _byChunk.values) {
-      e.botController.tick();
+    for (final list in _byChunk.values) {
+      for (final e in list) {
+        e.botController.tick();
+      }
     }
   }
 }

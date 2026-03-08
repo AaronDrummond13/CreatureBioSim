@@ -29,6 +29,8 @@ class CreaturePainter extends CustomPainter {
   final bool drawEyes;
   /// If true, draw only eyes (used after inner-body cloud for correct stacking).
   final bool eyesOnly;
+  /// When true, draw at 0.25 scale and no eyes (baby creature).
+  final bool isBaby;
 
   static const double dorsalFinHeight = 18.0;
   static const double dorsalFinBaseFrac = 0.3;
@@ -45,6 +47,7 @@ class CreaturePainter extends CustomPainter {
     this.blurLayerBackgroundColor,
     this.drawEyes = true,
     this.eyesOnly = false,
+    this.isBaby = false,
   });
 
   // Set during paint() for use by _drawTailFin, _drawBody, _drawDorsalFins, _drawEyes.
@@ -55,13 +58,28 @@ class CreaturePainter extends CustomPainter {
   late List<Vector2> _paintPositions;
   late List<double> _paintSegmentAngles;
   late int _paintN;
+  late double _bodyScale;
+  late double _eyeScaleMultiplier;
 
   double _widthAt(int i) {
     final vw = creature.vertexWidths;
+    double w;
     if (i < vw.length) {
-      return vw[i].clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
+      w = vw[i].clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
+    } else {
+      w = _fallbackWidth.clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
     }
-    return _fallbackWidth.clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
+    return w * _bodyScale;
+  }
+
+  /// For babies: scale spine positions around head so creature is proportionally smaller (length and width).
+  static List<Vector2> _positionsScaledFromHead(List<Vector2> positions, double scale) {
+    if (positions.isEmpty) return positions;
+    final head = positions.last;
+    return [
+      for (final p in positions)
+        Vector2(head.x + (p.x - head.x) * scale, head.y + (p.y - head.y) * scale),
+    ];
   }
 
   /// Builds the creature body outline path in screen coordinates for clipping (e.g. consumption effects).
@@ -147,12 +165,14 @@ class CreaturePainter extends CustomPainter {
     _paintCenterY = size.height / 2;
     _paintZ = view.zoom;
     _paintFillColor = Color(creature.color);
-    _paintPositions = positions;
+    _bodyScale = isBaby ? 0.25 : 1.0;
+    _paintPositions = isBaby ? _positionsScaledFromHead(positions, _bodyScale) : positions;
     _paintSegmentAngles = segmentAngles;
-    _paintN = positions.length - 1;
+    _paintN = _paintPositions.length - 1;
+    _eyeScaleMultiplier = 1.0;
 
     if (eyesOnly) {
-      _drawEyes(canvas);
+      if (!isBaby) _drawEyes(canvas);
       if (useBlurLayer) canvas.restore();
       return;
     }
@@ -167,7 +187,7 @@ class CreaturePainter extends CustomPainter {
     _drawLateralFins(canvas);
     _drawBody(canvas);
     _drawDorsalFins(canvas);
-    if (drawEyes) _drawEyes(canvas);
+    if (drawEyes && !isBaby) _drawEyes(canvas);
   }
 
   void _drawTailFin(Canvas canvas) {
@@ -202,11 +222,11 @@ class CreaturePainter extends CustomPainter {
         .toList();
     final rootW = vws.isEmpty
         ? _widthAt(0)
-        : vws.reduce((a, b) => a < b ? a : b);
+        : vws.reduce((a, b) => a < b ? a : b) * _bodyScale;
     final tailSegmentWidth = _widthAt(0);
     final maxW = vws.isEmpty
         ? rootW / 2
-        : vws.reduce((a, b) => a > b ? a : b) / 2;
+        : vws.reduce((a, b) => a > b ? a : b) / 2 * _bodyScale;
 
     final back = tailA + pi;
     final len = tailSegmentWidth * 3.0;
@@ -496,7 +516,7 @@ class CreaturePainter extends CustomPainter {
     final maxAngle = spine.maxJointAngleRad;
     for (final fin in fins) {
       final run = fin.$1;
-      final fullH = fin.$2 ?? dorsalFinHeight;
+      final fullH = (fin.$2 ?? dorsalFinHeight) * _bodyScale;
       if (run.isEmpty) continue;
       final s = run.first;
       final e = run.last;
@@ -581,7 +601,7 @@ class CreaturePainter extends CustomPainter {
       headCx + sin(headA) * headW * eyeInset,
       headCy - cos(headA) * headW * eyeInset,
     );
-    final eyeRadius = headW * 0.24;
+    final eyeRadius = headW * 0.24 * _eyeScaleMultiplier;
     final eyePaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
@@ -599,5 +619,6 @@ class CreaturePainter extends CustomPainter {
       oldDelegate.layerOpacity != layerOpacity ||
       oldDelegate.blurLayerBackgroundColor != blurLayerBackgroundColor ||
       oldDelegate.drawEyes != drawEyes ||
-      oldDelegate.eyesOnly != eyesOnly;
+      oldDelegate.eyesOnly != eyesOnly ||
+      oldDelegate.isBaby != isBaby;
 }

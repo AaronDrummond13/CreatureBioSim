@@ -144,6 +144,26 @@ class _SimulationScreenState extends State<SimulationScreen>
         consumeRadius,
         _viewState.timeSeconds,
       );
+      for (final e in _creatureStore.entities) {
+        if (!e.isBaby) continue;
+        final pos = e.spine.positions;
+        if (pos.isEmpty) continue;
+        final bx = pos.last.x;
+        final by = pos.last.y;
+        final dx = head.x - bx;
+        final dy = head.y - by;
+        if (dx * dx + dy * dy <= consumeRadius * consumeRadius) {
+          _foodStore.addConsumedRemnantAt(
+            bx,
+            by,
+            _viewState.timeSeconds,
+            head.x,
+            head.y,
+            cellType: CellType.animal,
+          );
+          _creatureStore.removeCreature(e);
+        }
+      }
     }
     _viewState.timeSeconds = elapsed.inMilliseconds / 1000.0;
     _backgroundGiantStore.tick();
@@ -270,6 +290,7 @@ class _SimulationScreenState extends State<SimulationScreen>
               spine: e.spine,
               view: cameraView,
               timeSeconds: t,
+              isBaby: e.isBaby,
             ),
           ),
         ),

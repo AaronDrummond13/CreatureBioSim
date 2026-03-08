@@ -95,6 +95,30 @@ class FoodStore {
     }
   }
 
+  /// Add a consumed remnant at (x, y), e.g. when a baby creature is eaten. Uses [cellType] (default animal) for rendering.
+  void addConsumedRemnantAt(
+    double x,
+    double y,
+    double consumedAt,
+    double headX,
+    double headY, {
+    CellType cellType = CellType.animal,
+  }) {
+    final n = _random.nextInt(3) + 1;
+    final bubbleSizes = List<int>.generate(n, (_) => _random.nextInt(3));
+    _consumedRemnants.add(ConsumedRemnant(
+      x: x,
+      y: y,
+      nucleusOffsetX: 0,
+      nucleusOffsetY: 0,
+      cellType: cellType,
+      consumedAt: consumedAt,
+      headX: headX,
+      headY: headY,
+      bubbleSizes: bubbleSizes,
+    ));
+  }
+
   /// Only checks items in the same chunk (ci, cj).
   bool _tooCloseInChunk(int ci, int cj, double x, double y, double minDist) {
     final minDist2 = minDist * minDist;

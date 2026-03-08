@@ -17,6 +17,27 @@ class Spawner {
     return (creature, spine);
   }
 
+  /// Creates one random creature and [count] spines (identical body plan). Each spine is placed near [centerX], [centerY] with small random offset. Returns (creature, list of (spine, isBaby)).
+  (Creature, List<(Spine, bool)>) createGroupAt(
+    double centerX,
+    double centerY, {
+    int count = 5,
+    double babyChance = 0.4,
+  }) {
+    final creature = _randomCreature();
+    const spread = 60.0;
+    final list = <(Spine, bool)>[];
+    for (var i = 0; i < count; i++) {
+      final spine = Spine(segmentCount: creature.segmentCount);
+      final x = centerX + (_rng.nextDouble() * 2 - 1) * spread;
+      final y = centerY + (_rng.nextDouble() * 2 - 1) * spread;
+      _positionSpineHeadAt(spine, x, y);
+      final isBaby = _rng.nextDouble() < babyChance;
+      list.add((spine, isBaby));
+    }
+    return (creature, list);
+  }
+
   /// 1/8 chance for each tail type including none.
   CaudalFinType? _randomTailFin() {
     switch (_rng.nextInt(8)) {
