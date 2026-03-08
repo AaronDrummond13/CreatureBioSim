@@ -1,7 +1,9 @@
 import 'dart:math' show cos, pi, Random, sin, sqrt;
 
 import '../world/biome.dart';
+import '../world/biome_food_config.dart';
 import '../world/biome_map.dart';
+import '../world/consumed_remnant.dart';
 import '../world/food.dart';
 import '../world/world.dart';
 

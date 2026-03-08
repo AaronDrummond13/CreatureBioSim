@@ -3,7 +3,8 @@ import 'dart:math' show cos, pi, sin, sqrt;
 import 'package:flutter/material.dart';
 
 import '../simulation/spine.dart';
-import '../world/food.dart' show CellType, ConsumedRemnant, FoodItem;
+import '../world/consumed_remnant.dart';
+import '../world/food.dart' show CellType, FoodItem;
 import 'render_utils.dart' show drawBubble, drawBubbleShape;
 import 'view.dart';
 
