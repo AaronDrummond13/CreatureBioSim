@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'render/view.dart';
+import 'package:creature_bio_sim/render/view.dart';
 
 /// Holds view/camera and touch state for the simulation screen.
 /// Camera = world position at screen center; zoom; touch target; time for drift/parallax.

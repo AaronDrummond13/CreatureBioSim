@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'editor_style.dart';
+import 'package:creature_bio_sim/editor/editor_style.dart';
 
 /// Custom slider: track + draggable thumb (no Material).
 class EditorSlider extends StatefulWidget {

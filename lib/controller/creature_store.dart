@@ -1,13 +1,13 @@
 import 'dart:math' show Random;
 
-import '../creature.dart';
-import '../simulation/spine.dart';
-import '../world/biome.dart';
-import '../world/biome_creature_config.dart';
-import '../world/biome_map.dart';
-import '../world/world.dart';
-import 'bot_controller.dart';
-import 'spawner.dart';
+import 'package:creature_bio_sim/creature.dart';
+import 'package:creature_bio_sim/simulation/spine.dart';
+import 'package:creature_bio_sim/world/biome.dart';
+import 'package:creature_bio_sim/world/biome_creature_config.dart';
+import 'package:creature_bio_sim/world/biome_map.dart';
+import 'package:creature_bio_sim/world/world.dart';
+import 'package:creature_bio_sim/controller/bot_controller.dart';
+import 'package:creature_bio_sim/controller/spawner.dart';
 
 /// A creature plus spine and bot controller, tied to a chunk for culling.
 class StoredCreature {

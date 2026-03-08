@@ -1,7 +1,7 @@
-import '../world/world.dart';
+import 'package:creature_bio_sim/world/world.dart';
 
-import 'food_store.dart';
-import 'creature_store.dart';
+import 'package:creature_bio_sim/controller/food_store.dart';
+import 'package:creature_bio_sim/controller/creature_store.dart';
 
 /// Chunk lifecycle for main world only (food + creatures). One center, one radius.
 /// Mammoths use their own parallax universe and are not managed here.

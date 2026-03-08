@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'creature.dart';
-import 'editor/editor_screen.dart';
-import 'simulation_screen.dart';
+import 'package:creature_bio_sim/creature.dart';
+import 'package:creature_bio_sim/editor/editor_screen.dart';
+import 'package:creature_bio_sim/simulation_screen.dart';
 
 void main() {
   runApp(const MainApp());

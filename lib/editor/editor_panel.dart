@@ -2,11 +2,11 @@ import 'dart:math' show pi;
 
 import 'package:flutter/material.dart';
 
-import '../creature.dart';
-import '../render/tail_painter.dart';
-import '../simulation/vector.dart';
-import 'editor_shared.dart';
-import 'editor_style.dart';
+import 'package:creature_bio_sim/creature.dart';
+import 'package:creature_bio_sim/render/tail_painter.dart';
+import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:creature_bio_sim/editor/editor_shared.dart';
+import 'package:creature_bio_sim/editor/editor_style.dart';
 
 /// Left/bottom panel: custom tab row + content (no Material). Play is top-right only.
 class EditorPanel extends StatelessWidget {

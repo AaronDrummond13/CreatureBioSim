@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../creature.dart';
-import 'editor_panel.dart';
-import 'editor_preview.dart';
-import 'editor_style.dart';
+import 'package:creature_bio_sim/creature.dart';
+import 'package:creature_bio_sim/editor/editor_panel.dart';
+import 'package:creature_bio_sim/editor/editor_preview.dart';
+import 'package:creature_bio_sim/editor/editor_style.dart';
 
 /// Full-screen creature editor: left (or bottom) panel for properties, right (or top) for live preview.
 /// Play and Test/Edit buttons are drawn inside the editor (top-right).

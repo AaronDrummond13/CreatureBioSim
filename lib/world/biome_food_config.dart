@@ -1,4 +1,4 @@
-import 'biome.dart';
+import 'package:creature_bio_sim/world/biome.dart';
 
 /// Target counts per chunk per food type. Adjust per biome below.
 class BiomeFoodConfig {

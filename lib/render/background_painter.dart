@@ -1,8 +1,8 @@
 import 'dart:math' show cos, sin;
 import 'package:flutter/material.dart';
-import '../world/biome_map.dart';
-import 'render_utils.dart';
-import 'view.dart';
+import 'package:creature_bio_sim/world/biome_map.dart';
+import 'package:creature_bio_sim/render/render_utils.dart';
+import 'package:creature_bio_sim/render/view.dart';
 
 /// Deterministic size variance from grid index: returns multiplier in [minFrac, 1].
 double _sizeVariance(int i, int j, {double minFrac = 0.65}) {

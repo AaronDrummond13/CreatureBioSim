@@ -1,11 +1,11 @@
 import 'dart:math' show cos, pi, Random, sin, sqrt;
 
-import '../world/biome.dart';
-import '../world/biome_food_config.dart';
-import '../world/biome_map.dart';
-import '../world/consumed_remnant.dart';
-import '../world/food.dart';
-import '../world/world.dart';
+import 'package:creature_bio_sim/world/biome.dart';
+import 'package:creature_bio_sim/world/biome_food_config.dart';
+import 'package:creature_bio_sim/world/biome_map.dart';
+import 'package:creature_bio_sim/world/consumed_remnant.dart';
+import 'package:creature_bio_sim/world/food.dart';
+import 'package:creature_bio_sim/world/world.dart';
 
 /// Food items linked to chunks. Generation/clear is driven by [ChunkManager]. Spawn counts per chunk come from [biomeFoodConfig] for the chunk's biome.
 class FoodStore {

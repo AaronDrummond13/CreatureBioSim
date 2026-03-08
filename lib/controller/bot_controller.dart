@@ -1,6 +1,6 @@
 import 'dart:math' show cos, pi, Random, sin, sqrt;
 
-import '../simulation/spine.dart';
+import 'package:creature_bio_sim/simulation/spine.dart';
 
 /// Drives a spine toward random wander targets. Pure Dart; no Flutter.
 /// Call [tick] each simulation step; the spine's head moves toward the current

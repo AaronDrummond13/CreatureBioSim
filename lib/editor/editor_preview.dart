@@ -1,15 +1,15 @@
 import 'dart:math' show atan2, cos, pi, sin, sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
-import '../creature.dart';
-import '../render/background_painter.dart';
-import '../render/creature_painter.dart';
-import '../render/view.dart';
-import '../simulation/angle_util.dart' show relativeAngleDiff;
-import '../simulation/spine.dart';
-import '../simulation/vector.dart';
-import 'editor_shared.dart';
-import 'editor_style.dart';
+import 'package:creature_bio_sim/creature.dart';
+import 'package:creature_bio_sim/render/background_painter.dart';
+import 'package:creature_bio_sim/render/creature_painter.dart';
+import 'package:creature_bio_sim/render/view.dart';
+import 'package:creature_bio_sim/simulation/angle_util.dart' show relativeAngleDiff;
+import 'package:creature_bio_sim/simulation/spine.dart';
+import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:creature_bio_sim/editor/editor_shared.dart';
+import 'package:creature_bio_sim/editor/editor_style.dart';
 /// Draws one lateral fin on the creature at the given segment (for add/move preview). [highlight] = draw in highlight color; [highlightForRemove] = red (will be removed).
 class _LateralFinAtSegmentPainter extends CustomPainter {
   _LateralFinAtSegmentPainter({

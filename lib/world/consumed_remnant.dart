@@ -1,4 +1,4 @@
-import 'food.dart';
+import 'package:creature_bio_sim/world/food.dart';
 
 /// Remnant after consumption: nucleus stays, drifts away from [headX, headY], and fades over 5s; body "burst" drawn for ~0.3s. See [FoodPainter].
 class ConsumedRemnant {

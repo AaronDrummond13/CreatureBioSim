@@ -1,24 +1,27 @@
 import 'dart:math' show atan2, cos, sin, sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
-import 'controller/mammoth_store.dart';
-import 'controller/creature_store.dart';
-import 'controller/spawner.dart';
-import 'creature.dart' show Creature, CaudalFinType;
-import 'input/simulation_gesture_region.dart';
-import 'render/mammoth_painter.dart';
-import 'render/background_painter.dart'
+import 'package:creature_bio_sim/controller/mammoth_store.dart'
+    hide aabbOverlapsRect;
+import 'package:creature_bio_sim/controller/creature_store.dart';
+import 'package:creature_bio_sim/controller/spawner.dart';
+import 'package:creature_bio_sim/creature.dart' show Creature, CaudalFinType;
+import 'package:creature_bio_sim/input/simulation_gesture_region.dart';
+import 'package:creature_bio_sim/render/mammoth_painter.dart';
+import 'package:creature_bio_sim/render/background_painter.dart'
     show BackgroundPainter, SolidBackgroundPainter;
-import 'render/food_painter.dart';
-import 'render/creature_painter.dart';
-import 'simulation/angle_util.dart' show relativeAngleDiff;
-import 'simulation/spine.dart';
-import 'simulation_view_state.dart';
-import 'world/biome_map.dart';
-import 'controller/chunk_manager.dart';
-import 'controller/food_store.dart';
-import 'world/food.dart' show CellType;
-import 'world/world.dart'
+import 'package:creature_bio_sim/render/food_painter.dart';
+import 'package:creature_bio_sim/render/creature_painter.dart';
+import 'package:creature_bio_sim/render/joystick_overlay_painter.dart';
+import 'package:creature_bio_sim/simulation/angle_util.dart'
+    show relativeAngleDiff;
+import 'package:creature_bio_sim/simulation/spine.dart';
+import 'package:creature_bio_sim/simulation_view_state.dart';
+import 'package:creature_bio_sim/world/biome_map.dart';
+import 'package:creature_bio_sim/controller/chunk_manager.dart';
+import 'package:creature_bio_sim/controller/food_store.dart';
+import 'package:creature_bio_sim/world/food.dart' show CellType;
+import 'package:creature_bio_sim/world/world.dart'
     show aabbOverlapsRect, circleOverlapsRect, kFoodActiveRadiusWorld;
 
 /// Screen that runs the spine simulation. Hold and drag on the screen:
@@ -28,14 +31,13 @@ class SimulationScreen extends StatefulWidget {
 
   /// When provided, used as the player creature (simulation restarts with it).
   final Creature? initialCreature;
+
   /// When provided, an Edit button is shown (top-right) that calls this.
   final VoidCallback? onEdit;
 
   /// Default creature when [initialCreature] is null (e.g. first run).
   static Creature defaultCreature() => Creature(
-    vertexWidths: [
-      20, 20, 20, 20, 20, 20, 20, 20, 20, 10, 10, 20, 30, 30,
-    ],
+    vertexWidths: [20, 20, 20, 20, 20, 20, 20, 20, 20, 10, 10, 20, 30, 30],
     dorsalFins: [
       ([14, 15, 16, 17, 18, 19], 8.0),
       ([2, 3, 4, 5, 6, 7, 8, 9, 10], null),
@@ -463,13 +465,16 @@ class _SimulationScreenState extends State<SimulationScreen>
               }
               final joystickCenter = Offset(
                 _kJoystickPadding + _viewState.joystickMaxRadius,
-                layerSize.height - _kJoystickPadding - _viewState.joystickMaxRadius,
+                layerSize.height -
+                    _kJoystickPadding -
+                    _viewState.joystickMaxRadius,
               );
               final joystickZoneRadius = _viewState.joystickMaxRadius;
               bool isInJoystickZone(Offset local) {
                 final dx = local.dx - joystickCenter.dx;
                 final dy = local.dy - joystickCenter.dy;
-                return dx * dx + dy * dy <= joystickZoneRadius * joystickZoneRadius;
+                return dx * dx + dy * dy <=
+                    joystickZoneRadius * joystickZoneRadius;
               }
 
               return Stack(
@@ -507,34 +512,34 @@ class _SimulationScreenState extends State<SimulationScreen>
                         _viewState.clearLastTouch();
                       }
                     },
-                onScaleStart: (details) {
-                  _viewState.startPinch(details.pointerCount >= 2);
-                },
-                onScaleUpdate: (details) {
-                  _viewState.touchTargetFrozen = details.pointerCount >= 2;
-                  if (_viewState.pinchStartZoom != null) {
-                    _viewState.applyPinchZoom(
-                      _viewState.pinchStartZoom! * details.scale,
-                    );
-                  }
-                },
-                onScaleEnd: () {
-                  _viewState.endPinch();
-                },
-              ),
-              IgnorePointer(
-                child: ListenableBuilder(
-                  listenable: _viewState,
-                  builder: (context, _) => CustomPaint(
-                    size: layerSize,
-                    painter: _JoystickOverlayPainter(
-                      viewState: _viewState,
-                      layerSize: layerSize,
-                      knobRadius: 20.0,
+                    onScaleStart: (details) {
+                      _viewState.startPinch(details.pointerCount >= 2);
+                    },
+                    onScaleUpdate: (details) {
+                      _viewState.touchTargetFrozen = details.pointerCount >= 2;
+                      if (_viewState.pinchStartZoom != null) {
+                        _viewState.applyPinchZoom(
+                          _viewState.pinchStartZoom! * details.scale,
+                        );
+                      }
+                    },
+                    onScaleEnd: () {
+                      _viewState.endPinch();
+                    },
+                  ),
+                  IgnorePointer(
+                    child: ListenableBuilder(
+                      listenable: _viewState,
+                      builder: (context, _) => CustomPaint(
+                        size: layerSize,
+                        painter: JoystickOverlayPainter(
+                          viewState: _viewState,
+                          layerSize: layerSize,
+                          knobRadius: 20.0,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
                 ],
               );
             },
@@ -548,7 +553,10 @@ class _SimulationScreenState extends State<SimulationScreen>
               behavior: HitTestBehavior.opaque,
               onTap: widget.onEdit,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: _kEditBtnFill,
                   borderRadius: BorderRadius.circular(_kEditBtnRadius),
@@ -568,60 +576,4 @@ class _SimulationScreenState extends State<SimulationScreen>
       ],
     );
   }
-}
-
-/// Faint white joystick circles: outer always visible (hint when inactive, slightly more when active). Knob when active.
-class _JoystickOverlayPainter extends CustomPainter {
-  _JoystickOverlayPainter({
-    required this.viewState,
-    required this.layerSize,
-    this.knobRadius = 20.0,
-  });
-
-  final SimulationViewState viewState;
-  final Size layerSize;
-  final double knobRadius;
-
-  static const double _joystickPadding = 24.0;
-  static const double _strokeWidth = 1.5;
-  static const double _fillOpacity = 0.22;
-  static const double _strokeOpacity = 0.5;
-  static const double _outerActiveStrokeOpacity = 0.2;
-  static const double _hintStrokeOpacity = 0.08;
-
-  Offset get _zoneCenter => Offset(
-        _joystickPadding + viewState.joystickMaxRadius,
-        layerSize.height - _joystickPadding - viewState.joystickMaxRadius,
-      );
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = viewState.isJoystickActive ? viewState.joystickCenter : _zoneCenter;
-    final outerOpacity = viewState.isJoystickActive ? _outerActiveStrokeOpacity : _hintStrokeOpacity;
-    final outerPaint = Paint()
-      ..color = Colors.white.withValues(alpha: outerOpacity)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = _strokeWidth;
-    canvas.drawCircle(center, viewState.joystickMaxRadius, outerPaint);
-
-    // Knob: only when joystick active
-    if (viewState.isJoystickActive) {
-      final knobCenter = viewState.joystickOffset != null
-          ? center + viewState.joystickOffset!
-          : center;
-      final fillPaint = Paint()
-        ..color = Colors.white.withValues(alpha: _fillOpacity)
-        ..style = PaintingStyle.fill;
-      final strokePaint = Paint()
-        ..color = Colors.white.withValues(alpha: _strokeOpacity)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = _strokeWidth;
-      canvas.drawCircle(knobCenter, knobRadius, fillPaint);
-      canvas.drawCircle(knobCenter, knobRadius, strokePaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _JoystickOverlayPainter old) =>
-      old.viewState != viewState || old.layerSize != layerSize;
 }

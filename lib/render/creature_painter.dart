@@ -3,13 +3,13 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
-import '../creature.dart';
-import '../simulation/angle_util.dart';
-import '../simulation/spine.dart';
-import '../simulation/vector.dart';
-import 'render_utils.dart';
-import 'tail_painter.dart';
-import 'view.dart';
+import 'package:creature_bio_sim/creature.dart';
+import 'package:creature_bio_sim/simulation/angle_util.dart';
+import 'package:creature_bio_sim/simulation/spine.dart';
+import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:creature_bio_sim/render/render_utils.dart';
+import 'package:creature_bio_sim/render/tail_painter.dart';
+import 'package:creature_bio_sim/render/view.dart';
 
 /// Paints one creature in world space. Uses [view] to transform world → screen.
 /// For multiple creatures, pass the same [CameraView] to each painter so they share one camera.

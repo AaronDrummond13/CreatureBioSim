@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
-import 'angle_util.dart';
-import 'spine_node.dart';
-import 'vector.dart';
+import 'package:creature_bio_sim/simulation/angle_util.dart';
+import 'package:creature_bio_sim/simulation/spine_node.dart';
+import 'package:creature_bio_sim/simulation/vector.dart';
 
 /// Spine simulation engine: head-driven kinematic resolve, angle constraints,
 /// curve spread. Pure Dart; no rendering. Driven by segment count (e.g. from Creature).

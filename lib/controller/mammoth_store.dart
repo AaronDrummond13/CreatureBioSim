@@ -1,11 +1,9 @@
 import 'dart:math' show Random;
-
-import '../creature.dart';
-import '../simulation/spine.dart';
-import '../world/world.dart'
-    show distSqToAabb, aabbOverlapsRect, kChunkSizeWorld;
-import 'bot_controller.dart';
-import 'spawner.dart';
+import 'package:creature_bio_sim/controller/bot_controller.dart';
+import 'package:creature_bio_sim/controller/spawner.dart';
+import 'package:creature_bio_sim/creature.dart';
+import 'package:creature_bio_sim/simulation/spine.dart';
+import 'package:creature_bio_sim/world/world.dart';
 
 /// A mammoth (parallax layer): creature body + spine + controller, tied to a parallax chunk.
 class StoredMammoth {
