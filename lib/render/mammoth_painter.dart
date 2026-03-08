@@ -3,7 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import '../controller/mammoth_store.dart';
-import 'spine_painter.dart';
+import 'creature_painter.dart';
 import 'view.dart';
 
 /// Paints all mammoths (parallax layer). Each mammoth has its own blur and layer opacity (0.01–0.5).

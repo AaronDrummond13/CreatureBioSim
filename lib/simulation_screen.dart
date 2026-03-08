@@ -10,7 +10,7 @@ import 'render/mammoth_painter.dart';
 import 'render/background_painter.dart'
     show BackgroundPainter, SolidBackgroundPainter;
 import 'render/food_painter.dart';
-import 'render/spine_painter.dart';
+import 'render/creature_painter.dart';
 import 'simulation/angle_util.dart' show relativeAngleDiff;
 import 'simulation/spine.dart';
 import 'simulation_view_state.dart';
