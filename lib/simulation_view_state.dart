@@ -25,8 +25,8 @@ class SimulationViewState extends ChangeNotifier {
   /// True while user has two fingers down (pinch). Target is frozen so zoom doesn't move it and cause shaking.
   bool touchTargetFrozen = false;
 
-  static const double minZoom = 0.7;
-  static const double maxZoom = 2.1;
+  static const double minZoom = 0.3;
+  static const double maxZoom = 2.5;
 
   CameraView get cameraView =>
       CameraView(cameraX: cameraX, cameraY: cameraY, zoom: zoom);
