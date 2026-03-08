@@ -14,7 +14,7 @@ import 'render/spine_painter.dart';
 import 'simulation/spine.dart';
 import 'simulation_view_state.dart';
 import 'world/biome_map.dart';
-import 'world/chunk_manager.dart';
+import 'controller/chunk_manager.dart';
 import 'controller/food_store.dart';
 import 'world/food.dart' show CellType;
 import 'world/world.dart'
