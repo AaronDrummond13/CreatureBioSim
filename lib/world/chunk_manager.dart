@@ -1,6 +1,6 @@
 import 'world.dart';
 
-import 'food.dart';
+import '../controller/food_store.dart';
 import '../controller/creature_store.dart';
 
 /// Chunk lifecycle for main world only (food + creatures). One center, one radius.

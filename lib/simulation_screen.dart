@@ -15,7 +15,8 @@ import 'simulation/spine.dart';
 import 'simulation_view_state.dart';
 import 'world/biome_map.dart';
 import 'world/chunk_manager.dart';
-import 'world/food.dart';
+import 'controller/food_store.dart';
+import 'world/food.dart' show CellType;
 import 'world/world.dart'
     show aabbOverlapsRect, circleOverlapsRect, kFoodActiveRadiusWorld;
 
