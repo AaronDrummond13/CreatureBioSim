@@ -1,5 +1,37 @@
 import 'package:flutter/material.dart';
 
+/// Draws a bubble shape: filled circle plus a highlight for a 3D look.
+/// [fillColor] is the main bubble color (e.g. white or food color); highlight is drawn lighter.
+void drawBubble(
+  Canvas canvas,
+  Offset center,
+  double radius,
+  Color fillColor, {
+  double alpha = 1.0,
+}) {
+  if (radius <= 0) return;
+  final fill = Paint()
+    ..color = fillColor.withValues(alpha: alpha)
+    ..style = PaintingStyle.fill;
+  canvas.drawCircle(center, radius, fill);
+  final highlightRadius = radius * 0.35;
+  final highlightCenter = Offset(
+    center.dx - radius * 0.25,
+    center.dy - radius * 0.25,
+  );
+  final highlightRect = Rect.fromCircle(center: highlightCenter, radius: highlightRadius);
+  final highlightPaint = Paint()
+    ..shader = RadialGradient(
+      center: Alignment.center,
+      radius: 1.0,
+      colors: [
+        Colors.white.withValues(alpha: alpha * 0.6),
+        Colors.white.withValues(alpha: 0.0),
+      ],
+    ).createShader(highlightRect);
+  canvas.drawOval(highlightRect, highlightPaint);
+}
+
 /// Appends Catmull-Rom style cubic segments through [points] to [path].
 /// [closed]: if true, uses wrap-around indexing and closes the path; otherwise open curve.
 void appendSmoothCurve(

@@ -25,6 +25,10 @@ class CreaturePainter extends CustomPainter {
   final double? layerOpacity;
   /// Fill color for the blur layer so transparent pixels don't composite as black. Use simulation background color.
   final Color? blurLayerBackgroundColor;
+  /// If false, skip drawing eyes (e.g. to draw inner-body cloud between body and eyes).
+  final bool drawEyes;
+  /// If true, draw only eyes (used after inner-body cloud for correct stacking).
+  final bool eyesOnly;
 
   static const double dorsalFinHeight = 18.0;
   static const double dorsalFinBaseFrac = 0.3;
@@ -39,6 +43,8 @@ class CreaturePainter extends CustomPainter {
     this.blurSigma,
     this.layerOpacity,
     this.blurLayerBackgroundColor,
+    this.drawEyes = true,
+    this.eyesOnly = false,
   });
 
   // Set during paint() for use by _drawTailFin, _drawBody, _drawDorsalFins, _drawEyes.
@@ -56,6 +62,59 @@ class CreaturePainter extends CustomPainter {
       return vw[i].clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
     }
     return _fallbackWidth.clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
+  }
+
+  /// Builds the creature body outline path in screen coordinates for clipping (e.g. consumption effects).
+  static Path buildBodyPath(Creature creature, Spine spine, CameraView view, Size size) {
+    final positions = spine.positions;
+    final segmentAngles = spine.segmentAngles;
+    if (positions.length < 2 || segmentAngles.isEmpty) return Path();
+    final n = positions.length - 1;
+    final centerX = size.width / 2.0;
+    final centerY = size.height / 2.0;
+    final z = view.zoom;
+    double sx(double wx) => centerX + (wx - view.cameraX) * z;
+    double sy(double wy) => centerY + (wy - view.cameraY) * z;
+    double widthAt(int i) {
+      final vw = creature.vertexWidths;
+      if (i < vw.length) {
+        return vw[i].clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
+      }
+      return _fallbackWidth.clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
+    }
+    double wAt(int i) => widthAt(i) * z;
+    Offset rightAt(int i) {
+      final a = segmentAngles[i < segmentAngles.length ? i : segmentAngles.length - 1];
+      final w = wAt(i);
+      return Offset(sx(positions[i].x) - sin(a) * w, sy(positions[i].y) + cos(a) * w);
+    }
+    Offset leftAt(int i) {
+      final a = segmentAngles[i < segmentAngles.length ? i : segmentAngles.length - 1];
+      final w = wAt(i);
+      return Offset(sx(positions[i].x) + sin(a) * w, sy(positions[i].y) - cos(a) * w);
+    }
+    final tailA = segmentAngles[0];
+    final headA = segmentAngles[segmentAngles.length - 1];
+    final tailWWorld = widthAt(0);
+    final headWWorld = widthAt(n);
+    const int capSegments = 7;
+    final curve = <Offset>[];
+    for (var i = 0; i < capSegments; i++) {
+      final t = i / (capSegments - 1);
+      final a = tailA + 4 * pi / 3 + t * (2 * pi / 3 - 4 * pi / 3);
+      curve.add(Offset(sx(positions[0].x + tailWWorld * cos(a)), sy(positions[0].y + tailWWorld * sin(a))));
+    }
+    for (var i = 0; i <= n; i++) curve.add(rightAt(i));
+    for (var i = 0; i < capSegments; i++) {
+      final t = i / (capSegments - 1);
+      final a = headA + pi / 3 - t * (2 * pi / 3);
+      curve.add(Offset(sx(positions[n].x + headWWorld * cos(a)), sy(positions[n].y + headWWorld * sin(a))));
+    }
+    for (var i = n; i >= 0; i--) curve.add(leftAt(i));
+    const tension = 1.0 / 6.0;
+    final path = Path();
+    appendSmoothCurve(path, curve, tension, closed: true);
+    return path;
   }
 
   @override
@@ -92,6 +151,11 @@ class CreaturePainter extends CustomPainter {
     _paintSegmentAngles = segmentAngles;
     _paintN = positions.length - 1;
 
+    if (eyesOnly) {
+      _drawEyes(canvas);
+      if (useBlurLayer) canvas.restore();
+      return;
+    }
     _drawCreature(canvas);
 
     if (useBlurLayer) canvas.restore();
@@ -103,7 +167,7 @@ class CreaturePainter extends CustomPainter {
     _drawLateralFins(canvas);
     _drawBody(canvas);
     _drawDorsalFins(canvas);
-    _drawEyes(canvas);
+    if (drawEyes) _drawEyes(canvas);
   }
 
   void _drawTailFin(Canvas canvas) {
@@ -533,5 +597,7 @@ class CreaturePainter extends CustomPainter {
       oldDelegate.timeSeconds != timeSeconds ||
       oldDelegate.blurSigma != blurSigma ||
       oldDelegate.layerOpacity != layerOpacity ||
-      oldDelegate.blurLayerBackgroundColor != blurLayerBackgroundColor;
+      oldDelegate.blurLayerBackgroundColor != blurLayerBackgroundColor ||
+      oldDelegate.drawEyes != drawEyes ||
+      oldDelegate.eyesOnly != eyesOnly;
 }

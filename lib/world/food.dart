@@ -17,11 +17,14 @@ class ConsumedRemnant {
     required this.consumedAt,
     required this.headX,
     required this.headY,
+    required this.bubbleSizes,
   });
   final double x, y, nucleusOffsetX, nucleusOffsetY;
   final CellType cellType;
   final double consumedAt;
   final double headX, headY;
+  /// One entry per bubble (1–3). Each value 0=small, 1=medium, 2=large.
+  final List<int> bubbleSizes;
 }
 
 /// Linked to chunk [chunkCx], [chunkCy] for culling (stays linked even if it drifts out of chunk).
@@ -73,6 +76,8 @@ class FoodStore {
       final dy = item.y - headY;
       if (dx * dx + dy * dy <= r2) {
         if (timeSeconds != null) {
+          final n = _random.nextInt(3) + 1;
+          final bubbleSizes = List<int>.generate(n, (_) => _random.nextInt(3));
           _consumedRemnants.add(ConsumedRemnant(
             x: item.x,
             y: item.y,
@@ -82,6 +87,7 @@ class FoodStore {
             consumedAt: timeSeconds,
             headX: headX,
             headY: headY,
+            bubbleSizes: bubbleSizes,
           ));
         }
         _items.removeAt(i);

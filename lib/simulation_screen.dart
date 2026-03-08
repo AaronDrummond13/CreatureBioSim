@@ -50,8 +50,8 @@ class _SimulationScreenState extends State<SimulationScreen>
       ([14, 15, 16, 17, 18, 19], 8.0),
       ([2, 3, 4, 5, 6, 7, 8, 9, 10], null),
     ],
-    color: 0xFF2E7D32,
-    finColor: 0xFF5EAD62,
+    color: 0xFF777777,
+    finColor: 0xFF777777,
     tailFin: CaudalFinType.lunate,
     lateralFins: [4],
   );
@@ -241,6 +241,34 @@ class _SimulationScreenState extends State<SimulationScreen>
             spine: _spine,
             view: cameraView,
             timeSeconds: t,
+            drawEyes: false,
+          ),
+        ),
+      ),
+      Positioned.fill(
+        child: CustomPaint(
+          painter: InnerBodyCloudPainter(
+            view: cameraView,
+            spine: _spine,
+            consumedRemnants: _foodStore.consumedRemnants,
+            timeSeconds: t,
+            bodyClipPath: CreaturePainter.buildBodyPath(
+              _creature,
+              _spine,
+              cameraView,
+              size,
+            ),
+          ),
+        ),
+      ),
+      Positioned.fill(
+        child: CustomPaint(
+          painter: CreaturePainter(
+            creature: _creature,
+            spine: _spine,
+            view: cameraView,
+            timeSeconds: t,
+            eyesOnly: true,
           ),
         ),
       ),
