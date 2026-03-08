@@ -18,6 +18,7 @@ class ConsumedRemnant {
     required this.headX,
     required this.headY,
     required this.bubbleSizes,
+    this.scale = 1.0,
   });
   final double x, y, nucleusOffsetX, nucleusOffsetY;
   final CellType cellType;
@@ -25,6 +26,8 @@ class ConsumedRemnant {
   final double headX, headY;
   /// One entry per bubble (1–3). Each value 0=small, 1=medium, 2=large.
   final List<int> bubbleSizes;
+  /// Scale for drawing (e.g. 4.0 for player death remains).
+  final double scale;
 }
 
 /// Linked to chunk [chunkCx], [chunkCy] for culling (stays linked even if it drifts out of chunk).
@@ -95,7 +98,7 @@ class FoodStore {
     }
   }
 
-  /// Add a consumed remnant at (x, y), e.g. when a baby creature is eaten. Uses [cellType] (default animal) for rendering.
+  /// Add a consumed remnant at (x, y), e.g. when a baby creature is eaten. Uses [cellType] (default animal) for rendering. [scale] multiplies drawn size (e.g. 4.0 for player death).
   void addConsumedRemnantAt(
     double x,
     double y,
@@ -103,6 +106,7 @@ class FoodStore {
     double headX,
     double headY, {
     CellType cellType = CellType.animal,
+    double scale = 1.0,
   }) {
     final n = _random.nextInt(3) + 1;
     final bubbleSizes = List<int>.generate(n, (_) => _random.nextInt(3));
@@ -116,6 +120,7 @@ class FoodStore {
       headX: headX,
       headY: headY,
       bubbleSizes: bubbleSizes,
+      scale: scale,
     ));
   }
 

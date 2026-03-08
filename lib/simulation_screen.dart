@@ -1,12 +1,12 @@
 import 'dart:math' show sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
-import 'controller/background_giant_store.dart';
+import 'controller/mammoth_store.dart';
 import 'controller/creature_store.dart';
 import 'controller/spawner.dart';
 import 'creature.dart' show Creature, CaudalFinType;
 import 'input/simulation_gesture_region.dart';
-import 'render/background_giants_painter.dart';
+import 'render/mammoth_painter.dart';
 import 'render/background_painter.dart'
     show BackgroundPainter, SolidBackgroundPainter;
 import 'render/food_painter.dart';
@@ -62,7 +62,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   final Spawner _spawner = Spawner();
   late final CreatureStore _creatureStore = CreatureStore(spawner: _spawner);
   final FoodStore _foodStore = FoodStore();
-  late final BackgroundGiantStore _backgroundGiantStore = BackgroundGiantStore(
+  late final MammothStore _mammothStore = MammothStore(
     spawner: _spawner,
     spawnChanceOneIn: 2,
   );
@@ -72,12 +72,15 @@ class _SimulationScreenState extends State<SimulationScreen>
   );
   final BiomeMap _biomeMap = BiomeMap();
   bool _chunksInitialized = false;
+  bool _isDead = false;
 
   final SimulationViewState _viewState = SimulationViewState();
   late Ticker _ticker;
 
   static const double _headMoveSpeed = 4.0;
   static const double _arrivalThreshold = 4.0;
+  /// Fraction of head (vertex) size used for head/mouth collision (epic touch and consume radius).
+  static const double _kHeadMouthSizeFrac = 0.8;
 
   @override
   void initState() {
@@ -107,68 +110,98 @@ class _SimulationScreenState extends State<SimulationScreen>
   }
 
   void _onTick(Duration elapsed) {
+    _viewState.timeSeconds = elapsed.inMilliseconds / 1000.0;
     _viewState.refreshTouchFromStoredLocal();
     final positions = _spine.positions;
-    if (positions.isNotEmpty) {
+    if (positions.isNotEmpty && !_isDead) {
       final head = positions.last;
-      final dx = _viewState.touchX - head.x;
-      final dy = _viewState.touchY - head.y;
-      final len = sqrt(dx * dx + dy * dy);
-      if (len <= _arrivalThreshold) {
-        _spine.resolve(
-          head.x,
-          head.y,
-          intendedTargetX: _viewState.touchX,
-          intendedTargetY: _viewState.touchY,
-        );
-      } else {
-        final step = _headMoveSpeed / len;
-        final nx = head.x + dx * step;
-        final ny = head.y + dy * step;
-        _spine.resolve(
-          nx,
-          ny,
-          intendedTargetX: _viewState.touchX,
-          intendedTargetY: _viewState.touchY,
-        );
-      }
-      _viewState.cameraX = head.x;
-      _viewState.cameraY = head.y;
       final headSize = _creature.vertexWidths.isNotEmpty
           ? _creature.vertexWidths.last
           : _foodStore.radiusWorld;
-      final consumeRadius = _foodStore.radiusWorld + headSize;
-      _foodStore.consumeNear(
-        head.x,
-        head.y,
-        consumeRadius,
-        _viewState.timeSeconds,
-      );
+      final headCollision = headSize * _kHeadMouthSizeFrac;
       for (final e in _creatureStore.entities) {
-        if (!e.isBaby) continue;
-        final pos = e.spine.positions;
-        if (pos.isEmpty) continue;
-        final bx = pos.last.x;
-        final by = pos.last.y;
-        final dx = head.x - bx;
-        final dy = head.y - by;
-        if (dx * dx + dy * dy <= consumeRadius * consumeRadius) {
+        if (!e.isEpic) continue;
+        final ep = e.spine.positions;
+        if (ep.isEmpty) continue;
+        final ex = ep.last.x;
+        final ey = ep.last.y;
+        final epicHeadSize = e.creature.vertexWidths.isNotEmpty
+            ? e.creature.vertexWidths.last * CreaturePainter.kEpicRenderScale
+            : 30.0;
+        final epicCollision = epicHeadSize * _kHeadMouthSizeFrac;
+        final touchRad = headCollision + epicCollision;
+        final ddx = head.x - ex;
+        final ddy = head.y - ey;
+        if (ddx * ddx + ddy * ddy <= touchRad * touchRad) {
+          _isDead = true;
           _foodStore.addConsumedRemnantAt(
-            bx,
-            by,
+            head.x,
+            head.y,
             _viewState.timeSeconds,
             head.x,
             head.y,
             cellType: CellType.animal,
+            scale: 4.0,
           );
-          _creatureStore.removeCreature(e);
+          break;
+        }
+      }
+      if (!_isDead) {
+        final dx = _viewState.touchX - head.x;
+        final dy = _viewState.touchY - head.y;
+        final len = sqrt(dx * dx + dy * dy);
+        if (len <= _arrivalThreshold) {
+          _spine.resolve(
+            head.x,
+            head.y,
+            intendedTargetX: _viewState.touchX,
+            intendedTargetY: _viewState.touchY,
+          );
+        } else {
+          final step = _headMoveSpeed / len;
+          final nx = head.x + dx * step;
+          final ny = head.y + dy * step;
+          _spine.resolve(
+            nx,
+            ny,
+            intendedTargetX: _viewState.touchX,
+            intendedTargetY: _viewState.touchY,
+          );
+        }
+        _viewState.cameraX = head.x;
+        _viewState.cameraY = head.y;
+        final consumeRadius = _foodStore.radiusWorld + headCollision;
+        _foodStore.consumeNear(
+          head.x,
+          head.y,
+          consumeRadius,
+          _viewState.timeSeconds,
+        );
+        for (final e in _creatureStore.entities) {
+          if (!e.isBaby) continue;
+          final pos = e.spine.positions;
+          if (pos.isEmpty) continue;
+          final bx = pos.last.x;
+          final by = pos.last.y;
+          final bdx = head.x - bx;
+          final bdy = head.y - by;
+          if (bdx * bdx + bdy * bdy <= consumeRadius * consumeRadius) {
+            _foodStore.addConsumedRemnantAt(
+              bx,
+              by,
+              _viewState.timeSeconds,
+              head.x,
+              head.y,
+              cellType: CellType.animal,
+            );
+            _creatureStore.removeCreature(e);
+          }
         }
       }
     }
-    _viewState.timeSeconds = elapsed.inMilliseconds / 1000.0;
-    _backgroundGiantStore.tick();
+    _mammothStore.tick();
     if (_viewState.viewWidthWorld > 0 && _viewState.viewHeightWorld > 0) {
-      _backgroundGiantStore.update(_viewState.cameraX, _viewState.cameraY);
+      _mammothStore.update(_viewState.cameraX, _viewState.cameraY);
       _chunkManager.update(
         _viewState.cameraX,
         _viewState.cameraY,
@@ -183,7 +216,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   List<Widget> _buildViewStack(Size size) {
     _viewState.setViewSize(size);
     if (!_chunksInitialized) {
-      _backgroundGiantStore.update(_viewState.cameraX, _viewState.cameraY);
+      _mammothStore.update(_viewState.cameraX, _viewState.cameraY);
       _chunkManager.update(
         _viewState.cameraX,
         _viewState.cameraY,
@@ -240,7 +273,7 @@ class _SimulationScreenState extends State<SimulationScreen>
         bottom,
       );
     }).toList();
-    final visibleGiants = _backgroundGiantStore.getVisible(
+    final visibleMammoths = _mammothStore.getVisible(
       _viewState.cameraX,
       _viewState.cameraY,
       _viewState.viewWidthWorld,
@@ -252,8 +285,8 @@ class _SimulationScreenState extends State<SimulationScreen>
       ),
       Positioned.fill(
         child: CustomPaint(
-          painter: BackgroundGiantsPainter(
-            giants: visibleGiants,
+          painter: MammothPainter(
+            mammoths: visibleMammoths,
             view: bgView,
             timeSeconds: t,
             blurSigma: 5,
@@ -291,48 +324,51 @@ class _SimulationScreenState extends State<SimulationScreen>
               view: cameraView,
               timeSeconds: t,
               isBaby: e.isBaby,
+              isEpic: e.isEpic,
             ),
           ),
         ),
       ),
-      Positioned.fill(
-        child: CustomPaint(
-          painter: CreaturePainter(
-            creature: _creature,
-            spine: _spine,
-            view: cameraView,
-            timeSeconds: t,
-            drawEyes: false,
-          ),
-        ),
-      ),
-      Positioned.fill(
-        child: CustomPaint(
-          painter: InnerBodyCloudPainter(
-            view: cameraView,
-            spine: _spine,
-            consumedRemnants: visibleRemnants,
-            timeSeconds: t,
-            bodyClipPath: CreaturePainter.buildBodyPath(
-              _creature,
-              _spine,
-              cameraView,
-              size,
+      if (!_isDead) ...[
+        Positioned.fill(
+          child: CustomPaint(
+            painter: CreaturePainter(
+              creature: _creature,
+              spine: _spine,
+              view: cameraView,
+              timeSeconds: t,
+              drawEyes: false,
             ),
           ),
         ),
-      ),
-      Positioned.fill(
-        child: CustomPaint(
-          painter: CreaturePainter(
-            creature: _creature,
-            spine: _spine,
-            view: cameraView,
-            timeSeconds: t,
-            eyesOnly: true,
+        Positioned.fill(
+          child: CustomPaint(
+            painter: InnerBodyCloudPainter(
+              view: cameraView,
+              spine: _spine,
+              consumedRemnants: visibleRemnants,
+              timeSeconds: t,
+              bodyClipPath: CreaturePainter.buildBodyPath(
+                _creature,
+                _spine,
+                cameraView,
+                size,
+              ),
+            ),
           ),
         ),
-      ),
+        Positioned.fill(
+          child: CustomPaint(
+            painter: CreaturePainter(
+              creature: _creature,
+              spine: _spine,
+              view: cameraView,
+              timeSeconds: t,
+              eyesOnly: true,
+            ),
+          ),
+        ),
+      ],
     ];
   }
 

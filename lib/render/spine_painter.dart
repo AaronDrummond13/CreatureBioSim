@@ -23,14 +23,30 @@ class CreaturePainter extends CustomPainter {
   /// When set, creature is drawn as a blurred background layer (e.g. sigma 10, opacity 0.2).
   final double? blurSigma;
   final double? layerOpacity;
+
   /// Fill color for the blur layer so transparent pixels don't composite as black. Use simulation background color.
   final Color? blurLayerBackgroundColor;
+
   /// If false, skip drawing eyes (e.g. to draw inner-body cloud between body and eyes).
   final bool drawEyes;
+
   /// If true, draw only eyes (used after inner-body cloud for correct stacking).
   final bool eyesOnly;
+
   /// When true, draw at 0.25 scale and no eyes (baby creature).
   final bool isBaby;
+
+  /// When true, draw at [kEpicRenderScale] (epic creature).
+  final bool isEpic;
+
+  /// Render scale for mammoths (normal size in parallax view).
+  static const double kMammothRenderScale = 1.0;
+
+  /// Render scale for epic creatures (main world, big).
+  static const double kEpicRenderScale = 3.0;
+
+  /// Render scale for baby creatures.
+  static const double kBabyRenderScale = 0.25;
 
   static const double dorsalFinHeight = 18.0;
   static const double dorsalFinBaseFrac = 0.3;
@@ -48,6 +64,7 @@ class CreaturePainter extends CustomPainter {
     this.drawEyes = true,
     this.eyesOnly = false,
     this.isBaby = false,
+    this.isEpic = false,
   });
 
   // Set during paint() for use by _drawTailFin, _drawBody, _drawDorsalFins, _drawEyes.
@@ -67,23 +84,37 @@ class CreaturePainter extends CustomPainter {
     if (i < vw.length) {
       w = vw[i].clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
     } else {
-      w = _fallbackWidth.clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
+      w = _fallbackWidth.clamp(
+        Creature.minVertexWidth,
+        Creature.maxVertexWidth,
+      );
     }
     return w * _bodyScale;
   }
 
   /// For babies: scale spine positions around head so creature is proportionally smaller (length and width).
-  static List<Vector2> _positionsScaledFromHead(List<Vector2> positions, double scale) {
+  static List<Vector2> _positionsScaledFromHead(
+    List<Vector2> positions,
+    double scale,
+  ) {
     if (positions.isEmpty) return positions;
     final head = positions.last;
     return [
       for (final p in positions)
-        Vector2(head.x + (p.x - head.x) * scale, head.y + (p.y - head.y) * scale),
+        Vector2(
+          head.x + (p.x - head.x) * scale,
+          head.y + (p.y - head.y) * scale,
+        ),
     ];
   }
 
   /// Builds the creature body outline path in screen coordinates for clipping (e.g. consumption effects).
-  static Path buildBodyPath(Creature creature, Spine spine, CameraView view, Size size) {
+  static Path buildBodyPath(
+    Creature creature,
+    Spine spine,
+    CameraView view,
+    Size size,
+  ) {
     final positions = spine.positions;
     final segmentAngles = spine.segmentAngles;
     if (positions.length < 2 || segmentAngles.isEmpty) return Path();
@@ -98,19 +129,37 @@ class CreaturePainter extends CustomPainter {
       if (i < vw.length) {
         return vw[i].clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
       }
-      return _fallbackWidth.clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
+      return _fallbackWidth.clamp(
+        Creature.minVertexWidth,
+        Creature.maxVertexWidth,
+      );
     }
+
     double wAt(int i) => widthAt(i) * z;
     Offset rightAt(int i) {
-      final a = segmentAngles[i < segmentAngles.length ? i : segmentAngles.length - 1];
+      final a =
+          segmentAngles[i < segmentAngles.length
+              ? i
+              : segmentAngles.length - 1];
       final w = wAt(i);
-      return Offset(sx(positions[i].x) - sin(a) * w, sy(positions[i].y) + cos(a) * w);
+      return Offset(
+        sx(positions[i].x) - sin(a) * w,
+        sy(positions[i].y) + cos(a) * w,
+      );
     }
+
     Offset leftAt(int i) {
-      final a = segmentAngles[i < segmentAngles.length ? i : segmentAngles.length - 1];
+      final a =
+          segmentAngles[i < segmentAngles.length
+              ? i
+              : segmentAngles.length - 1];
       final w = wAt(i);
-      return Offset(sx(positions[i].x) + sin(a) * w, sy(positions[i].y) - cos(a) * w);
+      return Offset(
+        sx(positions[i].x) + sin(a) * w,
+        sy(positions[i].y) - cos(a) * w,
+      );
     }
+
     final tailA = segmentAngles[0];
     final headA = segmentAngles[segmentAngles.length - 1];
     final tailWWorld = widthAt(0);
@@ -120,13 +169,23 @@ class CreaturePainter extends CustomPainter {
     for (var i = 0; i < capSegments; i++) {
       final t = i / (capSegments - 1);
       final a = tailA + 4 * pi / 3 + t * (2 * pi / 3 - 4 * pi / 3);
-      curve.add(Offset(sx(positions[0].x + tailWWorld * cos(a)), sy(positions[0].y + tailWWorld * sin(a))));
+      curve.add(
+        Offset(
+          sx(positions[0].x + tailWWorld * cos(a)),
+          sy(positions[0].y + tailWWorld * sin(a)),
+        ),
+      );
     }
     for (var i = 0; i <= n; i++) curve.add(rightAt(i));
     for (var i = 0; i < capSegments; i++) {
       final t = i / (capSegments - 1);
       final a = headA + pi / 3 - t * (2 * pi / 3);
-      curve.add(Offset(sx(positions[n].x + headWWorld * cos(a)), sy(positions[n].y + headWWorld * sin(a))));
+      curve.add(
+        Offset(
+          sx(positions[n].x + headWWorld * cos(a)),
+          sy(positions[n].y + headWWorld * sin(a)),
+        ),
+      );
     }
     for (var i = n; i >= 0; i--) curve.add(leftAt(i));
     const tension = 1.0 / 6.0;
@@ -165,14 +224,22 @@ class CreaturePainter extends CustomPainter {
     _paintCenterY = size.height / 2;
     _paintZ = view.zoom;
     _paintFillColor = Color(creature.color);
-    _bodyScale = isBaby ? 0.25 : 1.0;
-    _paintPositions = isBaby ? _positionsScaledFromHead(positions, _bodyScale) : positions;
+    _bodyScale = isEpic
+        ? kEpicRenderScale
+        : (isBaby ? kBabyRenderScale : kMammothRenderScale);
+    final posScale = isEpic
+        ? kEpicRenderScale
+        : (isBaby ? kBabyRenderScale : kMammothRenderScale);
+    _paintPositions = (isEpic || isBaby)
+        ? _positionsScaledFromHead(positions, posScale)
+        : positions;
     _paintSegmentAngles = segmentAngles;
     _paintN = _paintPositions.length - 1;
     _eyeScaleMultiplier = 1.0;
 
     if (eyesOnly) {
-      if (!isBaby) _drawEyes(canvas);
+      if (!isBaby)
+        _drawEyes(canvas); // babies have no eyes; epic has normal eyes
       if (useBlurLayer) canvas.restore();
       return;
     }
@@ -620,5 +687,6 @@ class CreaturePainter extends CustomPainter {
       oldDelegate.blurLayerBackgroundColor != blurLayerBackgroundColor ||
       oldDelegate.drawEyes != drawEyes ||
       oldDelegate.eyesOnly != eyesOnly ||
-      oldDelegate.isBaby != isBaby;
+      oldDelegate.isBaby != isBaby ||
+      oldDelegate.isEpic != isEpic;
 }

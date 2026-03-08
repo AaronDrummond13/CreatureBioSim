@@ -2,21 +2,21 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
-import '../controller/background_giant_store.dart';
+import '../controller/mammoth_store.dart';
 import 'spine_painter.dart';
 import 'view.dart';
 
-/// Paints all background giants in a single blur layer. Sigma clamped to avoid Skia Invalid argument.
-class BackgroundGiantsPainter extends CustomPainter {
-  BackgroundGiantsPainter({
-    required this.giants,
+/// Paints all mammoths (parallax layer) in a single blur layer. Sigma clamped to avoid Skia Invalid argument.
+class MammothPainter extends CustomPainter {
+  MammothPainter({
+    required this.mammoths,
     required this.view,
     this.timeSeconds = 0.0,
     this.blurSigma = 5.0,
     this.layerOpacity = 0.35,
   });
 
-  final List<StoredBackgroundGiant> giants;
+  final List<StoredMammoth> mammoths;
   final CameraView view;
   final double timeSeconds;
   final double blurSigma;
@@ -26,16 +26,16 @@ class BackgroundGiantsPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (giants.isEmpty) return;
+    if (mammoths.isEmpty) return;
     final sigma = blurSigma.clamp(0.0, _maxBlurSigma);
     canvas.saveLayer(
       Rect.fromLTWH(0, 0, size.width, size.height),
       Paint()..imageFilter = ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
     );
-    for (final g in giants) {
+    for (final mammoth in mammoths) {
       CreaturePainter(
-        creature: g.creature,
-        spine: g.spine,
+        creature: mammoth.creature,
+        spine: mammoth.spine,
         view: view,
         timeSeconds: timeSeconds,
       ).paint(canvas, size);
@@ -44,8 +44,8 @@ class BackgroundGiantsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant BackgroundGiantsPainter old) {
-    return old.giants != giants ||
+  bool shouldRepaint(covariant MammothPainter old) {
+    return old.mammoths != mammoths ||
         old.view.cameraX != view.cameraX ||
         old.view.cameraY != view.cameraY ||
         old.view.zoom != view.zoom ||

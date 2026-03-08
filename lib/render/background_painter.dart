@@ -138,7 +138,7 @@ class BackgroundPainter extends CustomPainter {
     final halfW = size.width / (2 * z);
     final halfH = size.height / (2 * z);
 
-    // Layer 1: distant blobs — parallax 0.25 (same as big background creature).
+    // Layer 1: distant blobs — parallax 0.25 (same as mammoths).
     final blobCamX = view.cameraX * parallaxBlobs;
     final blobCamY = view.cameraY * parallaxBlobs;
     double blobSx(double wx) => centerX + (wx - blobCamX) * z;

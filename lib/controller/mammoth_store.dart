@@ -6,9 +6,9 @@ import '../world/world.dart' show distSqToAabb, aabbOverlapsRect, kChunkSizeWorl
 import 'bot_controller.dart';
 import 'spawner.dart';
 
-/// A background giant: creature + spine + controller, tied to a parallax chunk.
-class StoredBackgroundGiant {
-  StoredBackgroundGiant({
+/// A mammoth (parallax layer): creature body + spine + controller, tied to a parallax chunk.
+class StoredMammoth {
+  StoredMammoth({
     required this.chunkCx,
     required this.chunkCy,
     required this.creature,
@@ -23,7 +23,7 @@ class StoredBackgroundGiant {
   final BotController botController;
 }
 
-/// Parallax-only universe: own chunk grid (main chunk × 4 for 0.25 scale → 2000×2000), no biome coupling.
+/// Mammoths' universe: own chunk grid (main chunk × 4 for 0.25 scale → 2000×2000), no biome coupling.
 /// Procedural only; when cleared, state is discarded ("moved away").
 double get _kParallaxChunkSize => kChunkSizeWorld * 4; // 500*4 = 2000 for parallax 0.25
 const double _kParallaxRadius = 3000.0;
@@ -32,9 +32,9 @@ const double _kParallaxZoomScale = 5.0;
 
 String _parallaxKey(int i, int j) => 'p$i,$j';
 
-/// Chunk-based store for background giants (blurred, slow, parallax). Own lifecycle.
-class BackgroundGiantStore {
-  BackgroundGiantStore({
+/// Chunk-based store for mammoths (blurred, slow, parallax layer). Own lifecycle.
+class MammothStore {
+  MammothStore({
     required this.spawner,
     this.spawnChanceOneIn = 28,
     Random? random,
@@ -44,10 +44,10 @@ class BackgroundGiantStore {
   final int spawnChanceOneIn;
   final Random _random;
 
-  final Map<String, StoredBackgroundGiant> _byChunk = {};
+  final Map<String, StoredMammoth> _byChunk = {};
   final Set<String> _generated = {};
 
-  /// Update parallax chunks from main camera: center = (cameraX * factor, cameraY * factor).
+  /// Update mammoth chunks from main camera: center = (cameraX × factor, cameraY × factor).
   void update(double cameraX, double cameraY) {
     final px = cameraX * _kParallaxFactor;
     final py = cameraY * _kParallaxFactor;
@@ -100,7 +100,7 @@ class BackgroundGiantStore {
       ticksPerNewTarget: 350 + _random.nextInt(140),
       speed: 0.9,
     );
-    _byChunk[key] = StoredBackgroundGiant(
+    _byChunk[key] = StoredMammoth(
       chunkCx: i,
       chunkCy: j,
       creature: creature,
@@ -110,8 +110,8 @@ class BackgroundGiantStore {
     _generated.add(key);
   }
 
-  /// Giants visible in the parallax view rect (world coords around camera * factor).
-  List<StoredBackgroundGiant> getVisible(
+  /// Mammoths visible in the parallax view rect (world coords around camera × factor).
+  List<StoredMammoth> getVisible(
     double cameraX,
     double cameraY,
     double viewWidthWorld,
@@ -126,9 +126,9 @@ class BackgroundGiantStore {
     final right = px + halfW;
     final top = py - halfH;
     final bottom = py + halfH;
-    final out = <StoredBackgroundGiant>[];
-    for (final g in _byChunk.values) {
-      final pos = g.spine.positions;
+    final out = <StoredMammoth>[];
+    for (final m in _byChunk.values) {
+      final pos = m.spine.positions;
       if (pos.isEmpty) continue;
       var minX = pos[0].x, maxX = pos[0].x, minY = pos[0].y, maxY = pos[0].y;
       for (final p in pos) {
@@ -147,15 +147,15 @@ class BackgroundGiantStore {
         top,
         bottom,
       )) {
-        out.add(g);
+        out.add(m);
       }
     }
     return out;
   }
 
   void tick() {
-    for (final g in _byChunk.values) {
-      g.botController.tick();
+    for (final m in _byChunk.values) {
+      m.botController.tick();
     }
   }
 }

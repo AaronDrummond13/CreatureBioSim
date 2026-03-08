@@ -31,7 +31,7 @@ class SimulationViewState extends ChangeNotifier {
   CameraView get cameraView =>
       CameraView(cameraX: cameraX, cameraY: cameraY, zoom: zoom);
 
-  /// Parallax view for background layer (e.g. blurred creature).
+  /// Parallax view for background layer (e.g. mammoths).
   CameraView backgroundCameraView({
     double parallaxFactor = 0.25,
     double zoomScale = 5.0,

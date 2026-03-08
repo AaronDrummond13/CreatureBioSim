@@ -4,7 +4,7 @@ import 'food.dart';
 import '../controller/creature_store.dart';
 
 /// Chunk lifecycle for main world only (food + creatures). One center, one radius.
-/// Background giants use their own parallax universe and are not managed here.
+/// Mammoths use their own parallax universe and are not managed here.
 class ChunkManager {
   ChunkManager({
     required this.foodStore,

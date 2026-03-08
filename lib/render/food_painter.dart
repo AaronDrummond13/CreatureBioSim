@@ -41,6 +41,7 @@ class FoodPainter extends CustomPainter {
     for (final r in consumedRemnants) {
       final age = timeSeconds - r.consumedAt;
       if (age < 0) continue;
+      final scale = r.scale;
       const burstDuration = 5.0;
       if (age < burstDuration) {
         var dirAx = r.x - r.headX;
@@ -54,12 +55,12 @@ class FoodPainter extends CustomPainter {
           dirAy /= lenA;
         }
         const gasDriftSpeedWorld = 60.0;
-        final driftAway = age * gasDriftSpeedWorld;
+        final driftAway = age * gasDriftSpeedWorld * scale;
         final t = age / burstDuration;
-        final spreadWorld = (0.12 + t * 1.0) * (foodRadiusWorld * 4.2);
+        final spreadWorld = (0.12 + t * 1.0) * (foodRadiusWorld * 4.2) * scale;
         final alphaFade = (1 - t).clamp(0.0, 1.0);
         final color = r.cellType == CellType.animal ? animalCellColor : fillColor;
-        final puffRadiusBase = (foodRadiusWorld * z * 1.35).clamp(10.0, 42.0);
+        final puffRadiusBase = (foodRadiusWorld * z * 1.35 * scale).clamp(10.0, 42.0 * scale);
         final growFrac = 0.5 + 1.0 * t;
         void drawPuff(double px, double py, double radius, Color fill, double opacity) {
           final rect = Rect.fromCircle(center: Offset(px, py), radius: radius);
@@ -104,11 +105,11 @@ class FoodPainter extends CustomPainter {
           dirAy /= lenA;
         }
         const gasDriftSpeedWorld = 60.0;
-        final driftAway = age * gasDriftSpeedWorld;
+        final driftAway = age * gasDriftSpeedWorld * scale;
         const burstDurationSec = 5.0;
         final t = age / burstDurationSec;
-        final spreadWorld = (0.12 + t * 1.0) * (foodRadiusWorld * 4.2);
-        final lineScale = foodRadiusWorld * 0.48;
+        final spreadWorld = (0.12 + t * 1.0) * (foodRadiusWorld * 4.2) * scale;
+        final lineScale = foodRadiusWorld * 0.48 * scale;
         final tLine = age / lineDuration;
         final baseAlpha = (tLine <= 0.5 ? 1.0 : (1.0 - (tLine - 0.5) / 0.5).clamp(0.0, 1.0)) * 0.7;
         for (var i = 0; i < 6; i++) {
@@ -161,12 +162,12 @@ class FoodPainter extends CustomPainter {
         }
         const maxDriftWorld = 320.0;
         final t = (age / 7.5).clamp(0.0, 1.0);
-        final drift = maxDriftWorld * (2 * t - t * t);
+        final drift = maxDriftWorld * (2 * t - t * t) * scale;
         final nucleusWx = baseNx + dx * drift;
         final nucleusWy = baseNy + dy * drift;
         final nx = sx(nucleusWx);
         final ny = sy(nucleusWy);
-        final nr = (foodRadiusWorld * z * 0.22).clamp(2.0, 12.0);
+        final nr = (foodRadiusWorld * z * 0.22 * scale).clamp(2.0, 12.0 * scale);
         final alpha = (1 - age / 7.5).clamp(0.0, 1.0);
         final nucleusPaint = Paint()
           ..color = const Color(0xFF3d2914).withValues(alpha: alpha)
@@ -193,7 +194,7 @@ class FoodPainter extends CustomPainter {
         }
         final tb = (age / bubbleDuration).clamp(0.0, 1.0);
         const bubbleMaxDriftWorld = 90.0;
-        final drift = bubbleMaxDriftWorld * (2 * tb - tb * tb);
+        final drift = bubbleMaxDriftWorld * (2 * tb - tb * tb) * scale;
         final bubbleAlpha = (1 - age / bubbleDuration).clamp(0.0, 1.0);
         const spreadRad = 0.55;
         const bubbleSizeSmall = 0.7;
@@ -203,7 +204,7 @@ class FoodPainter extends CustomPainter {
         final bubbleSizes = r.bubbleSizes;
         if (bubbleSizes.isEmpty) continue;
         final nBubbles = bubbleSizes.length.clamp(1, 3);
-        final baseBubbleR = (foodRadiusWorld * z * 0.36).clamp(3.0, 14.0);
+        final baseBubbleR = (foodRadiusWorld * z * 0.36 * scale).clamp(3.0, 14.0 * scale);
         for (var b = 0; b < nBubbles; b++) {
           final angle = nBubbles == 1 ? 0.0 : -spreadRad + (b * 2 * spreadRad / (nBubbles - 1));
           final sizeIndex = bubbleSizes[b].clamp(0, 2);
@@ -372,6 +373,7 @@ class InnerBodyCloudPainter extends CustomPainter {
     for (final r in consumedRemnants) {
       final age = timeSeconds - r.consumedAt;
       if (age < 0 || age > _duration) continue;
+      final scale = r.scale;
       final t = age / _duration;
       final alpha = (1 - t).clamp(0.0, 1.0) * 0.5;
       final base = r.cellType == CellType.animal ? animalCellColor : fillColor;
@@ -396,7 +398,7 @@ class InnerBodyCloudPainter extends CustomPainter {
         final vx = v0.x + (v1.x - v0.x) * blend;
         final vy = v0.y + (v1.y - v0.y) * blend;
         final perp = p * 1.7 + t * 4.3 + r.consumedAt;
-        final offWorld = baseRadiusWorld * (0.15 + 0.75 * (sin(perp * 1.1) * 0.5 + 0.5));
+        final offWorld = baseRadiusWorld * (0.15 + 0.75 * (sin(perp * 1.1) * 0.5 + 0.5)) * scale;
         final angle = perp * 0.9 + cos(p * 2.3) * 2;
         final jitterX = cos(angle) * offWorld;
         final jitterY = sin(angle) * offWorld;
@@ -404,7 +406,7 @@ class InnerBodyCloudPainter extends CustomPainter {
         final wy = vy + jitterY;
         final px = sx(wx);
         final py = sy(wy);
-        final rPuff = baseRadius * (0.5 + 0.85 * (sin(p * 2.1 + t) * 0.5 + 0.5));
+        final rPuff = baseRadius * (0.5 + 0.85 * (sin(p * 2.1 + t) * 0.5 + 0.5)) * scale;
         final rect = Rect.fromCircle(center: Offset(px, py), radius: rPuff);
         final puffAlpha = alpha * (0.6 + 0.4 * (cos(p * 1.3) * 0.5 + 0.5));
         final paint = Paint()
