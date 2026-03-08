@@ -4,8 +4,14 @@ import 'package:creature_bio_sim/render/view.dart';
 
 /// Holds view/camera and touch state for the simulation screen.
 /// Camera = world position at screen center; zoom; touch target; time for drift/parallax.
-/// Extends [ChangeNotifier] so only the view subtree rebuilds on tick/gesture; gesture region stays stable.
+/// Extends [ChangeNotifier] so the view subtree rebuilds on tick/gesture; gesture region stays stable.
+/// [joystickListenable] notifies only on joystick start/update/end so the joystick overlay doesn't rebuild every frame.
 class SimulationViewState extends ChangeNotifier {
+  SimulationViewState() : _joystickNotifier = ChangeNotifier();
+
+  final ChangeNotifier _joystickNotifier;
+  Listenable get joystickListenable => _joystickNotifier;
+
   double cameraX = 0;
   double cameraY = 0;
   double zoom = 0.7;
@@ -105,7 +111,7 @@ class SimulationViewState extends ChangeNotifier {
           );
     joystickGrabTime = timeSeconds;
     isJoystickActive = true;
-    notifyListeners();
+    _joystickNotifier.notifyListeners();
   }
 
   void updateJoystick(Offset localPosition) {
@@ -118,7 +124,7 @@ class SimulationViewState extends ChangeNotifier {
             offset.dx / len * joystickMaxRadius,
             offset.dy / len * joystickMaxRadius,
           );
-    notifyListeners();
+    _joystickNotifier.notifyListeners();
   }
 
   void endJoystick(double headX, double headY) {
@@ -129,7 +135,7 @@ class SimulationViewState extends ChangeNotifier {
     joystickGrabTime = null;
     lastTouchLocal = null;
     lastTouchScreenSize = null;
-    notifyListeners();
+    _joystickNotifier.notifyListeners();
   }
 
   /// Apply pinch zoom; notifies only if [z] differs from current zoom.

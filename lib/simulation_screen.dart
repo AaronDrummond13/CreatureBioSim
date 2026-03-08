@@ -529,7 +529,7 @@ class _SimulationScreenState extends State<SimulationScreen>
                   ),
                   IgnorePointer(
                     child: ListenableBuilder(
-                      listenable: _viewState,
+                      listenable: _viewState.joystickListenable,
                       builder: (context, _) => CustomPaint(
                         size: layerSize,
                         painter: JoystickOverlayPainter(
