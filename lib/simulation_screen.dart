@@ -1,11 +1,12 @@
 import 'dart:math' show sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
-import 'controller/bot_controller.dart';
+import 'controller/background_giant_store.dart';
 import 'controller/creature_store.dart';
 import 'controller/spawner.dart';
 import 'creature.dart' show Creature, CaudalFinType;
 import 'input/simulation_gesture_region.dart';
+import 'render/background_giants_painter.dart';
 import 'render/background_painter.dart'
     show BackgroundPainter, SolidBackgroundPainter;
 import 'render/food_painter.dart';
@@ -15,7 +16,8 @@ import 'simulation_view_state.dart';
 import 'world/biome_map.dart';
 import 'world/chunk_manager.dart';
 import 'world/food.dart';
-import 'world/world.dart' show aabbOverlapsRect, circleOverlapsRect, kFoodActiveRadiusWorld;
+import 'world/world.dart'
+    show aabbOverlapsRect, circleOverlapsRect, kFoodActiveRadiusWorld;
 
 /// Screen that runs the spine simulation. Hold and drag on the screen:
 /// the head moves toward the touch point; drag to change direction.
@@ -60,17 +62,17 @@ class _SimulationScreenState extends State<SimulationScreen>
   final Spawner _spawner = Spawner();
   late final CreatureStore _creatureStore = CreatureStore(spawner: _spawner);
   final FoodStore _foodStore = FoodStore();
+  late final BackgroundGiantStore _backgroundGiantStore = BackgroundGiantStore(
+    spawner: _spawner,
+    spawnChanceOneIn: 5,
+  );
   late final ChunkManager _chunkManager = ChunkManager(
     foodStore: _foodStore,
     creatureStore: _creatureStore,
+    backgroundGiantStore: _backgroundGiantStore,
   );
   final BiomeMap _biomeMap = BiomeMap();
   bool _chunksInitialized = false;
-
-  /// Single background creature: big, blurred, slow, drawn behind the dots.
-  late final Creature _bgCreature;
-  late final Spine _bgSpine;
-  late final BotController _bgController;
 
   final SimulationViewState _viewState = SimulationViewState();
   late Ticker _ticker;
@@ -97,16 +99,6 @@ class _SimulationScreenState extends State<SimulationScreen>
     }
     _ticker = createTicker(_onTick);
     _ticker.start();
-
-    final bg = _spawner.createRandomAt(0, 0);
-    _bgCreature = bg.$1;
-    _bgSpine = bg.$2;
-    _bgController = BotController(
-      spine: _bgSpine,
-      wanderRadius: 1400,
-      ticksPerNewTarget: 420,
-      speed: 0.9,
-    );
   }
 
   @override
@@ -155,7 +147,7 @@ class _SimulationScreenState extends State<SimulationScreen>
       );
     }
     _viewState.timeSeconds = elapsed.inMilliseconds / 1000.0;
-    _bgController.tick();
+    _backgroundGiantStore.tick();
     if (_viewState.viewWidthWorld > 0 && _viewState.viewHeightWorld > 0) {
       _chunkManager.update(
         _viewState.cameraX,
@@ -181,10 +173,11 @@ class _SimulationScreenState extends State<SimulationScreen>
     final cameraView = _viewState.cameraView;
     final bgView = _viewState.backgroundCameraView();
     final t = _viewState.timeSeconds;
-    final bgColor = _biomeMap.blendedColorAt(
-      _viewState.cameraX,
-      _viewState.cameraY,
-    );
+    final bgColor = Color.lerp(
+      const Color.fromARGB(255, 28, 30, 54),
+      _biomeMap.blendedColorAt(_viewState.cameraX, _viewState.cameraY),
+      0.18,
+    )!;
     final (left, right, top, bottom) = _viewState.renderRectWithBuffer(0.15);
     final r = _foodStore.radiusWorld;
     final visibleItems = _foodStore.items
@@ -192,7 +185,17 @@ class _SimulationScreenState extends State<SimulationScreen>
         .toList();
     const remnantRadius = 220.0;
     final visibleRemnants = _foodStore.consumedRemnants
-        .where((r) => circleOverlapsRect(r.x, r.y, remnantRadius, left, right, top, bottom))
+        .where(
+          (r) => circleOverlapsRect(
+            r.x,
+            r.y,
+            remnantRadius,
+            left,
+            right,
+            top,
+            bottom,
+          ),
+        )
         .toList();
     const creatureMargin = 50.0;
     final visibleEntities = _creatureStore.entities.where((e) {
@@ -206,9 +209,47 @@ class _SimulationScreenState extends State<SimulationScreen>
         if (p.y > maxY) maxY = p.y;
       }
       return aabbOverlapsRect(
-        minX - creatureMargin, maxX + creatureMargin,
-        minY - creatureMargin, maxY + creatureMargin,
-        left, right, top, bottom,
+        minX - creatureMargin,
+        maxX + creatureMargin,
+        minY - creatureMargin,
+        maxY + creatureMargin,
+        left,
+        right,
+        top,
+        bottom,
+      );
+    }).toList();
+    // Cull giants by PARALLAX visible rect: they're drawn with bgView so only giants near (camera*0.25) appear on screen. Use a large buffer so we don't cut them off.
+    const double parallaxFactor = 0.25;
+    const double parallaxZoomScale = 5.0;
+    final px = _viewState.cameraX * parallaxFactor;
+    final py = _viewState.cameraY * parallaxFactor;
+    final parHalfW = ((_viewState.viewWidthWorld / parallaxZoomScale) * 4.0).clamp(600.0, 3000.0);
+    final parHalfH = ((_viewState.viewHeightWorld / parallaxZoomScale) * 4.0).clamp(600.0, 3000.0);
+    final pLeft = px - parHalfW;
+    final pRight = px + parHalfW;
+    final pTop = py - parHalfH;
+    final pBottom = py + parHalfH;
+    const giantMargin = 150.0;
+    final visibleGiants = _backgroundGiantStore.entities.where((g) {
+      final pos = g.spine.positions;
+      if (pos.isEmpty) return false;
+      var minX = pos[0].x, maxX = pos[0].x, minY = pos[0].y, maxY = pos[0].y;
+      for (final p in pos) {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      }
+      return aabbOverlapsRect(
+        minX - giantMargin,
+        maxX + giantMargin,
+        minY - giantMargin,
+        maxY + giantMargin,
+        pLeft,
+        pRight,
+        pTop,
+        pBottom,
       );
     }).toList();
     return [
@@ -217,14 +258,12 @@ class _SimulationScreenState extends State<SimulationScreen>
       ),
       Positioned.fill(
         child: CustomPaint(
-          painter: CreaturePainter(
-            creature: _bgCreature,
-            spine: _bgSpine,
+          painter: BackgroundGiantsPainter(
+            giants: visibleGiants,
             view: bgView,
             timeSeconds: t,
             blurSigma: 5,
             layerOpacity: 0.35,
-            blurLayerBackgroundColor: bgColor,
           ),
         ),
       ),
@@ -234,6 +273,7 @@ class _SimulationScreenState extends State<SimulationScreen>
             view: cameraView,
             timeSeconds: t,
             biomeMap: _biomeMap,
+            biomeTintFrac: 0.35,
           ),
         ),
       ),
@@ -308,7 +348,9 @@ class _SimulationScreenState extends State<SimulationScreen>
       children: [
         ListenableBuilder(
           listenable: _viewState,
-          builder: (context, _) => Stack(children: _buildViewStack(size)),
+          builder: (context, _) => Stack(
+            children: [const SizedBox.expand(), ..._buildViewStack(size)],
+          ),
         ),
         Positioned.fill(
           child: LayoutBuilder(

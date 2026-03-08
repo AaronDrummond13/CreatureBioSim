@@ -85,6 +85,7 @@ class BackgroundPainter extends CustomPainter {
     this.parallaxBlobs = 0.8,
     this.parallaxBubbles = 0.9,
     this.biomeMap,
+    this.biomeTintFrac = 0.12,
   });
 
   final CameraView view;
@@ -92,6 +93,8 @@ class BackgroundPainter extends CustomPainter {
   final double parallaxBlobs;
   final double parallaxBubbles;
   final BiomeMap? biomeMap;
+  /// When set with biomeMap, dots/bubbles/blobs are light with this fraction of biome colour (0 = pure white).
+  final double biomeTintFrac;
 
   static const double _dotSpacing = 150.0;
   static const double _dotDriftAmount = 100.0;
@@ -127,7 +130,8 @@ class BackgroundPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final z = view.zoom;
+    if (size.width < 1 || size.height < 1) return;
+    final z = (view.zoom.isFinite && view.zoom >= 0.01) ? view.zoom : 1.0;
     final centerX = size.width / 2;
     final centerY = size.height / 2;
 
@@ -173,10 +177,10 @@ class BackgroundPainter extends CustomPainter {
         final wy = j * _blobSpacing + driftY;
         if (biomeMap != null) {
           final c = biomeMap!.blendedColorAt(wx, wy);
-          blobFill.color = c.withValues(alpha:_blobFillOpacity);
-          blobRim.color = c.withValues(alpha:_blobRimOpacity);
-          blobPrimary.color = c.withValues(alpha:_blobPrimaryOpacity);
-          blobSecondary.color = c.withValues(alpha:_blobSecondaryOpacity);
+          blobFill.color = Color.lerp(Colors.white, c, biomeTintFrac)!.withValues(alpha: _blobFillOpacity);
+          blobRim.color = Color.lerp(Colors.white, c, biomeTintFrac)!.withValues(alpha: _blobRimOpacity);
+          blobPrimary.color = Color.lerp(Colors.white, c, biomeTintFrac)!.withValues(alpha: _blobPrimaryOpacity);
+          blobSecondary.color = Color.lerp(Colors.white, c, biomeTintFrac)!.withValues(alpha: _blobSecondaryOpacity);
         }
         final px = blobSx(wx);
         final py = blobSy(wy);
@@ -238,10 +242,10 @@ class BackgroundPainter extends CustomPainter {
         final wy = j * _bubbleSpacing + driftY;
         if (biomeMap != null) {
           final c = biomeMap!.blendedColorAt(wx, wy);
-          bubbleFill.color = c.withValues(alpha:_bubbleFillOpacity);
-          bubbleRim.color = c.withValues(alpha:_bubbleRimOpacity);
-          bubblePrimary.color = c.withValues(alpha:_bubblePrimaryOpacity);
-          bubbleSecondary.color = c.withValues(alpha:_bubbleSecondaryOpacity);
+          bubbleFill.color = Color.lerp(Colors.white, c, biomeTintFrac)!.withValues(alpha: _bubbleFillOpacity);
+          bubbleRim.color = Color.lerp(Colors.white, c, biomeTintFrac)!.withValues(alpha: _bubbleRimOpacity);
+          bubblePrimary.color = Color.lerp(Colors.white, c, biomeTintFrac)!.withValues(alpha: _bubblePrimaryOpacity);
+          bubbleSecondary.color = Color.lerp(Colors.white, c, biomeTintFrac)!.withValues(alpha: _bubbleSecondaryOpacity);
         }
         final px = bubbleSx(wx);
         final py = bubbleSy(wy);
@@ -289,7 +293,9 @@ class BackgroundPainter extends CustomPainter {
         final wx = i * _dotSpacing + driftX;
         final wy = j * _dotSpacing + driftY;
         if (biomeMap != null) {
-          dotPaint.color = biomeMap!.blendedColorAt(wx, wy).withValues(alpha:_dotOpacity);
+          dotPaint.color = Color.lerp(Colors.white, biomeMap!.blendedColorAt(wx, wy), biomeTintFrac)!.withValues(alpha: _dotOpacity);
+        } else {
+          dotPaint.color = Colors.white.withValues(alpha: _dotOpacity);
         }
         final px = dotSx(wx);
         final py = dotSy(wy);
@@ -309,5 +315,6 @@ class BackgroundPainter extends CustomPainter {
       oldDelegate.timeSeconds != timeSeconds ||
       oldDelegate.parallaxBlobs != parallaxBlobs ||
       oldDelegate.parallaxBubbles != parallaxBubbles ||
-      oldDelegate.biomeMap != biomeMap;
+      oldDelegate.biomeMap != biomeMap ||
+      oldDelegate.biomeTintFrac != biomeTintFrac;
 }
