@@ -61,13 +61,16 @@ class Spawner {
   }
 
   Creature _randomCreature() {
-    final segmentCount = 1 + _rng.nextInt(14);
+    final segmentCount = 1 + _rng.nextInt(Creature.maxSegmentCount);
     final vertexCount = segmentCount + 1;
     final widths = _smoothVertexWidths(vertexCount);
     final color = 0xFF000000 | _rng.nextInt(0xFFFFFF);
     final dorsalFins = _randomDorsalFins(segmentCount);
     final tailFin = _randomTailFin();
     final lateralFins = _randomLateralFins(segmentCount);
+    final tailRoot = tailFin != null ? _inRange(Creature.tailRootWidthMin, Creature.tailRootWidthMax) : null;
+    final tailMax = tailFin != null ? _inRange(Creature.tailMaxWidthMin, Creature.tailMaxWidthMax) : null;
+    final tailLen = tailFin != null ? _inRange(Creature.tailLengthMin, Creature.tailLengthMax) : null;
     return Creature(
       vertexWidths: widths,
       color: color,
@@ -78,8 +81,13 @@ class Spawner {
       lateralFins: (lateralFins == null || lateralFins.isEmpty)
           ? null
           : lateralFins,
+      tailRootWidth: tailRoot,
+      tailMaxWidth: tailMax,
+      tailLength: tailLen,
     );
   }
+
+  double _inRange(double min, double max) => min + _rng.nextDouble() * (max - min);
 
   /// ~1/6 chance per segment (excluding head) to get a lateral fin.
   List<int>? _randomLateralFins(int segmentCount) {

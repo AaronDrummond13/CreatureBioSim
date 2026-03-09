@@ -50,16 +50,15 @@ void paintTailFin(
   final vws = creature.vertexWidths
       .map((w) => w.clamp(Creature.minVertexWidth, Creature.maxVertexWidth))
       .toList();
-  final rootW = vws.isEmpty
-      ? widthAt(0)
-      : vws.reduce((a, b) => a < b ? a : b) * bodyScale;
-  final tailSegmentWidth = widthAt(0);
-  final maxW = vws.isEmpty
-      ? rootW / 2
-      : vws.reduce((a, b) => a > b ? a : b) / 2 * bodyScale;
+  final derivedRoot = vws.isEmpty ? widthAt(0) / bodyScale : vws.reduce((a, b) => a < b ? a : b);
+  final derivedMax = vws.isEmpty ? derivedRoot / 2 : vws.reduce((a, b) => a > b ? a : b) / 2;
+  final derivedLen = widthAt(0) * 3.0;
+
+  final rootW = (creature.tailRootWidth ?? derivedRoot) * bodyScale;
+  final maxW = (creature.tailMaxWidth ?? derivedMax) * bodyScale;
+  final len = creature.tailLength != null ? creature.tailLength! * bodyScale : derivedLen;
 
   final back = tailA + pi;
-  final len = tailSegmentWidth * 3.0;
   final t = (maxAngle > 1e-6)
       ? (tailBend / maxAngle * 0.5 + 0.5).clamp(0.0, 1.0)
       : 0.5;

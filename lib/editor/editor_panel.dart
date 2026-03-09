@@ -165,6 +165,9 @@ class _BodyTab extends StatelessWidget {
       finColor: c.finColor,
       tailFin: v,
       lateralFins: c.lateralFins,
+      tailRootWidth: c.tailRootWidth,
+      tailMaxWidth: c.tailMaxWidth,
+      tailLength: c.tailLength,
     ));
   }
 }
@@ -243,6 +246,9 @@ class _ColourTabState extends State<_ColourTab> {
                   finColor: creature.color,
                   tailFin: creature.tailFin,
                   lateralFins: creature.lateralFins,
+                  tailRootWidth: creature.tailRootWidth,
+                  tailMaxWidth: creature.tailMaxWidth,
+                  tailLength: creature.tailLength,
                 )),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -267,6 +273,9 @@ class _ColourTabState extends State<_ColourTab> {
                   finColor: _editingFin ? value : creature.finColor,
                   tailFin: creature.tailFin,
                   lateralFins: creature.lateralFins,
+                  tailRootWidth: creature.tailRootWidth,
+                  tailMaxWidth: creature.tailMaxWidth,
+                  tailLength: creature.tailLength,
                 ));
               },
             ),
