@@ -125,51 +125,41 @@ class _BodyTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final current = creature.tailFin;
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
         Text('Body length', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         Text('Drag the tail node in the view to change segment count.', style: TextStyle(fontSize: 12, color: EditorStyle.textMuted)),
-        const SizedBox(height: 16),
-        Text('Tail (caudal) fin — tap to select', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
-            _TailBox(
-              creature: creature,
-              tailFin: null,
-              selected: current == null,
-              onTap: () => _setTail(creature, null),
-            ),
-            ...CaudalFinType.values.map((e) => _TailBox(
-              creature: creature,
-              tailFin: e,
-              selected: current == e,
-              onTap: () => _setTail(creature, e),
-            )),
-          ],
-        ),
       ],
     );
   }
+}
 
-  void _setTail(Creature c, CaudalFinType? v) {
-    onCreatureChanged(Creature(
-      vertexWidths: c.vertexWidths,
-      color: c.color,
-      dorsalFins: c.dorsalFins,
-      finColor: c.finColor,
-      tailFin: v,
-      lateralFins: c.lateralFins,
-      tailRootWidth: c.tailRootWidth,
-      tailMaxWidth: c.tailMaxWidth,
-      tailLength: c.tailLength,
-    ));
-  }
+/// Shared helper for draggable tail box (used from Fins tab).
+Widget _draggableTailBox(Creature c, CaudalFinType tailFin) {
+  const boxW = 52.0;
+  const boxH = 36.0;
+  final box = _TailBox(creature: c, tailFin: tailFin);
+  return Draggable<TailDragPayload>(
+    data: TailDragPayload(tailFin),
+    dragAnchorStrategy: pointerDragAnchorStrategy,
+    feedbackOffset: const Offset(-boxW / 2, -boxH / 2),
+    feedback: Material(
+      elevation: 0,
+      color: Colors.transparent,
+      child: SizedBox(
+        width: boxW,
+        height: boxH,
+        child: CustomPaint(
+          painter: _TailPreviewPainter(creature: c, tailFin: tailFin),
+          size: const Size(boxW, boxH),
+        ),
+      ),
+    ),
+    childWhenDragging: Opacity(opacity: 0.5, child: box),
+    child: box,
+  );
 }
 
 /// Colour tab: one picker, select Body or Fin to colour. No scroll.
@@ -451,14 +441,12 @@ class _SVSquarePainter extends CustomPainter {
   bool shouldRepaint(covariant _SVSquarePainter old) => old.hue != hue || old.s != s || old.v != v;
 }
 
-/// One tail option: real tail via [paintTailFin] with creature colours and minimal spine.
+/// One tail option: real tail via [paintTailFin] with creature colours and minimal spine. Wrapped in Draggable by caller.
 class _TailBox extends StatelessWidget {
-  const _TailBox({required this.creature, required this.tailFin, required this.selected, required this.onTap});
+  const _TailBox({required this.creature, required this.tailFin});
 
   final Creature creature;
-  final CaudalFinType? tailFin;
-  final bool selected;
-  final void Function() onTap;
+  final CaudalFinType tailFin;
 
   static const double _boxW = 52;
   static const double _boxH = 36;
@@ -469,28 +457,22 @@ class _TailBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: _boxW,
-        height: _boxH,
-        decoration: BoxDecoration(
-          color: EditorStyle.fill,
-          borderRadius: BorderRadius.circular(EditorStyle.radius),
-          border: Border.all(
-            color: selected ? EditorStyle.text : EditorStyle.stroke,
-            width: selected ? 2 : EditorStyle.strokeWidth,
+    return Container(
+      width: _boxW,
+      height: _boxH,
+      decoration: BoxDecoration(
+        color: EditorStyle.fill,
+        borderRadius: BorderRadius.circular(EditorStyle.radius),
+        border: Border.all(color: EditorStyle.stroke, width: EditorStyle.strokeWidth),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(EditorStyle.radius),
+        child: CustomPaint(
+          painter: _TailPreviewPainter(
+            creature: creature,
+            tailFin: tailFin,
           ),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(EditorStyle.radius),
-          child: CustomPaint(
-            painter: _TailPreviewPainter(
-              creature: creature,
-              tailFin: tailFin,
-            ),
-            size: const Size(_boxW, _boxH),
-          ),
+          size: const Size(_boxW, _boxH),
         ),
       ),
     );
@@ -823,6 +805,15 @@ class _FinsTab extends StatelessWidget {
               child: _lateralBox(),
             ),
           ],
+        ),
+        const SizedBox(height: 16),
+        Text('Tail (caudal)', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
+        Text('Drag onto creature to add. Tap tail in view to select; drag off to remove.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: CaudalFinType.values.map((e) => _draggableTailBox(creature, e)).toList(),
         ),
       ],
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:creature_bio_sim/creature.dart';
 import 'package:creature_bio_sim/editor/editor_style.dart';
 
 /// Custom slider: track + draggable thumb (no Material).
@@ -81,3 +82,9 @@ class LateralDragPayload {}
 
 /// Marker for dorsal fin drag from panel to viewport.
 class DorsalDragPayload {}
+
+/// Payload for tail (caudal) fin drag from panel to viewport. [tailFin] = type to add, or null to remove.
+class TailDragPayload {
+  const TailDragPayload(this.tailFin);
+  final CaudalFinType? tailFin;
+}

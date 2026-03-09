@@ -81,6 +81,8 @@ class EditorScreenState extends State<EditorScreen> {
       onTailRootWidthChanged: _onTailRootWidthFromViewport,
       onTailMaxWidthChanged: _onTailMaxWidthFromViewport,
       onTailLengthChanged: _onTailLengthFromViewport,
+      onTailAdded: _onTailAddedFromViewport,
+      onTailRemoved: _onTailRemovedFromViewport,
       onLateralToggled: _onLateralToggledFromViewport,
       onLateralMoved: _onLateralMovedFromViewport,
       onLateralAdded: _onLateralAddedFromViewport,
@@ -311,6 +313,34 @@ class EditorScreenState extends State<EditorScreen> {
       tailRootWidth: _creature.tailRootWidth,
       tailMaxWidth: _creature.tailMaxWidth,
       tailLength: v,
+    ));
+  }
+
+  void _onTailAddedFromViewport(CaudalFinType? tailFin) {
+    setState(() => _creature = Creature(
+      vertexWidths: _creature.vertexWidths,
+      color: _creature.color,
+      dorsalFins: _creature.dorsalFins,
+      finColor: _creature.finColor,
+      tailFin: tailFin,
+      lateralFins: _creature.lateralFins,
+      tailRootWidth: _creature.tailRootWidth ?? 12.0,
+      tailMaxWidth: _creature.tailMaxWidth ?? 20.0,
+      tailLength: _creature.tailLength ?? 90.0,
+    ));
+  }
+
+  void _onTailRemovedFromViewport() {
+    setState(() => _creature = Creature(
+      vertexWidths: _creature.vertexWidths,
+      color: _creature.color,
+      dorsalFins: _creature.dorsalFins,
+      finColor: _creature.finColor,
+      tailFin: null,
+      lateralFins: _creature.lateralFins,
+      tailRootWidth: _creature.tailRootWidth,
+      tailMaxWidth: _creature.tailMaxWidth,
+      tailLength: _creature.tailLength,
     ));
   }
 

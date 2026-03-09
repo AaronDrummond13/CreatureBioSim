@@ -22,8 +22,9 @@ void paintTailFin(
   double cameraY,
   double bodyScale,
   Color bodyColor,
-  double Function(int i) widthAt,
-) {
+  double Function(int i) widthAt, {
+  Color? overrideFinColor,
+}) {
   if (creature.tailFin == null) return;
   final tailFinType = creature.tailFin!;
   double sx(double wx) => centerX + (wx - cameraX) * zoom;
@@ -139,9 +140,10 @@ void paintTailFin(
   path.moveTo(pts[0].dx, pts[0].dy);
   appendSmoothCurve(path, pts, 1.0 / 6.0);
   path.close();
-  final finColor = creature.finColor != null
-      ? Color(creature.finColor!)
-      : Color.lerp(bodyColor, Colors.white, 0.12)!;
+  final finColor = overrideFinColor ??
+      (creature.finColor != null
+          ? Color(creature.finColor!)
+          : Color.lerp(bodyColor, Colors.white, 0.12)!);
   final finPaint = Paint()..color = finColor..style = PaintingStyle.fill;
   final strokePaint = Paint()
     ..color = Colors.white
