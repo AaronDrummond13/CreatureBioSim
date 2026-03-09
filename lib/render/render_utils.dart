@@ -109,3 +109,31 @@ void appendSmoothCurve(
   }
   if (closed) path.close();
 }
+
+/// Appends a jagged line from [start] to [end] to [path] (opposite of smooth: multiple sharp segments).
+/// [numTeeth]: number of zigzag segments. [amplitude]: perpendicular offset magnitude.
+void appendJigJag(Path path, Offset start, Offset end, int numTeeth, double amplitude) {
+  if (numTeeth < 1) {
+    path.lineTo(end.dx, end.dy);
+    return;
+  }
+  final dx = end.dx - start.dx;
+  final dy = end.dy - start.dy;
+  final len = (dx * dx + dy * dy).clamp(1e-10, double.infinity);
+  final ux = dx / len;
+  final uy = dy / len;
+  final perpX = -uy;
+  final perpY = ux;
+  final n = numTeeth * 2;
+  for (var i = 1; i <= n; i++) {
+    final t = i / n;
+    final px = start.dx + dx * t;
+    final py = start.dy + dy * t;
+    final sign = i.isOdd ? 1.0 : -1.0;
+    path.lineTo(
+      px + perpX * amplitude * sign,
+      py + perpY * amplitude * sign,
+    );
+  }
+  path.lineTo(end.dx, end.dy);
+}

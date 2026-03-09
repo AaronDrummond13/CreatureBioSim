@@ -79,7 +79,9 @@ class Spawner {
     final trophicType = TrophicType.values[_rng.nextInt(TrophicType.values.length)];
     final mouth = trophicType == TrophicType.herbivore
         ? MouthType.tentacle
-        : (trophicType == TrophicType.carnivore ? MouthType.teeth : MouthType.tentacle);
+        : (trophicType == TrophicType.carnivore
+            ? MouthType.teeth
+            : MouthType.mandible);
     return Creature(
       vertexWidths: widths,
       color: color,

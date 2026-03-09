@@ -46,8 +46,8 @@ class SimulationScreen extends StatefulWidget {
     finColor: 0xFF777777,
     tail: TailConfig(CaudalFinType.lunate),
     lateralFins: [4],
-    trophicType: TrophicType.herbivore,
-    mouth: MouthType.tentacle,
+    trophicType: TrophicType.omnivore,
+    mouth: MouthType.mandible,
   );
 
   @override
@@ -311,8 +311,8 @@ class _SimulationScreenState extends State<SimulationScreen>
       final allowedFood = e.creature.trophicType == TrophicType.herbivore
           ? {CellType.plant, CellType.bubble}
           : (e.creature.trophicType == TrophicType.carnivore
-              ? {CellType.animal, CellType.bubble}
-              : null);
+                ? {CellType.animal, CellType.bubble}
+                : null);
       _foodStore.consumeNear(
         head.x,
         head.y,
@@ -496,7 +496,9 @@ class _SimulationScreenState extends State<SimulationScreen>
             painter: InnerBodyCloudPainter(
               view: cameraView,
               spine: _spine,
-              consumedRemnants: visibleRemnants.where((r) => r.consumedByPlayer).toList(),
+              consumedRemnants: visibleRemnants
+                  .where((r) => r.consumedByPlayer)
+                  .toList(),
               timeSeconds: t,
               bodyClipPath: CreaturePainter.buildBodyPath(
                 _creature,

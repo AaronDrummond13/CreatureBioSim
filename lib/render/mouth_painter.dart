@@ -1,4 +1,4 @@
-import 'dart:math' show cos, sin, sqrt;
+import 'dart:math' show atan2, cos, pi, sin, sqrt;
 
 import 'package:flutter/material.dart';
 
@@ -137,6 +137,37 @@ void paintMouth(
       sx,
       sy,
     );
+    return;
+  }
+  if (creature.mouth == MouthType.mandible) {
+    _paintMandibleMouth(
+      canvas,
+      creature,
+      centerX,
+      centerY,
+      zoom,
+      cameraX,
+      cameraY,
+      bodyScale,
+      headWidthWorld,
+      mouthTime,
+      headX,
+      headY,
+      forwardX,
+      forwardY,
+      perpX,
+      perpY,
+      halfW,
+      sizeScale,
+      rightX,
+      rightY,
+      leftX,
+      leftY,
+      fillPaint,
+      strokePaint,
+      sx,
+      sy,
+    );
   }
 }
 
@@ -191,13 +222,9 @@ void _paintTentacleMouth(
     final t = tentacleCount > 1 ? ti / (tentacleCount - 1) : 0.5;
     final oneMinusT = 1.0 - t;
     final baseX =
-        oneMinusT * oneMinusT * rX +
-        2 * oneMinusT * t * bulgeX +
-        t * t * lX;
+        oneMinusT * oneMinusT * rX + 2 * oneMinusT * t * bulgeX + t * t * lX;
     final baseY =
-        oneMinusT * oneMinusT * rY +
-        2 * oneMinusT * t * bulgeY +
-        t * t * lY;
+        oneMinusT * oneMinusT * rY + 2 * oneMinusT * t * bulgeY + t * t * lY;
 
     final centerDist = tentacleCount > 1
         ? (ti - (tentacleCount - 1) / 2).abs() / ((tentacleCount - 1) / 2)
@@ -399,6 +426,122 @@ void _paintTeethMouth(
     final path = Path();
     path.moveTo(outline[0].dx, outline[0].dy);
     appendSmoothCurve(path, outline, 1.0 / 6.0, closed: true);
+
+    canvas.drawPath(path, fillPaint);
+    canvas.drawPath(path, strokePaint);
+  }
+}
+
+void _paintMandibleMouth(
+  Canvas canvas,
+  Creature creature,
+  double centerX,
+  double centerY,
+  double zoom,
+  double cameraX,
+  double cameraY,
+  double bodyScale,
+  double headWidthWorld,
+  double timeSeconds,
+  double headX,
+  double headY,
+  double forwardX,
+  double forwardY,
+  double perpX,
+  double perpY,
+  double halfW,
+  double sizeScale,
+  double rightX,
+  double rightY,
+  double leftX,
+  double leftY,
+  Paint fillPaint,
+  Paint strokePaint,
+  double Function(double) sx,
+  double Function(double) sy,
+) {
+  const mandibleLength = 42.0;
+  const mandibleWidth = 3.0;
+  const mandibleArcWidth = 0.65;
+  const openAngleBase = -0.2;
+  const openAngleAmp = 0.18;
+  const openAngleSpeed = 1.5;
+  const jigJagTeeth = 10;
+  const jigJagAmplitudeWorld = 150;
+  const outerArcSegments = 3;
+  const outerArcBulge = 2;
+
+  final headA = atan2(forwardY, forwardX);
+  final arcCenterX = (rightX + leftX) * 0.5;
+  final arcCenterY = (rightY + leftY) * 0.5;
+  final rX = arcCenterX + (rightX - arcCenterX) * mandibleArcWidth;
+  final rY = arcCenterY + (rightY - arcCenterY) * mandibleArcWidth;
+  final lX = arcCenterX + (leftX - arcCenterX) * mandibleArcWidth;
+  final lY = arcCenterY + (leftY - arcCenterY) * mandibleArcWidth;
+
+  final openAngle =
+      openAngleBase + openAngleAmp * sin(timeSeconds * openAngleSpeed);
+
+  final len = mandibleLength * sizeScale;
+  final wid = mandibleWidth * sizeScale;
+
+  for (var side = 0; side < 2; side++) {
+    final isLeft = side == 0;
+    final rootX = isLeft ? lX : rX;
+    final rootY = isLeft ? lY : rY;
+    final angle = headA + (isLeft ? openAngle : -openAngle);
+    final dirX = cos(angle);
+    final dirY = sin(angle);
+    final perpDirX = -sin(angle);
+    final perpDirY = cos(angle);
+    final outerSign = isLeft ? 1.0 : -1.0;
+    final tipX = rootX + dirX * len;
+    final tipY = rootY + dirY * len;
+    final rootInnerX = rootX - perpDirX * wid * outerSign;
+    final rootInnerY = rootY - perpDirY * wid * outerSign;
+    final tipInnerX = tipX - perpDirX * wid * outerSign;
+    final tipInnerY = tipY - perpDirY * wid * outerSign;
+
+    final mainArcPts = <Offset>[];
+    for (var i = 0; i <= outerArcSegments; i++) {
+      final frac = i / outerArcSegments;
+      final bulgeFrac = sin(frac * pi);
+      final offset = wid * (1.0 + outerArcBulge * bulgeFrac) * outerSign;
+      final wx = rootX + dirX * len * frac + perpDirX * offset;
+      final wy = rootY + dirY * len * frac + perpDirY * offset;
+      mainArcPts.add(Offset(sx(wx), sy(wy)));
+    }
+    final rootOuterPt = mainArcPts.first;
+    final tipOuterPt = mainArcPts.last;
+    final rootInnerPt = Offset(sx(rootInnerX), sy(rootInnerY));
+    final tipInnerPt = Offset(sx(tipInnerX), sy(tipInnerY));
+
+    const blendFrac = 0.35;
+    final outerArcPts = <Offset>[
+      rootInnerPt,
+      Offset(
+        rootInnerPt.dx + blendFrac * (rootOuterPt.dx - rootInnerPt.dx),
+        rootInnerPt.dy + blendFrac * (rootOuterPt.dy - rootInnerPt.dy),
+      ),
+      ...mainArcPts,
+      Offset(
+        tipOuterPt.dx + (1.0 - blendFrac) * (tipInnerPt.dx - tipOuterPt.dx),
+        tipOuterPt.dy + (1.0 - blendFrac) * (tipInnerPt.dy - tipOuterPt.dy),
+      ),
+      tipInnerPt,
+    ];
+
+    final path = Path();
+    path.moveTo(outerArcPts[0].dx, outerArcPts[0].dy);
+    appendSmoothCurve(path, outerArcPts, 1.0 / 6.0, closed: false);
+    appendJigJag(
+      path,
+      Offset(sx(tipInnerX), sy(tipInnerY)),
+      Offset(sx(rootInnerX), sy(rootInnerY)),
+      jigJagTeeth,
+      jigJagAmplitudeWorld * zoom,
+    );
+    path.close();
 
     canvas.drawPath(path, fillPaint);
     canvas.drawPath(path, strokePaint);

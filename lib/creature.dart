@@ -57,8 +57,8 @@ class TailConfig {
 /// What a creature can eat. Herbivore = plant cells only; carnivore = animal cells + babies; omnivore = all (balance TBD).
 enum TrophicType { herbivore, carnivore, omnivore }
 
-/// Mouth style. Null = no mouth. Tentacle = shrimp/herbivore (wiggly). Teeth = carnivore (rigid spikes, curve + protrude).
-enum MouthType { tentacle, teeth }
+/// Mouth style. Null = no mouth. Tentacle = shrimp/herbivore (wiggly). Teeth = carnivore (rigid spikes). Mandible = omnivore (ant-like, open/close).
+enum MouthType { tentacle, teeth, mandible }
 
 /// Creature definition: identity and appearance, outside engine and renderer.
 /// Spine length is implied by [vertexWidths] (segmentCount = vertexWidths.length - 1). Capped at [maxSegmentCount].
