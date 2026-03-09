@@ -25,8 +25,8 @@ void paintTailFin(
   double Function(int i) widthAt, {
   Color? overrideFinColor,
 }) {
-  if (creature.tailFin == null) return;
-  final tailFinType = creature.tailFin!;
+  if (creature.tail == null) return;
+  final tailFinType = creature.tail!.type;
   double sx(double wx) => centerX + (wx - cameraX) * zoom;
   double sy(double wy) => centerY + (wy - cameraY) * zoom;
 
@@ -55,9 +55,10 @@ void paintTailFin(
   final derivedMax = vws.isEmpty ? derivedRoot / 2 : vws.reduce((a, b) => a > b ? a : b) / 2;
   final derivedLen = widthAt(0) * 3.0;
 
-  final rootW = (creature.tailRootWidth ?? derivedRoot) * bodyScale;
-  final maxW = (creature.tailMaxWidth ?? derivedMax) * bodyScale;
-  final len = creature.tailLength != null ? creature.tailLength! * bodyScale : derivedLen;
+  final tailCfg = creature.tail!;
+  final rootW = (tailCfg.rootWidth ?? derivedRoot) * bodyScale;
+  final maxW = (tailCfg.maxWidth ?? derivedMax) * bodyScale;
+  final len = tailCfg.length != null ? tailCfg.length! * bodyScale : derivedLen;
 
   final back = tailA + pi;
   final t = (maxAngle > 1e-6)

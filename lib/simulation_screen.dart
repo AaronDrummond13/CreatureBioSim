@@ -5,7 +5,7 @@ import 'package:creature_bio_sim/controller/mammoth_store.dart'
     hide aabbOverlapsRect;
 import 'package:creature_bio_sim/controller/creature_store.dart';
 import 'package:creature_bio_sim/controller/spawner.dart';
-import 'package:creature_bio_sim/creature.dart' show Creature, CaudalFinType;
+import 'package:creature_bio_sim/creature.dart' show Creature, CaudalFinType, TailConfig;
 import 'package:creature_bio_sim/input/simulation_gesture_region.dart';
 import 'package:creature_bio_sim/render/mammoth_painter.dart';
 import 'package:creature_bio_sim/render/background_painter.dart'
@@ -44,7 +44,7 @@ class SimulationScreen extends StatefulWidget {
     ],
     color: 0xFF777777,
     finColor: 0xFF777777,
-    tailFin: CaudalFinType.lunate,
+    tail: TailConfig(CaudalFinType.lunate),
     lateralFins: [4],
   );
 

@@ -234,11 +234,8 @@ class _ColourTabState extends State<_ColourTab> {
                   color: creature.color,
                   dorsalFins: creature.dorsalFins,
                   finColor: creature.color,
-                  tailFin: creature.tailFin,
+                  tail: creature.tail,
                   lateralFins: creature.lateralFins,
-                  tailRootWidth: creature.tailRootWidth,
-                  tailMaxWidth: creature.tailMaxWidth,
-                  tailLength: creature.tailLength,
                 )),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -261,11 +258,8 @@ class _ColourTabState extends State<_ColourTab> {
                   color: _editingFin ? creature.color : value,
                   dorsalFins: creature.dorsalFins,
                   finColor: _editingFin ? value : creature.finColor,
-                  tailFin: creature.tailFin,
+                  tail: creature.tail,
                   lateralFins: creature.lateralFins,
-                  tailRootWidth: creature.tailRootWidth,
-                  tailMaxWidth: creature.tailMaxWidth,
-                  tailLength: creature.tailLength,
                 ));
               },
             ),
@@ -500,7 +494,7 @@ class _TailPreviewPainter extends CustomPainter {
       vertexWidths: [20.0, 25.0],
       color: creature.color,
       finColor: creature.finColor,
-      tailFin: tailFin,
+      tail: TailConfig(tailFin!),
     );
     final positions = [
       Vector2(_TailBox._tailWorldLeft, 0),

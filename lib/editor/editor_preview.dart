@@ -268,7 +268,7 @@ class _DorsalNodesOverlayPainter extends CustomPainter {
       old.startSeg != startSeg || old.endSeg != endSeg || old.activeNode != activeNode;
 }
 
-/// Three nodes for tail sizing: root width, max width, length (when creature has tailFin).
+/// Three nodes for tail sizing: root width, max width, length (when creature has tail).
 class _TailNodesOverlayPainter extends CustomPainter {
   _TailNodesOverlayPainter({
     required this.tailX,
@@ -422,11 +422,13 @@ class _TailAddPreviewPainter extends CustomPainter {
       color: creature.color,
       dorsalFins: creature.dorsalFins,
       finColor: creature.finColor,
-      tailFin: previewTailFin,
+      tail: TailConfig(
+        previewTailFin,
+        rootWidth: creature.tail?.rootWidth ?? 12.0,
+        maxWidth: creature.tail?.maxWidth ?? 20.0,
+        length: creature.tail?.length ?? 90.0,
+      ),
       lateralFins: creature.lateralFins,
-      tailRootWidth: creature.tailRootWidth ?? 12.0,
-      tailMaxWidth: creature.tailMaxWidth ?? 20.0,
-      tailLength: creature.tailLength ?? 90.0,
     );
     paintTailFin(
       canvas,
@@ -894,21 +896,21 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
         }
 
         bool _showTailNodes() =>
-            isTailEdit && _tailSelected && widget.creature.tailFin != null && positions.length >= 1 && _spine.segmentAngles.isNotEmpty;
+            isTailEdit && _tailSelected && widget.creature.tail != null && positions.length >= 1 && _spine.segmentAngles.isNotEmpty;
         double _effectiveTailRoot() {
           final v = widget.creature.vertexWidths;
           final derived = v.isEmpty ? 20.0 : v.reduce((a, b) => a < b ? a : b);
-          return widget.creature.tailRootWidth ?? derived;
+          return widget.creature.tail?.rootWidth ?? derived;
         }
         double _effectiveTailMax() {
           final v = widget.creature.vertexWidths;
           final derived = v.isEmpty ? 10.0 : v.reduce((a, b) => a > b ? a : b) / 2;
-          return widget.creature.tailMaxWidth ?? derived;
+          return widget.creature.tail?.maxWidth ?? derived;
         }
         double _effectiveTailLen() {
           final segW = widthAtSegment(0);
           final derived = segW * 3.0;
-          return widget.creature.tailLength ?? derived;
+          return widget.creature.tail?.length ?? derived;
         }
         int? _hitTailNode(double px, double py) {
           if (!_showTailNodes()) return null;
@@ -945,7 +947,7 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           return (px - nx) * (px - nx) + (py - ny) * (py - ny);
         }
         bool _isPointOnTail(double px, double py) {
-          if (widget.creature.tailFin == null || positions.isEmpty || _spine.segmentAngles.isEmpty) return false;
+          if (widget.creature.tail == null || positions.isEmpty || _spine.segmentAngles.isEmpty) return false;
           final tail = positions.first;
           final tailA = _spine.segmentAngles[0];
           final back = tailA + pi;
@@ -1040,7 +1042,7 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                                 : (tailNode == 1 ? _effectiveTailMax() : _effectiveTailLen());
                           } else if (tailNode == null &&
                               _isPointOnTail(lx, ly) &&
-                              widget.creature.tailFin != null &&
+                              widget.creature.tail != null &&
                               widget.onTailRemoved != null) {
                             widget.onDorsalFinSelected?.call(null);
                             setState(() {
@@ -1092,15 +1094,15 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                     final dy = (_lastPanY - _panStartY) / _zoom;
                     if (_tailDraggingNode == 0 && widget.onTailRootWidthChanged != null) {
                       final delta = dx * leftDirX + dy * leftDirY;
-                      final v = (_tailDragStartValue + delta).clamp(Creature.tailRootWidthMin, Creature.tailRootWidthMax);
+                      final v = (_tailDragStartValue + delta).clamp(TailConfig.rootWidthMin, TailConfig.rootWidthMax);
                       widget.onTailRootWidthChanged!(v);
                     } else if (_tailDraggingNode == 1 && widget.onTailMaxWidthChanged != null) {
                       final delta = dx * leftDirX + dy * leftDirY;
-                      final v = (_tailDragStartValue + delta).clamp(Creature.tailMaxWidthMin, Creature.tailMaxWidthMax);
+                      final v = (_tailDragStartValue + delta).clamp(TailConfig.maxWidthMin, TailConfig.maxWidthMax);
                       widget.onTailMaxWidthChanged!(v);
                     } else if (_tailDraggingNode == 2 && widget.onTailLengthChanged != null) {
                       final delta = dx * backDirX + dy * backDirY;
-                      final v = (_tailDragStartValue + delta).clamp(Creature.tailLengthMin, Creature.tailLengthMax);
+                      final v = (_tailDragStartValue + delta).clamp(TailConfig.lengthMin, TailConfig.lengthMax);
                       widget.onTailLengthChanged!(v);
                     }
                     setState(() {});
@@ -1297,7 +1299,7 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                 ),
               ),
             if (_tailDragFromCreature &&
-                widget.creature.tailFin != null &&
+                widget.creature.tail != null &&
                 !_finRemoveBounds().contains(Offset(_lastPanX, _lastPanY)))
               Positioned.fill(
                 child: IgnorePointer(

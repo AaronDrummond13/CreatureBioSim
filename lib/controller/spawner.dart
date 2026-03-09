@@ -68,22 +68,24 @@ class Spawner {
     final dorsalFins = _randomDorsalFins(segmentCount);
     final tailFin = _randomTailFin();
     final lateralFins = _randomLateralFins(segmentCount);
-    final tailRoot = tailFin != null ? _inRange(Creature.tailRootWidthMin, Creature.tailRootWidthMax) : null;
-    final tailMax = tailFin != null ? _inRange(Creature.tailMaxWidthMin, Creature.tailMaxWidthMax) : null;
-    final tailLen = tailFin != null ? _inRange(Creature.tailLengthMin, Creature.tailLengthMax) : null;
+    final tail = tailFin != null
+        ? TailConfig(
+            tailFin,
+            rootWidth: _inRange(TailConfig.rootWidthMin, TailConfig.rootWidthMax),
+            maxWidth: _inRange(TailConfig.maxWidthMin, TailConfig.maxWidthMax),
+            length: _inRange(TailConfig.lengthMin, TailConfig.lengthMax),
+          )
+        : null;
     return Creature(
       vertexWidths: widths,
       color: color,
       dorsalFins: (dorsalFins == null || dorsalFins.isEmpty)
           ? null
           : dorsalFins,
-      tailFin: tailFin,
+      tail: tail,
       lateralFins: (lateralFins == null || lateralFins.isEmpty)
           ? null
           : lateralFins,
-      tailRootWidth: tailRoot,
-      tailMaxWidth: tailMax,
-      tailLength: tailLen,
     );
   }
 

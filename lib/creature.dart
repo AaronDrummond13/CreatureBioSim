@@ -22,20 +22,44 @@ enum CaudalFinType {
   rhomboid,
 }
 
+/// Tail (caudal) fin config: type and optional dimensions. Null dimension = derive in renderer.
+class TailConfig {
+  static const double rootWidthMin = 1.0;
+  static const double rootWidthMax = 25.0;
+  static const double maxWidthMin = 10.0;
+  static const double maxWidthMax = 40.0;
+  static const double lengthMin = 50.0;
+  static const double lengthMax = 200.0;
+
+  TailConfig(this.type, {double? rootWidth, double? maxWidth, double? length})
+    : rootWidth = rootWidth?.clamp(rootWidthMin, rootWidthMax),
+      maxWidth = maxWidth?.clamp(maxWidthMin, maxWidthMax),
+      length = length?.clamp(lengthMin, lengthMax);
+
+  final CaudalFinType type;
+  final double? rootWidth;
+  final double? maxWidth;
+  final double? length;
+
+  TailConfig copyWith({
+    CaudalFinType? type,
+    double? rootWidth,
+    double? maxWidth,
+    double? length,
+  }) => TailConfig(
+    type ?? this.type,
+    rootWidth: rootWidth ?? this.rootWidth,
+    maxWidth: maxWidth ?? this.maxWidth,
+    length: length ?? this.length,
+  );
+}
+
 /// Creature definition: identity and appearance, outside engine and renderer.
 /// Spine length is implied by [vertexWidths] (segmentCount = vertexWidths.length - 1). Capped at [maxSegmentCount].
 class Creature {
   static const double minVertexWidth = 10.0;
   static const double maxVertexWidth = 50.0;
   static const int maxSegmentCount = 15;
-
-  /// Tail (caudal) fin sizing. When null, renderer derives from vertexWidths.
-  static const double tailRootWidthMin = 1.0;
-  static const double tailRootWidthMax = 25.0;
-  static const double tailMaxWidthMin = 10.0;
-  static const double tailMaxWidthMax = 40.0;
-  static const double tailLengthMin = 50.0;
-  static const double tailLengthMax = 200.0;
 
   /// Fill colour as 0xAARRGGBB. Renderer uses this when drawing.
   final int color;
@@ -49,21 +73,12 @@ class Creature {
   /// Fin colour as 0xAARRGGBB. When null, a lighter tint of body color is used.
   final int? finColor;
 
-  /// Caudal (tail) fin type. Null = no tail fin. Rendered under the body.
-  final CaudalFinType? tailFin;
+  /// Tail (caudal) fin. Null = no tail. Rendered under the body; null dimensions in config are derived.
+  final TailConfig? tail;
 
   /// Lateral fins (pectoral, pelvic, anal, etc.): vertex indices where a fin is attached.
   /// Rendered under the body as rotated ellipses. Only indices < segmentCount (not head) are valid.
   final List<int>? lateralFins;
-
-  /// Tail root half-width (world units). Null = derive from min(vertexWidths). Clamped to [tailRootWidthMin, tailRootWidthMax].
-  final double? tailRootWidth;
-
-  /// Tail max half-width at flare (world units). Null = derive from max(vertexWidths)/2. Clamped to [tailMaxWidthMin, tailMaxWidthMax].
-  final double? tailMaxWidth;
-
-  /// Tail length (world units). Null = tailSegmentWidth * 3. Clamped to [tailLengthMin, tailLengthMax].
-  final double? tailLength;
 
   /// Number of spine segments (vertexWidths.length - 1), capped at [maxSegmentCount].
   int get segmentCount => vertexWidths.length - 1;
@@ -72,17 +87,11 @@ class Creature {
     required List<double> vertexWidths,
     this.dorsalFins,
     this.finColor,
-    this.tailFin,
+    this.tail,
     this.lateralFins,
-    double? tailRootWidth,
-    double? tailMaxWidth,
-    double? tailLength,
     this.color = 0xFF2E7D32,
   }) : vertexWidths = vertexWidths
            .take(maxSegmentCount + 1)
            .map((w) => w.clamp(minVertexWidth, maxVertexWidth))
-           .toList(),
-       tailRootWidth = tailRootWidth?.clamp(tailRootWidthMin, tailRootWidthMax),
-       tailMaxWidth = tailMaxWidth?.clamp(tailMaxWidthMin, tailMaxWidthMax),
-       tailLength = tailLength?.clamp(tailLengthMin, tailLengthMax);
+           .toList();
 }
