@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:creature_bio_sim/creature.dart';
 import 'package:creature_bio_sim/render/background_painter.dart';
 import 'package:creature_bio_sim/render/creature_painter.dart';
+import 'package:creature_bio_sim/render/mouth_painter.dart' show paintMouth;
 import 'package:creature_bio_sim/render/tail_painter.dart';
 import 'package:creature_bio_sim/render/view.dart';
 import 'package:creature_bio_sim/simulation/angle_util.dart' show relativeAngleDiff;
@@ -387,6 +388,102 @@ class _TailRemoveHighlightPainter extends CustomPainter {
   bool shouldRepaint(covariant _TailRemoveHighlightPainter old) => false;
 }
 
+/// Draws the mouth only as preview when dragging a mouth type onto the creature.
+class _MouthAddPreviewPainter extends CustomPainter {
+  _MouthAddPreviewPainter({
+    required this.creature,
+    required this.previewMouthType,
+    required this.positions,
+    required this.segmentAngles,
+    required this.centerX,
+    required this.centerY,
+    required this.cameraX,
+    required this.cameraY,
+    required this.zoom,
+    required this.headWidthWorld,
+    required this.bodyColor,
+  });
+
+  final Creature creature;
+  final MouthType previewMouthType;
+  final List<Vector2> positions;
+  final List<double> segmentAngles;
+  final double centerX;
+  final double centerY;
+  final double cameraX;
+  final double cameraY;
+  final double zoom;
+  final double headWidthWorld;
+  final Color bodyColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final previewCreature = Creature(
+      vertexWidths: creature.vertexWidths,
+      color: creature.color,
+      dorsalFins: creature.dorsalFins,
+      finColor: creature.finColor,
+      tail: creature.tail,
+      lateralFins: creature.lateralFins,
+      trophicType: creature.trophicType,
+      mouth: previewMouthType,
+    );
+    paintMouth(
+      canvas,
+      previewCreature,
+      positions,
+      segmentAngles,
+      centerX,
+      centerY,
+      zoom,
+      cameraX,
+      cameraY,
+      1.0,
+      bodyColor,
+      headWidthWorld,
+      0.0,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _MouthAddPreviewPainter old) =>
+      old.previewMouthType != previewMouthType ||
+      old.positions != positions ||
+      old.centerX != centerX ||
+      old.centerY != centerY ||
+      old.zoom != zoom;
+}
+
+/// Red circle at head when dragging mouth off to remove.
+class _MouthRemoveHighlightPainter extends CustomPainter {
+  _MouthRemoveHighlightPainter({
+    required this.headSx,
+    required this.headSy,
+    required this.radius,
+  });
+
+  final double headSx;
+  final double headSy;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.red.withValues(alpha: 0.5)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(headSx, headSy), radius, paint);
+    final stroke = Paint()
+      ..color = Colors.red
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(Offset(headSx, headSy), radius, stroke);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MouthRemoveHighlightPainter old) =>
+      old.headSx != headSx || old.headSy != headSy || old.radius != radius;
+}
+
 /// Draws the tail fin as preview when dragging a new tail type onto the creature.
 class _TailAddPreviewPainter extends CustomPainter {
   _TailAddPreviewPainter({
@@ -528,6 +625,8 @@ class EditorPreview extends StatefulWidget {
     this.onLateralMoved,
     this.onLateralAdded,
     this.onLateralRemoved,
+    this.onMouthAdded,
+    this.onMouthRemoved,
   });
 
   final Creature creature;
@@ -550,6 +649,8 @@ class EditorPreview extends StatefulWidget {
   final void Function(int fromSeg, int toSeg)? onLateralMoved;
   final void Function(int seg)? onLateralAdded;
   final void Function(int seg)? onLateralRemoved;
+  final void Function(MouthType? type)? onMouthAdded;
+  final void Function()? onMouthRemoved;
 
   @override
   State<EditorPreview> createState() => _EditorPreviewState();
@@ -573,6 +674,9 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
   bool _tailSelected = false;
   Offset? _tailAddDragLocal;
   TailDragPayload? _tailAddDragPayload;
+  Offset? _mouthAddDragLocal;
+  MouthDragPayload? _mouthAddDragPayload;
+  bool _mouthDragFromCreature = false;
   int? _lateralDragFromSeg;
   int? _lateralPanStartSeg;
   double _lastPanX = 0;
@@ -847,6 +951,16 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           return null;
         }
 
+        bool _isPointOnMouth(double px, double py) {
+          if (widget.creature.mouth == null || positions.length < 2) return false;
+          final head = positions.last;
+          final headSeg = (positions.length - 2).clamp(0, positions.length - 1);
+          final headW = widthAtSegment(headSeg) * _zoom * 1.4;
+          final sx = centerX + (head.x - cameraX) * _zoom;
+          final sy = centerY + (head.y - cameraY) * _zoom;
+          return (px - sx) * (px - sx) + (py - sy) * (py - sy) <= headW * headW;
+        }
+
         const double _dorsalNodeRadius = 14.0;
         List<Offset>? _dorsalNodePositions() {
           final fins = widget.creature.dorsalFins ?? [];
@@ -1029,6 +1143,14 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                         if (lateralSeg != null) {
                           _lateralPanStartSeg = lateralSeg;
                           if (widget.onLateralMoved != null) _lateralDragFromSeg = lateralSeg;
+                        } else if (_isPointOnMouth(lx, ly) &&
+                            widget.creature.mouth != null &&
+                            widget.onMouthRemoved != null) {
+                          widget.onDorsalFinSelected?.call(null);
+                          setState(() {
+                            _tailSelected = false;
+                            _mouthDragFromCreature = true;
+                          });
                         } else {
                           final tailNode = _hitTailNode(lx, ly);
                           if (tailNode != null &&
@@ -1074,7 +1196,7 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                   }
                   _lastPanX = lx;
                   _lastPanY = ly;
-                  if (_tailDragFromCreature) {
+                  if (_tailDragFromCreature || _mouthDragFromCreature) {
                     setState(() {});
                     return;
                   }
@@ -1147,7 +1269,7 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                     setState(() {});
                     return;
                   }
-                  if (_bodyDraggingNode != null || _dorsalDragFromFin || _dorsalDragStartSeg != null || _lateralDragFromSeg != null) return;
+                  if (_bodyDraggingNode != null || _dorsalDragFromFin || _dorsalDragStartSeg != null || _lateralDragFromSeg != null || _mouthDragFromCreature) return;
                   if (isSpineLocked) return;
                   final worldX = (lx - centerX) / _zoom + cameraX;
                   final worldY = (ly - centerY) / _zoom + cameraY;
@@ -1163,6 +1285,13 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                       widget.onTailRemoved!();
                     }
                     setState(() => _tailDragFromCreature = false);
+                    return;
+                  }
+                  if (_mouthDragFromCreature) {
+                    if (!_finRemoveBounds().contains(Offset(_lastPanX, _lastPanY)) && widget.onMouthRemoved != null) {
+                      widget.onMouthRemoved!();
+                    }
+                    setState(() => _mouthDragFromCreature = false);
                     return;
                   }
                   if (_tailDraggingNode != null) {
@@ -1320,6 +1449,22 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                   ),
                 ),
               ),
+            if (_mouthDragFromCreature &&
+                widget.creature.mouth != null &&
+                !_finRemoveBounds().contains(Offset(_lastPanX, _lastPanY)) &&
+                positions.isNotEmpty)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _MouthRemoveHighlightPainter(
+                      headSx: centerX + (positions.last.x - cameraX) * _zoom,
+                      headSy: centerY + (positions.last.y - cameraY) * _zoom,
+                      radius: widthAtSegment((positions.length - 2).clamp(0, positions.length - 1)) * _zoom * 1.2,
+                    ),
+                    size: Size(w, h),
+                  ),
+                ),
+              ),
             if (_tailAddDragLocal != null &&
                 _tailAddDragPayload?.tailFin != null &&
                 creatureScreenBounds().inflate(80).contains(_tailAddDragLocal!))
@@ -1338,6 +1483,31 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                       zoom: _zoom,
                       bodyColor: Color(widget.creature.color),
                       widthAt: (i) => widthAtSegment(i),
+                    ),
+                    size: Size(w, h),
+                  ),
+                ),
+              ),
+            if (_mouthAddDragLocal != null &&
+                _mouthAddDragPayload != null &&
+                creatureScreenBounds().inflate(80).contains(_mouthAddDragLocal!) &&
+                positions.length >= 2 &&
+                _spine.segmentAngles.isNotEmpty)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _MouthAddPreviewPainter(
+                      creature: widget.creature,
+                      previewMouthType: _mouthAddDragPayload!.mouthType,
+                      positions: positions,
+                      segmentAngles: _spine.segmentAngles,
+                      centerX: centerX,
+                      centerY: centerY,
+                      cameraX: cameraX,
+                      cameraY: cameraY,
+                      zoom: _zoom,
+                      headWidthWorld: widthAtSegment((positions.length - 2).clamp(0, positions.length - 1)),
+                      bodyColor: Color(widget.creature.color),
                     ),
                     size: Size(w, h),
                   ),
@@ -1555,6 +1725,33 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
               }
             },
             onLeave: (_) => setState(() => _lateralAddDragLocal = null),
+            builder: (context, candidateData, rejectedData) => child,
+          );
+        }
+        if (editTab == 2 && widget.onMouthAdded != null) {
+          final child = inner;
+          inner = DragTarget<MouthDragPayload>(
+            onWillAcceptWithDetails: (_) => true,
+            onAcceptWithDetails: (d) {
+              final box = _previewContentKey.currentContext?.findRenderObject() as RenderBox?;
+              if (box != null && box.hasSize) {
+                final local = box.globalToLocal(d.offset);
+                if (creatureScreenBounds().inflate(80).contains(local)) {
+                  widget.onMouthAdded!(d.data.mouthType);
+                }
+              }
+              setState(() { _mouthAddDragLocal = null; _mouthAddDragPayload = null; });
+            },
+            onMove: (d) {
+              final box = _previewContentKey.currentContext?.findRenderObject() as RenderBox?;
+              if (box != null && box.hasSize) {
+                setState(() {
+                  _mouthAddDragLocal = box.globalToLocal(d.offset);
+                  _mouthAddDragPayload = d.data;
+                });
+              }
+            },
+            onLeave: (_) => setState(() { _mouthAddDragLocal = null; _mouthAddDragPayload = null; }),
             builder: (context, candidateData, rejectedData) => child,
           );
         }

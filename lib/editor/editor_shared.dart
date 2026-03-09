@@ -88,3 +88,9 @@ class TailDragPayload {
   const TailDragPayload(this.tailFin);
   final CaudalFinType? tailFin;
 }
+
+/// Payload for mouth drag from panel to viewport. [mouthType] = type to add/replace.
+class MouthDragPayload {
+  const MouthDragPayload(this.mouthType);
+  final MouthType mouthType;
+}

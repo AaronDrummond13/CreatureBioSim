@@ -87,6 +87,8 @@ class EditorScreenState extends State<EditorScreen> {
       onLateralMoved: _onLateralMovedFromViewport,
       onLateralAdded: _onLateralAddedFromViewport,
       onLateralRemoved: _onLateralRemovedFromViewport,
+      onMouthAdded: _onMouthAddedFromViewport,
+      onMouthRemoved: _onMouthRemovedFromViewport,
     );
 
     Widget content;
@@ -405,6 +407,35 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: list.isEmpty ? null : list,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+    ));
+  }
+
+  void _onMouthAddedFromViewport(MouthType? type) {
+    final trophicType = type == MouthType.teeth
+        ? TrophicType.carnivore
+        : (type == MouthType.tentacle ? TrophicType.herbivore : (type == MouthType.mandible ? TrophicType.omnivore : _creature.trophicType));
+    setState(() => _creature = Creature(
+      vertexWidths: _creature.vertexWidths,
+      color: _creature.color,
+      dorsalFins: _creature.dorsalFins,
+      finColor: _creature.finColor,
+      tail: _creature.tail,
+      lateralFins: _creature.lateralFins,
+      trophicType: trophicType,
+      mouth: type,
+    ));
+  }
+
+  void _onMouthRemovedFromViewport() {
+    setState(() => _creature = Creature(
+      vertexWidths: _creature.vertexWidths,
+      color: _creature.color,
+      dorsalFins: _creature.dorsalFins,
+      finColor: _creature.finColor,
+      tail: _creature.tail,
+      lateralFins: _creature.lateralFins,
+      trophicType: _creature.trophicType,
+      mouth: null,
     ));
   }
 }
