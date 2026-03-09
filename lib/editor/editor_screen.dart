@@ -107,10 +107,6 @@ class EditorScreenState extends State<EditorScreen> {
     }
 
     return SafeArea(
-      top: !_panelClosed,
-      bottom: !_panelClosed,
-      left: !_panelClosed,
-      right: !_panelClosed,
       child: Stack(
         fit: StackFit.expand,
         children: [
