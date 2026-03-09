@@ -46,8 +46,8 @@ class SimulationScreen extends StatefulWidget {
     finColor: 0xFF777777,
     tail: TailConfig(CaudalFinType.lunate),
     lateralFins: [4],
-    trophicType: TrophicType.carnivore,
-    mouth: MouthType.teeth,
+    trophicType: TrophicType.herbivore,
+    mouth: MouthType.tentacle,
   );
 
   @override
@@ -97,6 +97,7 @@ class _SimulationScreenState extends State<SimulationScreen>
 
   double _simTimeSeconds = 0;
   double? _lastRealTimeSeconds;
+  double? _lastAteTimeSeconds;
 
   @override
   void initState() {
@@ -248,13 +249,14 @@ class _SimulationScreenState extends State<SimulationScreen>
             : (_creature.trophicType == TrophicType.carnivore
                   ? {CellType.animal, CellType.bubble}
                   : null);
-        _foodStore.consumeNear(
+        final consumed = _foodStore.consumeNear(
           headAfter.x,
           headAfter.y,
           consumeRadius,
           _viewState.timeSeconds,
           allowedFood,
         );
+        if (consumed > 0) _lastAteTimeSeconds = _viewState.timeSeconds;
         if (_creature.trophicType != TrophicType.herbivore) {
           for (final e in _creatureStore.entities) {
             if (!e.isBaby) continue;
@@ -274,6 +276,7 @@ class _SimulationScreenState extends State<SimulationScreen>
                 cellType: CellType.animal,
               );
               _creatureStore.removeCreature(e);
+              _lastAteTimeSeconds = _viewState.timeSeconds;
             }
           }
         }
@@ -416,6 +419,7 @@ class _SimulationScreenState extends State<SimulationScreen>
               view: cameraView,
               timeSeconds: t,
               drawEyes: false,
+              lastAteAt: _lastAteTimeSeconds,
             ),
           ),
         ),
@@ -443,6 +447,7 @@ class _SimulationScreenState extends State<SimulationScreen>
               view: cameraView,
               timeSeconds: t,
               eyesOnly: true,
+              lastAteAt: _lastAteTimeSeconds,
             ),
           ),
         ),

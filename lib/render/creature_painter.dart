@@ -55,11 +55,15 @@ class CreaturePainter extends CustomPainter {
   static const double caudalFinBaseFrac = 0.2;
   static const double _fallbackWidth = 30.0;
 
+  /// When set, mouth animation runs 3x for 2s after this time (e.g. after eating).
+  final double? lastAteAt;
+
   CreaturePainter({
     required this.creature,
     required this.spine,
     required this.view,
     this.timeSeconds = 0.0,
+    this.lastAteAt,
     this.blurSigma,
     this.layerOpacity,
     this.blurLayerBackgroundColor,
@@ -280,6 +284,7 @@ class CreaturePainter extends CustomPainter {
       _paintFillColor,
       headWidthWorld,
       timeSeconds,
+      lastAteAt: lastAteAt,
     );
   }
 
@@ -553,6 +558,7 @@ class CreaturePainter extends CustomPainter {
       oldDelegate.spine != spine ||
       oldDelegate.view != view ||
       oldDelegate.timeSeconds != timeSeconds ||
+      oldDelegate.lastAteAt != lastAteAt ||
       oldDelegate.blurSigma != blurSigma ||
       oldDelegate.layerOpacity != layerOpacity ||
       oldDelegate.blurLayerBackgroundColor != blurLayerBackgroundColor ||

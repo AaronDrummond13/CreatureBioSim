@@ -28,7 +28,8 @@ class FoodStore {
 
   /// Remove any food whose centre is within [radius] of (headX, headY). If [timeSeconds] is set, adds a [ConsumedRemnant] for rendering burst + fading nucleus.
   /// When [allowedCellTypes] is non-null, only food with [FoodItem.cellType] in the set is consumed (e.g. herbivore = plant only).
-  void consumeNear(
+  /// Returns the number of items consumed.
+  int consumeNear(
     double headX,
     double headY, [
     double? radius,
@@ -37,6 +38,7 @@ class FoodStore {
   ]) {
     final r = radius ?? radiusWorld;
     final r2 = r * r;
+    var count = 0;
     for (var i = _items.length - 1; i >= 0; i--) {
       final item = _items[i];
       if (allowedCellTypes != null && !allowedCellTypes.contains(item.cellType)) continue;
@@ -61,8 +63,10 @@ class FoodStore {
           );
         }
         _items.removeAt(i);
+        count++;
       }
     }
+    return count;
   }
 
   /// Add a consumed remnant at (x, y), e.g. when a baby creature is eaten. Uses [cellType] (default animal) for rendering. [scale] multiplies drawn size (e.g. 4.0 for player death).

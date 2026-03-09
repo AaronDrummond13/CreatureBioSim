@@ -8,6 +8,7 @@ import 'package:creature_bio_sim/render/render_utils.dart';
 
 /// Tentacle mouth: tentacles with multiple joints, bases on a curved arc across the head.
 /// [timeSeconds] drives wobble at each joint for soft-bodied motion.
+/// When [lastAteAt] is set and within 2s, mouth animation runs 3x faster.
 void paintMouth(
   Canvas canvas,
   Creature creature,
@@ -21,10 +22,20 @@ void paintMouth(
   double bodyScale,
   Color bodyColor,
   double headWidthWorld,
-  double timeSeconds,
-) {
+  double timeSeconds, {
+  double? lastAteAt,
+}) {
   if (creature.mouth == null) return;
   if (positions.length < 2 || segmentAngles.isEmpty) return;
+
+  const postEatDuration = 1.0;
+  const postEatSpeedMultiplier = 10.0;
+  final mouthTime =
+      (lastAteAt != null &&
+          (timeSeconds - lastAteAt) >= 0 &&
+          (timeSeconds - lastAteAt) < postEatDuration)
+      ? lastAteAt + (timeSeconds - lastAteAt) * postEatSpeedMultiplier
+      : timeSeconds;
 
   final headX = positions.last.x;
   final headY = positions.last.y;
@@ -73,7 +84,7 @@ void paintMouth(
       cameraY,
       bodyScale,
       headWidthWorld,
-      timeSeconds,
+      mouthTime,
       headX,
       headY,
       forwardX,
@@ -106,7 +117,7 @@ void paintMouth(
       cameraY,
       bodyScale,
       headWidthWorld,
-      timeSeconds,
+      mouthTime,
       headX,
       headY,
       forwardX,
@@ -298,7 +309,7 @@ void _paintTeethMouth(
   final lX = arcCenterX + (leftX - arcCenterX) * teethArcWidth;
   final lY = arcCenterY + (leftY - arcCenterY) * teethArcWidth;
 
-  final protrude = (0.1 + 0.35 * sin(timeSeconds * 2.5)).clamp(0.25, 0.5);
+  final protrude = 0.25 + 0.125 * (1 + sin(timeSeconds * 2.5));
 
   for (var ti = 0; ti < toothCount; ti++) {
     final t = toothCount > 1 ? ti / (toothCount - 1) : 0.5;
