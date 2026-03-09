@@ -467,7 +467,7 @@ void _paintMandibleMouth(
   const openAngleAmp = 0.18;
   const openAngleSpeed = 1.5;
   const jigJagTeeth = 10;
-  const jigJagAmplitudeWorld = 150;
+  const jigJagAmplitudeBase = 4.0;
   const outerArcSegments = 3;
   const outerArcBulge = 2;
 
@@ -539,7 +539,7 @@ void _paintMandibleMouth(
       Offset(sx(tipInnerX), sy(tipInnerY)),
       Offset(sx(rootInnerX), sy(rootInnerY)),
       jigJagTeeth,
-      jigJagAmplitudeWorld * zoom,
+      jigJagAmplitudeBase * zoom * sizeScale,
     );
     path.close();
 

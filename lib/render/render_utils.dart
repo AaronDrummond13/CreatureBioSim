@@ -1,3 +1,5 @@
+import 'dart:math' show sqrt;
+
 import 'package:flutter/material.dart';
 
 /// Full bubble shape: fill circle, rim stroke, primary highlight (top-left), optional secondary (bottom-right).
@@ -128,9 +130,11 @@ void appendJigJag(
   }
   final dx = end.dx - start.dx;
   final dy = end.dy - start.dy;
-  final len = (dx * dx + dy * dy).clamp(1e-10, double.infinity);
-  final ux = dx / len;
-  final uy = dy / len;
+  final lenSq = (dx * dx + dy * dy).clamp(1e-10, double.infinity);
+  final len = sqrt(lenSq);
+  final invLen = 1.0 / len;
+  final ux = dx * invLen;
+  final uy = dy * invLen;
   final perpX = -uy;
   final perpY = ux;
   final n = numTeeth * 2;

@@ -272,30 +272,7 @@ class _SimulationScreenState extends State<SimulationScreen>
               _lastAteTimeSeconds = _viewState.timeSeconds;
             }
           }
-          // Player is epic: can eat non-epic creatures (bots).
-          for (final e in _creatureStore.entities) {
-            if (e.isEpic) continue;
-            final pos = e.spine.positions;
-            if (pos.isEmpty) continue;
-            final bx = pos.last.x;
-            final by = pos.last.y;
-            final bdx = headAfter.x - bx;
-            final bdy = headAfter.y - by;
-            if (bdx * bdx + bdy * bdy <= consumeRadius * consumeRadius) {
-              _foodStore.addConsumedRemnantAt(
-                bx,
-                by,
-                _viewState.timeSeconds,
-                headAfter.x,
-                headAfter.y,
-                cellType: CellType.animal,
-                consumedByPlayer: true,
-              );
-              _creatureStore.removeCreature(e);
-              _lastAteTimeSeconds = _viewState.timeSeconds;
-              break;
-            }
-          }
+          // Player is not epic: only babies (above loop). Only epic bots can eat adult creatures.
         }
       }
     }
