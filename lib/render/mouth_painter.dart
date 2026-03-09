@@ -173,23 +173,31 @@ void _paintTentacleMouth(
   const tentacleCount = 5;
   const jointCount = 4;
   const length = 25.0;
+  const tentacleArcWidth = 0.9;
   const wobbleSpeed = 2.0;
   const wobbleAmplitude = 4.5;
   const wobblePhase = 0.85;
   const tentaclePhaseOffset = 2.4;
   const baseWidths = [3.6, 2.6, 1.5, 0.65, 0.18];
 
+  final arcCenterX = (rightX + leftX) * 0.5;
+  final arcCenterY = (rightY + leftY) * 0.5;
+  final rX = arcCenterX + (rightX - arcCenterX) * tentacleArcWidth;
+  final rY = arcCenterY + (rightY - arcCenterY) * tentacleArcWidth;
+  final lX = arcCenterX + (leftX - arcCenterX) * tentacleArcWidth;
+  final lY = arcCenterY + (leftY - arcCenterY) * tentacleArcWidth;
+
   for (var ti = 0; ti < tentacleCount; ti++) {
     final t = tentacleCount > 1 ? ti / (tentacleCount - 1) : 0.5;
     final oneMinusT = 1.0 - t;
     final baseX =
-        oneMinusT * oneMinusT * rightX +
+        oneMinusT * oneMinusT * rX +
         2 * oneMinusT * t * bulgeX +
-        t * t * leftX;
+        t * t * lX;
     final baseY =
-        oneMinusT * oneMinusT * rightY +
+        oneMinusT * oneMinusT * rY +
         2 * oneMinusT * t * bulgeY +
-        t * t * leftY;
+        t * t * lY;
 
     final centerDist = tentacleCount > 1
         ? (ti - (tentacleCount - 1) / 2).abs() / ((tentacleCount - 1) / 2)
