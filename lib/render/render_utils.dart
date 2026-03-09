@@ -63,7 +63,10 @@ void drawBubble(
     center.dx - radius * 0.25,
     center.dy - radius * 0.25,
   );
-  final highlightRect = Rect.fromCircle(center: highlightCenter, radius: highlightRadius);
+  final highlightRect = Rect.fromCircle(
+    center: highlightCenter,
+    radius: highlightRadius,
+  );
   final highlightPaint = Paint()
     ..shader = RadialGradient(
       center: Alignment.center,
@@ -112,7 +115,13 @@ void appendSmoothCurve(
 
 /// Appends a jagged line from [start] to [end] to [path] (opposite of smooth: multiple sharp segments).
 /// [numTeeth]: number of zigzag segments. [amplitude]: perpendicular offset magnitude.
-void appendJigJag(Path path, Offset start, Offset end, int numTeeth, double amplitude) {
+void appendJigJag(
+  Path path,
+  Offset start,
+  Offset end,
+  int numTeeth,
+  double amplitude,
+) {
   if (numTeeth < 1) {
     path.lineTo(end.dx, end.dy);
     return;
@@ -130,10 +139,7 @@ void appendJigJag(Path path, Offset start, Offset end, int numTeeth, double ampl
     final px = start.dx + dx * t;
     final py = start.dy + dy * t;
     final sign = i.isOdd ? 1.0 : -1.0;
-    path.lineTo(
-      px + perpX * amplitude * sign,
-      py + perpY * amplitude * sign,
-    );
+    path.lineTo(px + perpX * amplitude * sign, py + perpY * amplitude * sign);
   }
   path.lineTo(end.dx, end.dy);
 }

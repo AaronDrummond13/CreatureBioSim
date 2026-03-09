@@ -12,6 +12,10 @@ import 'package:creature_bio_sim/render/render_utils.dart';
 import 'package:creature_bio_sim/render/tail_painter.dart';
 import 'package:creature_bio_sim/render/view.dart';
 
+/// Contour line style: [schematic] = uniform line weight (clean schematic look);
+/// [tubular] = thinner at body edges, thicker toward spine (true tubular form).
+enum BodyContourStyle { schematic, tubular }
+
 /// Paints one creature in world space. Uses [view] to transform world → screen.
 /// For multiple creatures, pass the same [CameraView] to each painter so they share one camera.
 class CreaturePainter extends CustomPainter {
@@ -58,6 +62,15 @@ class CreaturePainter extends CustomPainter {
   /// When set, mouth animation runs 3x for 2s after this time (e.g. after eating).
   final double? lastAteAt;
 
+  /// Contour line style. [BodyContourStyle.tubular] = thinner at edges, thicker at center.
+  final BodyContourStyle bodyContourStyle;
+
+  /// When false, do not draw the white contour lines between bands (fills only).
+  final bool showContourLines;
+
+  /// When true, blur the band fills so layer boundaries blend together.
+  final bool blurBodyLayers;
+
   CreaturePainter({
     required this.creature,
     required this.spine,
@@ -71,6 +84,9 @@ class CreaturePainter extends CustomPainter {
     this.eyesOnly = false,
     this.isBaby = false,
     this.isEpic = false,
+    this.bodyContourStyle = BodyContourStyle.tubular,
+    this.showContourLines = false,
+    this.blurBodyLayers = true,
   });
 
   // Set during paint() for use by _drawTailFin, _drawBody, _drawDorsalFins, _drawEyes.
@@ -170,33 +186,32 @@ class CreaturePainter extends CustomPainter {
     final headA = segmentAngles[segmentAngles.length - 1];
     final tailWWorld = widthAt(0);
     final headWWorld = widthAt(n);
-    const int capSegments = 7;
-    final curve = <Offset>[];
-    for (var i = 0; i < capSegments; i++) {
-      final t = i / (capSegments - 1);
-      final a = tailA + 4 * pi / 3 + t * (2 * pi / 3 - 4 * pi / 3);
-      curve.add(
-        Offset(
-          sx(positions[0].x + tailWWorld * cos(a)),
-          sy(positions[0].y + tailWWorld * sin(a)),
-        ),
-      );
-    }
-    for (var i = 0; i <= n; i++) curve.add(rightAt(i));
-    for (var i = 0; i < capSegments; i++) {
-      final t = i / (capSegments - 1);
-      final a = headA + pi / 3 - t * (2 * pi / 3);
-      curve.add(
-        Offset(
-          sx(positions[n].x + headWWorld * cos(a)),
-          sy(positions[n].y + headWWorld * sin(a)),
-        ),
-      );
-    }
-    for (var i = n; i >= 0; i--) curve.add(leftAt(i));
     const tension = 1.0 / 6.0;
     final path = Path();
-    appendSmoothCurve(path, curve, tension, closed: true);
+    final tailCenter = Offset(sx(positions[0].x), sy(positions[0].y));
+    final tailLeft = Offset(
+      tailCenter.dx + tailWWorld * z * cos(tailA + 3 * pi / 2),
+      tailCenter.dy + tailWWorld * z * sin(tailA + 3 * pi / 2),
+    );
+    path.moveTo(tailLeft.dx, tailLeft.dy);
+    path.arcTo(
+      Rect.fromCircle(center: tailCenter, radius: tailWWorld * z),
+      tailA + 3 * pi / 2,
+      -pi,
+      false,
+    );
+    final rightSide = <Offset>[for (var i = 0; i <= n; i++) rightAt(i)];
+    appendSmoothCurve(path, rightSide, tension, closed: false);
+    final headCenter = Offset(sx(positions[n].x), sy(positions[n].y));
+    path.arcTo(
+      Rect.fromCircle(center: headCenter, radius: headWWorld * z),
+      headA + pi / 2,
+      -pi,
+      false,
+    );
+    final leftSide = <Offset>[for (var i = n; i >= 0; i--) leftAt(i)];
+    appendSmoothCurve(path, leftSide, tension, closed: false);
+    path.close();
     return path;
   }
 
@@ -268,7 +283,10 @@ class CreaturePainter extends CustomPainter {
     if (creature.mouth == null) return;
     final n = _paintN;
     final headWidthWorld = n < creature.vertexWidths.length
-        ? creature.vertexWidths[n].clamp(Creature.minVertexWidth, Creature.maxVertexWidth)
+        ? creature.vertexWidths[n].clamp(
+            Creature.minVertexWidth,
+            Creature.maxVertexWidth,
+          )
         : _fallbackWidth;
     paintMouth(
       canvas,
@@ -400,42 +418,319 @@ class CreaturePainter extends CustomPainter {
     final headA = segmentAngles[segmentAngles.length - 1];
     final tailWWorld = _widthAt(0);
     final headWWorld = _widthAt(n);
-    const int capSegments = 7;
-    final curve = <Offset>[];
-    for (var i = 0; i < capSegments; i++) {
-      final t = i / (capSegments - 1);
-      final a = tailA + 4 * pi / 3 + t * (2 * pi / 3 - 4 * pi / 3);
-      curve.add(
-        Offset(
-          sx(positions[0].x + tailWWorld * cos(a)),
-          sy(positions[0].y + tailWWorld * sin(a)),
-        ),
-      );
-    }
-    for (var i = 0; i <= n; i++) curve.add(rightAt(i));
-    for (var i = 0; i < capSegments; i++) {
-      final t = i / (capSegments - 1);
-      final a = headA + pi / 3 - t * (2 * pi / 3);
-      curve.add(
-        Offset(
-          sx(positions[n].x + headWWorld * cos(a)),
-          sy(positions[n].y + headWWorld * sin(a)),
-        ),
-      );
-    }
-    for (var i = n; i >= 0; i--) curve.add(leftAt(i));
     const tension = 1.0 / 6.0;
     final path = Path();
-    appendSmoothCurve(path, curve, tension, closed: true);
-    final fillPaint = Paint()
-      ..color = _paintFillColor
-      ..style = PaintingStyle.fill;
+    final tailCenter = Offset(sx(positions[0].x), sy(positions[0].y));
+    final tailLeft = Offset(
+      tailCenter.dx + tailWWorld * _paintZ * cos(tailA + 3 * pi / 2),
+      tailCenter.dy + tailWWorld * _paintZ * sin(tailA + 3 * pi / 2),
+    );
+    path.moveTo(tailLeft.dx, tailLeft.dy);
+    path.arcTo(
+      Rect.fromCircle(center: tailCenter, radius: tailWWorld * _paintZ),
+      tailA + 3 * pi / 2,
+      -pi,
+      false,
+    );
+    final rightSide = <Offset>[for (var i = 0; i <= n; i++) rightAt(i)];
+    appendSmoothCurve(path, rightSide, tension, closed: false);
+    final headCenter = Offset(sx(positions[n].x), sy(positions[n].y));
+    path.arcTo(
+      Rect.fromCircle(center: headCenter, radius: headWWorld * _paintZ),
+      headA + pi / 2,
+      -pi,
+      false,
+    );
+    final leftSide = <Offset>[for (var i = n; i >= 0; i--) leftAt(i)];
+    appendSmoothCurve(path, leftSide, tension, closed: false);
+    path.close();
     final strokePaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
       ..strokeWidth = (3.0 * _paintZ).clamp(1.0, 3.0);
-    canvas.drawPath(path, fillPaint);
+
+    canvas.save();
+    canvas.clipPath(path);
+    if (blurBodyLayers) {
+      final dark = Color.lerp(_paintFillColor, Colors.black, _shadeDarkBlend)!;
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = dark
+          ..style = PaintingStyle.fill,
+      );
+      final bounds = path.getBounds().inflate(24);
+      canvas.saveLayer(
+        bounds,
+        Paint()..imageFilter = ImageFilter.blur(sigmaX: 1.0, sigmaY: 1.0),
+      );
+    }
+    _drawBodyShadedBands(
+      canvas,
+      outlinePath: path,
+      positions: positions,
+      n: n,
+      sx: sx,
+      sy: sy,
+      tailA: tailA,
+      headA: headA,
+      tailWWorld: tailWWorld,
+      headWWorld: headWWorld,
+      rightAt: rightAt,
+      leftAt: leftAt,
+    );
+    if (blurBodyLayers) canvas.restore();
+    canvas.restore();
+
+    if (showContourLines) {
+      _drawBodyContourLines(
+        canvas,
+        positions: positions,
+        n: n,
+        sx: sx,
+        sy: sy,
+        tailA: tailA,
+        headA: headA,
+        tailWWorld: tailWWorld,
+        headWWorld: headWWorld,
+        rightAt: rightAt,
+        leftAt: leftAt,
+      );
+    }
+
     canvas.drawPath(path, strokePaint);
+  }
+
+  static const double _contourStrokeWidthFrac = 0.5;
+  static const double _contourOpacity = 0.45;
+  static const double _shadeDarkBlend = 0.28;
+  static const double _shadeBrightBlend = 0.22;
+
+  Path _buildContourPath(
+    double t,
+    List<Vector2> positions,
+    int n,
+    double Function(double) sx,
+    double Function(double) sy,
+    double tailA,
+    double headA,
+    double tailWWorld,
+    double headWWorld,
+    Offset Function(int) rightAt,
+    Offset Function(int) leftAt, {
+    bool reverse = false,
+  }) {
+    const tension = 1.0 / 6.0;
+    final tailRadius = tailWWorld * (1 - t) * _paintZ;
+    final headRadius = headWWorld * (1 - t) * _paintZ;
+    final tailCenter = Offset(sx(positions[0].x), sy(positions[0].y));
+    final headCenter = Offset(sx(positions[n].x), sy(positions[n].y));
+    final tailLeft = Offset(
+      tailCenter.dx + tailRadius * cos(tailA + 3 * pi / 2),
+      tailCenter.dy + tailRadius * sin(tailA + 3 * pi / 2),
+    );
+    final rightSide = <Offset>[
+      for (var i = 0; i <= n; i++)
+        Offset.lerp(
+          rightAt(i),
+          Offset(sx(positions[i].x), sy(positions[i].y)),
+          t,
+        )!,
+    ];
+    final leftSide = <Offset>[
+      for (var i = n; i >= 0; i--)
+        Offset.lerp(
+          leftAt(i),
+          Offset(sx(positions[i].x), sy(positions[i].y)),
+          t,
+        )!,
+    ];
+    final path = Path();
+    if (!reverse) {
+      path.moveTo(tailLeft.dx, tailLeft.dy);
+      path.arcTo(
+        Rect.fromCircle(center: tailCenter, radius: tailRadius),
+        tailA + 3 * pi / 2,
+        -pi,
+        false,
+      );
+      appendSmoothCurve(path, rightSide, tension, closed: false);
+      path.arcTo(
+        Rect.fromCircle(center: headCenter, radius: headRadius),
+        headA + pi / 2,
+        -pi,
+        false,
+      );
+      appendSmoothCurve(path, leftSide, tension, closed: false);
+    } else {
+      path.moveTo(tailLeft.dx, tailLeft.dy);
+      appendSmoothCurve(
+        path,
+        leftSide.reversed.toList(),
+        tension,
+        closed: false,
+      );
+      path.arcTo(
+        Rect.fromCircle(center: headCenter, radius: headRadius),
+        headA + 3 * pi / 2,
+        pi,
+        false,
+      );
+      appendSmoothCurve(
+        path,
+        rightSide.reversed.toList(),
+        tension,
+        closed: false,
+      );
+      path.arcTo(
+        Rect.fromCircle(center: tailCenter, radius: tailRadius),
+        tailA + pi / 2,
+        pi,
+        false,
+      );
+    }
+    path.close();
+    return path;
+  }
+
+  /// Band boundaries: schematic = even spacing; tubular = each band gets wider from outline to spine (monotonic).
+  List<double> _contourTValues() {
+    switch (bodyContourStyle) {
+      case BodyContourStyle.schematic:
+        return [0.0, 0.25, 0.5, 0.75, 1.0];
+      case BodyContourStyle.tubular:
+        return [0.0, 0.08, 0.22, 0.45, 1.0];
+    }
+  }
+
+  void _drawBodyShadedBands(
+    Canvas canvas, {
+    required Path outlinePath,
+    required List<Vector2> positions,
+    required int n,
+    required double Function(double) sx,
+    required double Function(double) sy,
+    required double tailA,
+    required double headA,
+    required double tailWWorld,
+    required double headWWorld,
+    required Offset Function(int) rightAt,
+    required Offset Function(int) leftAt,
+  }) {
+    final dark = Color.lerp(_paintFillColor, Colors.black, _shadeDarkBlend)!;
+    final bright = Color.lerp(
+      _paintFillColor,
+      Colors.white,
+      _shadeBrightBlend,
+    )!;
+    final mid = _paintFillColor;
+
+    final contourT = _contourTValues();
+    final bandColors = <Color>[
+      dark,
+      Color.lerp(dark, mid, 0.6)!,
+      Color.lerp(mid, bright, 0.5)!,
+      bright,
+    ];
+
+    for (var b = 0; b < 4; b++) {
+      final outerPath = b == 0
+          ? outlinePath
+          : _buildContourPath(
+              contourT[b],
+              positions,
+              n,
+              sx,
+              sy,
+              tailA,
+              headA,
+              tailWWorld,
+              headWWorld,
+              rightAt,
+              leftAt,
+            );
+      final innerPath = _buildContourPath(
+        contourT[b + 1],
+        positions,
+        n,
+        sx,
+        sy,
+        tailA,
+        headA,
+        tailWWorld,
+        headWWorld,
+        rightAt,
+        leftAt,
+        reverse: true,
+      );
+      final bandPath = Path()
+        ..addPath(outerPath, Offset.zero)
+        ..addPath(innerPath, Offset.zero);
+
+      final paint = Paint()
+        ..color = bandColors[b]
+        ..style = PaintingStyle.fill;
+      canvas.drawPath(bandPath, paint);
+    }
+  }
+
+  void _drawBodyContourLines(
+    Canvas canvas, {
+    required List<Vector2> positions,
+    required int n,
+    required double Function(double) sx,
+    required double Function(double) sy,
+    required double tailA,
+    required double headA,
+    required double tailWWorld,
+    required double headWWorld,
+    required Offset Function(int) rightAt,
+    required Offset Function(int) leftAt,
+  }) {
+    final baseStrokeWidth = (3.0 * _paintZ).clamp(1.0, 3.0);
+    final baseContourWidth = (baseStrokeWidth * _contourStrokeWidthFrac).clamp(
+      0.5,
+      1.5,
+    );
+    final contourT = _contourTValues();
+    final contourPaint = Paint()
+      ..color = Colors.white.withValues(
+        alpha: bodyContourStyle == BodyContourStyle.tubular
+            ? (_contourOpacity * 1.2).clamp(0.0, 1.0)
+            : _contourOpacity,
+      )
+      ..style = PaintingStyle.stroke;
+
+    for (var c = 1; c < contourT.length - 1; c++) {
+      final t = contourT[c];
+      final contourPath = _buildContourPath(
+        t,
+        positions,
+        n,
+        sx,
+        sy,
+        tailA,
+        headA,
+        tailWWorld,
+        headWWorld,
+        rightAt,
+        leftAt,
+      );
+      switch (bodyContourStyle) {
+        case BodyContourStyle.schematic:
+          contourPaint.strokeWidth = baseContourWidth;
+          break;
+        case BodyContourStyle.tubular:
+          // Linear: thin at outline (low t), thick toward spine (high t). No V — center is largest.
+          final tubularFrac = (0.3 + 0.7 * t).clamp(0.0, 1.0);
+          contourPaint.strokeWidth = (baseContourWidth * tubularFrac).clamp(
+            0.4,
+            baseContourWidth * 1.15,
+          );
+          break;
+      }
+      canvas.drawPath(contourPath, contourPaint);
+    }
   }
 
   void _drawDorsalFins(Canvas canvas) {
@@ -565,5 +860,8 @@ class CreaturePainter extends CustomPainter {
       oldDelegate.drawEyes != drawEyes ||
       oldDelegate.eyesOnly != eyesOnly ||
       oldDelegate.isBaby != isBaby ||
-      oldDelegate.isEpic != isEpic;
+      oldDelegate.isEpic != isEpic ||
+      oldDelegate.bodyContourStyle != bodyContourStyle ||
+      oldDelegate.showContourLines != showContourLines ||
+      oldDelegate.blurBodyLayers != blurBodyLayers;
 }

@@ -7,11 +7,13 @@ import 'package:creature_bio_sim/render/creature_painter.dart';
 import 'package:creature_bio_sim/render/mouth_painter.dart' show paintMouth;
 import 'package:creature_bio_sim/render/tail_painter.dart';
 import 'package:creature_bio_sim/render/view.dart';
-import 'package:creature_bio_sim/simulation/angle_util.dart' show relativeAngleDiff;
+import 'package:creature_bio_sim/simulation/angle_util.dart'
+    show relativeAngleDiff;
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
 import 'package:creature_bio_sim/editor/editor_shared.dart';
 import 'package:creature_bio_sim/editor/editor_style.dart';
+
 /// Draws one lateral fin on the creature at the given segment (for add/move preview). [highlight] = draw in highlight color; [highlightForRemove] = red (will be removed).
 class _LateralFinAtSegmentPainter extends CustomPainter {
   _LateralFinAtSegmentPainter({
@@ -44,7 +46,8 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (positions.length < 2 || segment < 0 || segment >= positions.length - 1) return;
+    if (positions.length < 2 || segment < 0 || segment >= positions.length - 1)
+      return;
     if (segment >= segmentAngles.length) return;
     double sx(double wx) => centerX + (wx - cameraX) * zoom;
     double sy(double wy) => centerY + (wy - cameraY) * zoom;
@@ -53,22 +56,37 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
     final wid = len / 3.0;
     final lenScreen = len * zoom;
     final widScreen = wid * zoom;
-    final rect = Rect.fromCenter(center: Offset.zero, width: lenScreen, height: widScreen);
+    final rect = Rect.fromCenter(
+      center: Offset.zero,
+      width: lenScreen,
+      height: widScreen,
+    );
     final aAttach = segmentAngles[segment];
     final segHead = segment + 1 < segmentAngles.length ? segment + 1 : segment;
     final aLock = segmentAngles[segHead];
     final halfW = segWidth;
     final px = positions[segment].x;
     final py = positions[segment].y;
-    final leftCx = px + sin(aAttach) * halfW, leftCy = py - cos(aAttach) * halfW;
-    final rightCx = px - sin(aAttach) * halfW, rightCy = py + cos(aAttach) * halfW;
+    final leftCx = px + sin(aAttach) * halfW,
+        leftCy = py - cos(aAttach) * halfW;
+    final rightCx = px - sin(aAttach) * halfW,
+        rightCy = py + cos(aAttach) * halfW;
     final leftAngle = aLock + flareRad, rightAngle = aLock - flareRad;
     final fillColor = highlightForRemove
         ? Colors.red.withValues(alpha: 0.5)
-        : (highlight ? Colors.white.withValues(alpha: 0.6) : finColor.withValues(alpha: 0.9));
-    final strokeColor = highlightForRemove ? Colors.red : (highlight ? Colors.amber : Colors.white);
-    final fillPaint = Paint()..color = fillColor..style = PaintingStyle.fill;
-    final strokePaint = Paint()..color = strokeColor..style = PaintingStyle.stroke..strokeWidth = (2.0 * zoom).clamp(1.0, 2.0);
+        : (highlight
+              ? Colors.white.withValues(alpha: 0.6)
+              : finColor.withValues(alpha: 0.9));
+    final strokeColor = highlightForRemove
+        ? Colors.red
+        : (highlight ? Colors.amber : Colors.white);
+    final fillPaint = Paint()
+      ..color = fillColor
+      ..style = PaintingStyle.fill;
+    final strokePaint = Paint()
+      ..color = strokeColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = (2.0 * zoom).clamp(1.0, 2.0);
     canvas.save();
     canvas.translate(sx(leftCx), sy(leftCy));
     canvas.rotate(leftAngle);
@@ -85,7 +103,9 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _LateralFinAtSegmentPainter old) =>
-      old.segment != segment || old.highlight != highlight || old.highlightForRemove != highlightForRemove;
+      old.segment != segment ||
+      old.highlight != highlight ||
+      old.highlightForRemove != highlightForRemove;
 }
 
 /// Highlights a 3-segment dorsal fin on the creature when dragging + dorsal over the viewport.
@@ -134,11 +154,19 @@ class _DorsalDropHighlightPainter extends CustomPainter {
     }
     if (topPts.isEmpty || spinePts.isEmpty) return;
     final path = Path()..moveTo(topPts.first.dx, topPts.first.dy);
-    for (var i = 1; i < topPts.length; i++) path.lineTo(topPts[i].dx, topPts[i].dy);
-    for (var i = spinePts.length - 1; i >= 0; i--) path.lineTo(spinePts[i].dx, spinePts[i].dy);
+    for (var i = 1; i < topPts.length; i++)
+      path.lineTo(topPts[i].dx, topPts[i].dy);
+    for (var i = spinePts.length - 1; i >= 0; i--)
+      path.lineTo(spinePts[i].dx, spinePts[i].dy);
     path.close();
     canvas.drawPath(path, Paint()..color = finColor.withValues(alpha: 0.5));
-    canvas.drawPath(path, Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 2);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
   }
 
   @override
@@ -192,11 +220,19 @@ class _DorsalRangeHighlightPainter extends CustomPainter {
     }
     if (topPts.isEmpty || spinePts.isEmpty) return;
     final path = Path()..moveTo(topPts.first.dx, topPts.first.dy);
-    for (var i = 1; i < topPts.length; i++) path.lineTo(topPts[i].dx, topPts[i].dy);
-    for (var i = spinePts.length - 1; i >= 0; i--) path.lineTo(spinePts[i].dx, spinePts[i].dy);
+    for (var i = 1; i < topPts.length; i++)
+      path.lineTo(topPts[i].dx, topPts[i].dy);
+    for (var i = spinePts.length - 1; i >= 0; i--)
+      path.lineTo(spinePts[i].dx, spinePts[i].dy);
     path.close();
     canvas.drawPath(path, Paint()..color = Colors.red.withValues(alpha: 0.5));
-    canvas.drawPath(path, Paint()..color = Colors.red..style = PaintingStyle.stroke..strokeWidth = 3);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.red
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
   }
 
   @override
@@ -230,7 +266,8 @@ class _DorsalNodesOverlayPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (positions.length < 2 || startSeg < 0 || endSeg >= positions.length) return;
+    if (positions.length < 2 || startSeg < 0 || endSeg >= positions.length)
+      return;
     double sx(double wx) => centerX + (wx - cameraX) * zoom;
     double sy(double wy) => centerY + (wy - cameraY) * zoom;
     final startCx = (positions[startSeg].x + positions[startSeg + 1].x) / 2;
@@ -258,7 +295,8 @@ class _DorsalNodesOverlayPainter extends CustomPainter {
         ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2;
-      final fill = Paint()..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
+      final fill = Paint()
+        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
       canvas.drawCircle(points[i], 14, fill);
       canvas.drawCircle(points[i], 14, stroke);
     }
@@ -266,7 +304,9 @@ class _DorsalNodesOverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DorsalNodesOverlayPainter old) =>
-      old.startSeg != startSeg || old.endSeg != endSeg || old.activeNode != activeNode;
+      old.startSeg != startSeg ||
+      old.endSeg != endSeg ||
+      old.activeNode != activeNode;
 }
 
 /// Three nodes for tail sizing: root width, max width, length (when creature has tail).
@@ -297,6 +337,7 @@ class _TailNodesOverlayPainter extends CustomPainter {
   final double cameraX;
   final double cameraY;
   final double zoom;
+
   /// 0=root, 1=max, 2=length; null=none active.
   final int? activeNode;
 
@@ -328,7 +369,8 @@ class _TailNodesOverlayPainter extends CustomPainter {
         ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3;
-      final fill = Paint()..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
+      final fill = Paint()
+        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
       canvas.drawCircle(points[i], _nodeRadius, fill);
       canvas.drawCircle(points[i], _nodeRadius, stroke);
     }
@@ -336,7 +378,10 @@ class _TailNodesOverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _TailNodesOverlayPainter old) =>
-      old.rootW != rootW || old.maxW != maxW || old.len != len || old.activeNode != activeNode;
+      old.rootW != rootW ||
+      old.maxW != maxW ||
+      old.len != len ||
+      old.activeNode != activeNode;
 }
 
 /// Draws the tail fin in red when dragging to remove (outside bounds).
@@ -567,6 +612,7 @@ class _BodyNodesOverlayPainter extends CustomPainter {
   final double cameraX;
   final double cameraY;
   final double zoom;
+
   /// 0 = tail; null = none active (inactive look).
   final int? activeNode;
 
@@ -591,7 +637,8 @@ class _BodyNodesOverlayPainter extends CustomPainter {
       ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
-    final fill = Paint()..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
+    final fill = Paint()
+      ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
     canvas.drawCircle(Offset(sx0, sy0), r, fill);
     canvas.drawCircle(Offset(sx0, sy0), r, stroke);
   }
@@ -656,7 +703,8 @@ class EditorPreview extends StatefulWidget {
   State<EditorPreview> createState() => _EditorPreviewState();
 }
 
-class _EditorPreviewState extends State<EditorPreview> with SingleTickerProviderStateMixin {
+class _EditorPreviewState extends State<EditorPreview>
+    with SingleTickerProviderStateMixin {
   late Spine _spine;
   double _dragTargetX = 0;
   double _dragTargetY = 0;
@@ -694,7 +742,13 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
   final GlobalKey _previewKey = GlobalKey();
   final GlobalKey _previewContentKey = GlobalKey();
 
-  int _segmentCountFromTailDrag(double centerX, double centerY, double cameraX, double cameraY, List<Vector2> positions) {
+  int _segmentCountFromTailDrag(
+    double centerX,
+    double centerY,
+    double cameraX,
+    double cameraY,
+    List<Vector2> positions,
+  ) {
     final dropWx = (_lastPanX - centerX) / _zoom + cameraX;
     final dropWy = (_lastPanY - centerY) / _zoom + cameraY;
     final headW = positions.last;
@@ -703,13 +757,21 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
     final headToDropY = dropWy - headW.y;
     final headToTailX = tailW.x - headW.x;
     final headToTailY = tailW.y - headW.y;
-    final headToTailLen = sqrt(headToTailX * headToTailX + headToTailY * headToTailY);
+    final headToTailLen = sqrt(
+      headToTailX * headToTailX + headToTailY * headToTailY,
+    );
     const nodeOffset = _BodyNodesOverlayPainter._outsideOffset;
     final projectedDist = headToTailLen > 1e-6
-        ? (headToDropX * headToTailX + headToDropY * headToTailY) / headToTailLen
+        ? (headToDropX * headToTailX + headToDropY * headToTailY) /
+              headToTailLen
         : 0.0;
     final spineLength = projectedDist - nodeOffset;
-    return spineLength <= 0 ? 1 : (spineLength / _spine.segmentLength).round().clamp(1, Creature.maxSegmentCount);
+    return spineLength <= 0
+        ? 1
+        : (spineLength / _spine.segmentLength).round().clamp(
+            1,
+            Creature.maxSegmentCount,
+          );
   }
 
   int _segmentAtLocal(double sx, double sy) {
@@ -726,7 +788,10 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
       final cx = (positions[i].x + positions[i + 1].x) / 2;
       final cy = (positions[i].y + positions[i + 1].y) / 2;
       final d2 = (wx - cx) * (wx - cx) + (wy - cy) * (wy - cy);
-      if (d2 < bestD2) { bestD2 = d2; best = i; }
+      if (d2 < bestD2) {
+        bestD2 = d2;
+        best = i;
+      }
     }
     return best.clamp(0, _spine.segmentCount - 1);
   }
@@ -734,10 +799,12 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
   static const double _minZoom = 0.4;
   static const double _maxZoom = 2.5;
   static const double _zoomStep = 0.15;
+
   /// Same as SimulationScreen: fixed distance per step so speed is constant.
   static const double _headMoveSpeed = 6.0;
   static const double _arrivalThreshold = 10.0;
   static const double _kGlobalTurnNudge = 0.02;
+
   /// Fixed sim step so editor movement matches play mode speed (60 steps/sec).
   static const double _kFixedDt = 1 / 60.0;
   static const int _kMaxStepsPerFrame = 5;
@@ -825,7 +892,10 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           if (_spine.segmentCount >= 2) {
             final headPos = _spine.positions.last;
             final headDir = _spine.segmentAngles.last;
-            final towardTouch = atan2(_dragTargetY - headPos.y, _dragTargetX - headPos.x);
+            final towardTouch = atan2(
+              _dragTargetY - headPos.y,
+              _dragTargetX - headPos.x,
+            );
             final turn = relativeAngleDiff(headDir, towardTouch);
             if (turn.abs() > _spine.maxJointAngleRad) {
               final nudge = turn.abs() < _kGlobalTurnNudge
@@ -858,7 +928,10 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
     final editTab = widget.editTabIndex ?? 0;
     final isBodyEdit = editTab == 0 && !widget.panelClosed;
     final isTailEdit = editTab == 2 && !widget.panelClosed;
-    final isDorsalEdit = editTab == 2 && widget.selectedDorsalFinIndex != null && !widget.panelClosed;
+    final isDorsalEdit =
+        editTab == 2 &&
+        widget.selectedDorsalFinIndex != null &&
+        !widget.panelClosed;
     final isLateralEdit = editTab == 2 && !widget.panelClosed;
     final isSpineLocked = !widget.panelClosed;
 
@@ -881,7 +954,10 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
             final cx = (positions[i].x + positions[i + 1].x) / 2;
             final cy = (positions[i].y + positions[i + 1].y) / 2;
             final d2 = (wx - cx) * (wx - cx) + (wy - cy) * (wy - cy);
-            if (d2 < bestD2) { bestD2 = d2; best = i; }
+            if (d2 < bestD2) {
+              bestD2 = d2;
+              best = i;
+            }
           }
           return best.clamp(0, _spine.segmentCount - 1);
         }
@@ -894,8 +970,12 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
 
         Rect creatureScreenBounds() {
           final pos = _spine.positions;
-          if (pos.isEmpty) return Rect.fromLTWH(centerX - 20, centerY - 20, 40, 40);
-          var minX = double.infinity, minY = double.infinity, maxX = -double.infinity, maxY = -double.infinity;
+          if (pos.isEmpty)
+            return Rect.fromLTWH(centerX - 20, centerY - 20, 40, 40);
+          var minX = double.infinity,
+              minY = double.infinity,
+              maxX = -double.infinity,
+              maxY = -double.infinity;
           for (final p in pos) {
             final sx = centerX + (p.x - cameraX) * _zoom;
             final sy = centerY + (p.y - cameraY) * _zoom;
@@ -905,10 +985,16 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
             if (sy > maxY) maxY = sy;
           }
           const margin = 40.0;
-          return Rect.fromLTRB(minX - margin, minY - margin, maxX + margin, maxY + margin);
+          return Rect.fromLTRB(
+            minX - margin,
+            minY - margin,
+            maxX + margin,
+            maxY + margin,
+          );
         }
 
-        Rect _finRemoveBounds() => creatureScreenBounds().inflate(kFinRemoveMargin);
+        Rect _finRemoveBounds() =>
+            creatureScreenBounds().inflate(kFinRemoveMargin);
 
         int? _dorsalFinIndexAtScreen(double px, double py) {
           final fins = widget.creature.dorsalFins ?? [];
@@ -917,7 +1003,11 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           for (var i = 0; i < fins.length; i++) {
             final range = fins[i].$1;
             if (range.isEmpty) continue;
-            for (var seg = range.first; seg <= range.last && seg < positions.length - 1; seg++) {
+            for (
+              var seg = range.first;
+              seg <= range.last && seg < positions.length - 1;
+              seg++
+            ) {
               final cx = (positions[seg].x + positions[seg + 1].x) / 2;
               final cy = (positions[seg].y + positions[seg + 1].y) / 2;
               final sx = centerX + (cx - cameraX) * _zoom;
@@ -937,22 +1027,33 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           double sx(double wx) => centerX + (wx - cameraX) * _zoom;
           double sy(double wy) => centerY + (wy - cameraY) * _zoom;
           for (final seg in laterals) {
-            if (seg < 0 || seg >= positions.length - 1 || seg >= segAngles.length) continue;
+            if (seg < 0 ||
+                seg >= positions.length - 1 ||
+                seg >= segAngles.length)
+              continue;
             final halfW = widthAtSegment(seg);
             final aAttach = segAngles[seg];
             final pxW = positions[seg].x, pyW = positions[seg].y;
-            final leftCx = pxW + sin(aAttach) * halfW, leftCy = pyW - cos(aAttach) * halfW;
-            final rightCx = pxW - sin(aAttach) * halfW, rightCy = pyW + cos(aAttach) * halfW;
+            final leftCx = pxW + sin(aAttach) * halfW,
+                leftCy = pyW - cos(aAttach) * halfW;
+            final rightCx = pxW - sin(aAttach) * halfW,
+                rightCy = pyW + cos(aAttach) * halfW;
             final leftSx = sx(leftCx), leftSy = sy(leftCy);
             final rightSx = sx(rightCx), rightSy = sy(rightCy);
-            if ((px - leftSx) * (px - leftSx) + (py - leftSy) * (py - leftSy) <= r2) return seg;
-            if ((px - rightSx) * (px - rightSx) + (py - rightSy) * (py - rightSy) <= r2) return seg;
+            if ((px - leftSx) * (px - leftSx) + (py - leftSy) * (py - leftSy) <=
+                r2)
+              return seg;
+            if ((px - rightSx) * (px - rightSx) +
+                    (py - rightSy) * (py - rightSy) <=
+                r2)
+              return seg;
           }
           return null;
         }
 
         bool _isPointOnMouth(double px, double py) {
-          if (widget.creature.mouth == null || positions.length < 2) return false;
+          if (widget.creature.mouth == null || positions.length < 2)
+            return false;
           final head = positions.last;
           final headSeg = (positions.length - 2).clamp(0, positions.length - 1);
           final headW = widthAtSegment(headSeg) * _zoom * 1.4;
@@ -965,21 +1066,32 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
         List<Offset>? _dorsalNodePositions() {
           final fins = widget.creature.dorsalFins ?? [];
           final idx = widget.selectedDorsalFinIndex;
-          if (idx == null || idx >= fins.length || positions.length < 2) return null;
+          if (idx == null || idx >= fins.length || positions.length < 2)
+            return null;
           final range = fins[idx].$1;
           if (range.isEmpty) return null;
           final startSeg = range.first.clamp(0, positions.length - 2);
           final endSeg = range.last.clamp(0, positions.length - 2);
           double sx(double wx) => centerX + (wx - cameraX) * _zoom;
           double sy(double wy) => centerY + (wy - cameraY) * _zoom;
-          final startCx = (positions[startSeg].x + positions[startSeg + 1].x) / 2;
-          final startCy = (positions[startSeg].y + positions[startSeg + 1].y) / 2;
+          final startCx =
+              (positions[startSeg].x + positions[startSeg + 1].x) / 2;
+          final startCy =
+              (positions[startSeg].y + positions[startSeg + 1].y) / 2;
           final endCx = (positions[endSeg].x + positions[endSeg + 1].x) / 2;
           final endCy = (positions[endSeg].y + positions[endSeg + 1].y) / 2;
           final midSeg = (startSeg + endSeg) ~/ 2;
-          final midCx = midSeg + 1 < positions.length ? (positions[midSeg].x + positions[midSeg + 1].x) / 2 : (positions[midSeg].x + positions[endSeg].x) / 2;
-          final midCy = midSeg + 1 < positions.length ? (positions[midSeg].y + positions[midSeg + 1].y) / 2 : (positions[midSeg].y + positions[endSeg].y) / 2;
-          return [Offset(sx(startCx), sy(startCy)), Offset(sx(endCx), sy(endCy)), Offset(sx(midCx), sy(midCy) - 24)];
+          final midCx = midSeg + 1 < positions.length
+              ? (positions[midSeg].x + positions[midSeg + 1].x) / 2
+              : (positions[midSeg].x + positions[endSeg].x) / 2;
+          final midCy = midSeg + 1 < positions.length
+              ? (positions[midSeg].y + positions[midSeg + 1].y) / 2
+              : (positions[midSeg].y + positions[endSeg].y) / 2;
+          return [
+            Offset(sx(startCx), sy(startCy)),
+            Offset(sx(endCx), sy(endCy)),
+            Offset(sx(midCx), sy(midCy) - 24),
+          ];
         }
 
         int? _hitDorsalNode(double px, double py) {
@@ -987,7 +1099,9 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           if (nodes == null) return null;
           for (var i = 0; i < nodes.length; i++) {
             final o = nodes[i];
-            if ((px - o.dx) * (px - o.dx) + (py - o.dy) * (py - o.dy) <= _dorsalNodeRadius * _dorsalNodeRadius) return i;
+            if ((px - o.dx) * (px - o.dx) + (py - o.dy) * (py - o.dy) <=
+                _dorsalNodeRadius * _dorsalNodeRadius)
+              return i;
           }
           return null;
         }
@@ -1001,7 +1115,8 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           double dx = tail.x - second.x, dy = tail.y - second.y;
           var len = sqrt(dx * dx + dy * dy);
           if (len < 1e-6) len = 1.0;
-          final tailOutX = tail.x + dx / len * out, tailOutY = tail.y + dy / len * out;
+          final tailOutX = tail.x + dx / len * out,
+              tailOutY = tail.y + dy / len * out;
           final sx0 = centerX + (tailOutX - cameraX) * _zoom;
           final sy0 = centerY + (tailOutY - cameraY) * _zoom;
           final r2 = _bodyNodeRadius * _bodyNodeRadius;
@@ -1010,22 +1125,31 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
         }
 
         bool _showTailNodes() =>
-            isTailEdit && _tailSelected && widget.creature.tail != null && positions.length >= 1 && _spine.segmentAngles.isNotEmpty;
+            isTailEdit &&
+            _tailSelected &&
+            widget.creature.tail != null &&
+            positions.length >= 1 &&
+            _spine.segmentAngles.isNotEmpty;
         double _effectiveTailRoot() {
           final v = widget.creature.vertexWidths;
           final derived = v.isEmpty ? 20.0 : v.reduce((a, b) => a < b ? a : b);
           return widget.creature.tail?.rootWidth ?? derived;
         }
+
         double _effectiveTailMax() {
           final v = widget.creature.vertexWidths;
-          final derived = v.isEmpty ? 10.0 : v.reduce((a, b) => a > b ? a : b) / 2;
+          final derived = v.isEmpty
+              ? 10.0
+              : v.reduce((a, b) => a > b ? a : b) / 2;
           return widget.creature.tail?.maxWidth ?? derived;
         }
+
         double _effectiveTailLen() {
           final segW = widthAtSegment(0);
           final derived = segW * 3.0;
           return widget.creature.tail?.length ?? derived;
         }
+
         int? _hitTailNode(double px, double py) {
           if (!_showTailNodes()) return null;
           final tail = positions.first;
@@ -1040,28 +1164,54 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           final len = _effectiveTailLen();
           double sx(double wx) => centerX + (wx - cameraX) * _zoom;
           double sy(double wy) => centerY + (wy - cameraY) * _zoom;
-          final r2 = _TailNodesOverlayPainter._nodeRadius * _TailNodesOverlayPainter._nodeRadius;
-          final rootPx = tail.x + leftDirX * rootW, rootPy = tail.y + leftDirY * rootW;
-          if ((px - sx(rootPx)) * (px - sx(rootPx)) + (py - sy(rootPy)) * (py - sy(rootPy)) <= r2) return 0;
-          final maxPx = tail.x + backDirX * len * 0.7 + leftDirX * maxW, maxPy = tail.y + backDirY * len * 0.7 + leftDirY * maxW;
-          if ((px - sx(maxPx)) * (px - sx(maxPx)) + (py - sy(maxPy)) * (py - sy(maxPy)) <= r2) return 1;
-          final tipPx = tail.x + backDirX * len, tipPy = tail.y + backDirY * len;
-          if ((px - sx(tipPx)) * (px - sx(tipPx)) + (py - sy(tipPy)) * (py - sy(tipPy)) <= r2) return 2;
+          final r2 =
+              _TailNodesOverlayPainter._nodeRadius *
+              _TailNodesOverlayPainter._nodeRadius;
+          final rootPx = tail.x + leftDirX * rootW,
+              rootPy = tail.y + leftDirY * rootW;
+          if ((px - sx(rootPx)) * (px - sx(rootPx)) +
+                  (py - sy(rootPy)) * (py - sy(rootPy)) <=
+              r2)
+            return 0;
+          final maxPx = tail.x + backDirX * len * 0.7 + leftDirX * maxW,
+              maxPy = tail.y + backDirY * len * 0.7 + leftDirY * maxW;
+          if ((px - sx(maxPx)) * (px - sx(maxPx)) +
+                  (py - sy(maxPy)) * (py - sy(maxPy)) <=
+              r2)
+            return 1;
+          final tipPx = tail.x + backDirX * len,
+              tipPy = tail.y + backDirY * len;
+          if ((px - sx(tipPx)) * (px - sx(tipPx)) +
+                  (py - sy(tipPy)) * (py - sy(tipPy)) <=
+              r2)
+            return 2;
           return null;
         }
 
         const double _tailGrabRadius = 36.0;
-        double _dist2ToSegment(double px, double py, double x0, double y0, double x1, double y1) {
+        double _dist2ToSegment(
+          double px,
+          double py,
+          double x0,
+          double y0,
+          double x1,
+          double y1,
+        ) {
           final dx = x1 - x0, dy = y1 - y0;
           final len2 = dx * dx + dy * dy;
-          if (len2 < 1e-10) return (px - x0) * (px - x0) + (py - y0) * (py - y0);
+          if (len2 < 1e-10)
+            return (px - x0) * (px - x0) + (py - y0) * (py - y0);
           var t = ((px - x0) * dx + (py - y0) * dy) / len2;
           t = t.clamp(0.0, 1.0);
           final nx = x0 + t * dx, ny = y0 + t * dy;
           return (px - nx) * (px - nx) + (py - ny) * (py - ny);
         }
+
         bool _isPointOnTail(double px, double py) {
-          if (widget.creature.tail == null || positions.isEmpty || _spine.segmentAngles.isEmpty) return false;
+          if (widget.creature.tail == null ||
+              positions.isEmpty ||
+              _spine.segmentAngles.isEmpty)
+            return false;
           final tail = positions.first;
           final tailA = _spine.segmentAngles[0];
           final back = tailA + pi;
@@ -1070,7 +1220,10 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           final tipY = tail.y + sin(back) * len;
           double sx(double wx) => centerX + (wx - cameraX) * _zoom;
           double sy(double wy) => centerY + (wy - cameraY) * _zoom;
-          final s0x = sx(tail.x), s0y = sy(tail.y), s1x = sx(tipX), s1y = sy(tipY);
+          final s0x = sx(tail.x),
+              s0y = sy(tail.y),
+              s1x = sx(tipX),
+              s1y = sy(tipY);
           final d2 = _dist2ToSegment(px, py, s0x, s0y, s1x, s1y);
           return d2 <= _tailGrabRadius * _tailGrabRadius;
         }
@@ -1086,7 +1239,10 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
             ),
             Positioned.fill(
               child: CustomPaint(
-                painter: BackgroundPainter(view: view, timeSeconds: _backgroundTimeSeconds),
+                painter: BackgroundPainter(
+                  view: view,
+                  timeSeconds: _backgroundTimeSeconds,
+                ),
                 size: Size(w, h),
               ),
             ),
@@ -1095,7 +1251,7 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
               width: w,
               height: h,
               child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
+                behavior: HitTestBehavior.opaque,
                 onScaleStart: (d) {
                   final lx = d.localFocalPoint.dx;
                   final ly = d.localFocalPoint.dy;
@@ -1108,10 +1264,15 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                     _lastPanY = ly;
                     if (isBodyEdit) {
                       final node = _hitBodyNode(lx, ly);
-                      if (node != null && widget.onSegmentCountChanged != null) {
+                      if (node != null &&
+                          widget.onSegmentCountChanged != null) {
                         _bodyDraggingNode = node;
-                      } else if (node == null && widget.onSegmentWidthDelta != null) {
-                        _bodyWidthDragSeg = segmentAtScreen(lx, ly).clamp(0, _spine.segmentCount - 1);
+                      } else if (node == null &&
+                          widget.onSegmentWidthDelta != null) {
+                        _bodyWidthDragSeg = segmentAtScreen(
+                          lx,
+                          ly,
+                        ).clamp(0, _spine.segmentCount - 1);
                         final seg = _bodyWidthDragSeg!;
                         final pos = _spine.positions;
                         if (seg < pos.length - 1) {
@@ -1119,12 +1280,17 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                           final cy = (pos[seg].y + pos[seg + 1].y) / 2;
                           final sx = centerX + (cx - cameraX) * _zoom;
                           final sy = centerY + (cy - cameraY) * _zoom;
-                          _bodyWidthDragLastDist = sqrt((lx - sx) * (lx - sx) + (ly - sy) * (ly - sy));
+                          _bodyWidthDragLastDist = sqrt(
+                            (lx - sx) * (lx - sx) + (ly - sy) * (ly - sy),
+                          );
                         }
                       } else if (node == null) {
                         final worldX = (lx - centerX) / _zoom + cameraX;
                         final worldY = (ly - centerY) / _zoom + cameraY;
-                        setState(() { _dragTargetX = worldX; _dragTargetY = worldY; });
+                        setState(() {
+                          _dragTargetX = worldX;
+                          _dragTargetY = worldY;
+                        });
                       }
                     } else if (editTab == 2 && !widget.panelClosed) {
                       // Fins tab: dorsal (body then node) -> lateral -> tail -> target (same one-drag-to-remove as tail)
@@ -1136,13 +1302,15 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                           _dorsalDragFromFin = true;
                         });
                         widget.onDorsalFinSelected?.call(dorsalIdx);
-                      } else if (widget.selectedDorsalFinIndex != null && dorsalNode != null) {
+                      } else if (widget.selectedDorsalFinIndex != null &&
+                          dorsalNode != null) {
                         _dorsalDraggingNode = dorsalNode;
                       } else {
                         final lateralSeg = _lateralSegNearScreen(lx, ly);
                         if (lateralSeg != null) {
                           _lateralPanStartSeg = lateralSeg;
-                          if (widget.onLateralMoved != null) _lateralDragFromSeg = lateralSeg;
+                          if (widget.onLateralMoved != null)
+                            _lateralDragFromSeg = lateralSeg;
                         } else if (_isPointOnMouth(lx, ly) &&
                             widget.creature.mouth != null &&
                             widget.onMouthRemoved != null) {
@@ -1161,7 +1329,9 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                             _tailDraggingNode = tailNode;
                             _tailDragStartValue = tailNode == 0
                                 ? _effectiveTailRoot()
-                                : (tailNode == 1 ? _effectiveTailMax() : _effectiveTailLen());
+                                : (tailNode == 1
+                                      ? _effectiveTailMax()
+                                      : _effectiveTailLen());
                           } else if (tailNode == null &&
                               _isPointOnTail(lx, ly) &&
                               widget.creature.tail != null &&
@@ -1174,14 +1344,20 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                           } else if (!isSpineLocked) {
                             final worldX = (lx - centerX) / _zoom + cameraX;
                             final worldY = (ly - centerY) / _zoom + cameraY;
-                            setState(() { _dragTargetX = worldX; _dragTargetY = worldY; });
+                            setState(() {
+                              _dragTargetX = worldX;
+                              _dragTargetY = worldY;
+                            });
                           }
                         }
                       }
                     } else if (!isSpineLocked) {
                       final worldX = (lx - centerX) / _zoom + cameraX;
                       final worldY = (ly - centerY) / _zoom + cameraY;
-                      setState(() { _dragTargetX = worldX; _dragTargetY = worldY; });
+                      setState(() {
+                        _dragTargetX = worldX;
+                        _dragTargetY = worldY;
+                      });
                     }
                   }
                 },
@@ -1190,7 +1366,10 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                   final ly = d.localFocalPoint.dy;
                   if (_pinchStartZoom != null && d.pointerCount >= 2) {
                     setState(() {
-                      _zoom = (_pinchStartZoom! * d.scale).clamp(_minZoom, _maxZoom);
+                      _zoom = (_pinchStartZoom! * d.scale).clamp(
+                        _minZoom,
+                        _maxZoom,
+                      );
                     });
                     return;
                   }
@@ -1200,12 +1379,23 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                     setState(() {});
                     return;
                   }
-                  if (_bodyDraggingNode != null && widget.onSegmentCountChanged != null) {
-                    widget.onSegmentCountChanged!(_segmentCountFromTailDrag(centerX, centerY, cameraX, cameraY, positions));
+                  if (_bodyDraggingNode != null &&
+                      widget.onSegmentCountChanged != null) {
+                    widget.onSegmentCountChanged!(
+                      _segmentCountFromTailDrag(
+                        centerX,
+                        centerY,
+                        cameraX,
+                        cameraY,
+                        positions,
+                      ),
+                    );
                     setState(() {});
                     return;
                   }
-                  if (_tailDraggingNode != null && positions.isNotEmpty && _spine.segmentAngles.isNotEmpty) {
+                  if (_tailDraggingNode != null &&
+                      positions.isNotEmpty &&
+                      _spine.segmentAngles.isNotEmpty) {
                     final tailA = _spine.segmentAngles[0];
                     final back = tailA + pi;
                     final leftDirX = sin(tailA);
@@ -1214,17 +1404,29 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                     final backDirY = sin(back);
                     final dx = (_lastPanX - _panStartX) / _zoom;
                     final dy = (_lastPanY - _panStartY) / _zoom;
-                    if (_tailDraggingNode == 0 && widget.onTailRootWidthChanged != null) {
+                    if (_tailDraggingNode == 0 &&
+                        widget.onTailRootWidthChanged != null) {
                       final delta = dx * leftDirX + dy * leftDirY;
-                      final v = (_tailDragStartValue + delta).clamp(TailConfig.rootWidthMin, TailConfig.rootWidthMax);
+                      final v = (_tailDragStartValue + delta).clamp(
+                        TailConfig.rootWidthMin,
+                        TailConfig.rootWidthMax,
+                      );
                       widget.onTailRootWidthChanged!(v);
-                    } else if (_tailDraggingNode == 1 && widget.onTailMaxWidthChanged != null) {
+                    } else if (_tailDraggingNode == 1 &&
+                        widget.onTailMaxWidthChanged != null) {
                       final delta = dx * leftDirX + dy * leftDirY;
-                      final v = (_tailDragStartValue + delta).clamp(TailConfig.maxWidthMin, TailConfig.maxWidthMax);
+                      final v = (_tailDragStartValue + delta).clamp(
+                        TailConfig.maxWidthMin,
+                        TailConfig.maxWidthMax,
+                      );
                       widget.onTailMaxWidthChanged!(v);
-                    } else if (_tailDraggingNode == 2 && widget.onTailLengthChanged != null) {
+                    } else if (_tailDraggingNode == 2 &&
+                        widget.onTailLengthChanged != null) {
                       final delta = dx * backDirX + dy * backDirY;
-                      final v = (_tailDragStartValue + delta).clamp(TailConfig.lengthMin, TailConfig.lengthMax);
+                      final v = (_tailDragStartValue + delta).clamp(
+                        TailConfig.lengthMin,
+                        TailConfig.lengthMax,
+                      );
                       widget.onTailLengthChanged!(v);
                     }
                     setState(() {});
@@ -1233,26 +1435,43 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                   if (_dorsalDraggingNode != null) {
                     final fins = widget.creature.dorsalFins ?? [];
                     final idx = widget.selectedDorsalFinIndex;
-                    if (idx != null && idx < fins.length && widget.onDorsalRangeChanged != null) {
+                    if (idx != null &&
+                        idx < fins.length &&
+                        widget.onDorsalRangeChanged != null) {
                       final range = fins[idx].$1;
                       if (range.isNotEmpty) {
-                        final seg = segmentAtScreen(_lastPanX, _lastPanY).clamp(0, _spine.segmentCount - 1);
+                        final seg = segmentAtScreen(
+                          _lastPanX,
+                          _lastPanY,
+                        ).clamp(0, _spine.segmentCount - 1);
                         if (_dorsalDraggingNode == 0) {
-                          widget.onDorsalRangeChanged!(seg.clamp(0, range.last), range.last);
+                          widget.onDorsalRangeChanged!(
+                            seg.clamp(0, range.last),
+                            range.last,
+                          );
                         } else if (_dorsalDraggingNode == 1) {
-                          widget.onDorsalRangeChanged!(range.first, seg.clamp(range.first, _spine.segmentCount - 1));
+                          widget.onDorsalRangeChanged!(
+                            range.first,
+                            seg.clamp(range.first, _spine.segmentCount - 1),
+                          );
                         }
                       }
                     }
-                    if (_dorsalDraggingNode == 2 && widget.onDorsalHeightChanged != null) {
+                    if (_dorsalDraggingNode == 2 &&
+                        widget.onDorsalHeightChanged != null) {
                       final frac = (1.0 - _lastPanY / h).clamp(0.0, 1.0);
-                      final height = frac < 0.33 ? kDorsalHeightSmall : (frac < 0.66 ? kDorsalHeightMedium : kDorsalHeightLarge);
+                      final height = frac < 0.33
+                          ? kDorsalHeightSmall
+                          : (frac < 0.66
+                                ? kDorsalHeightMedium
+                                : kDorsalHeightLarge);
                       widget.onDorsalHeightChanged!(height);
                     }
                     setState(() {});
                     return;
                   }
-                  if (_bodyWidthDragSeg != null && widget.onSegmentWidthDelta != null) {
+                  if (_bodyWidthDragSeg != null &&
+                      widget.onSegmentWidthDelta != null) {
                     const scale = 0.15;
                     final seg = _bodyWidthDragSeg!;
                     final pos = positions;
@@ -1261,15 +1480,24 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                       final cy = (pos[seg].y + pos[seg + 1].y) / 2;
                       final sx = centerX + (cx - cameraX) * _zoom;
                       final sy = centerY + (cy - cameraY) * _zoom;
-                      final currentDist = sqrt((_lastPanX - sx) * (_lastPanX - sx) + (_lastPanY - sy) * (_lastPanY - sy));
-                      final delta = (currentDist - _bodyWidthDragLastDist) * scale;
+                      final currentDist = sqrt(
+                        (_lastPanX - sx) * (_lastPanX - sx) +
+                            (_lastPanY - sy) * (_lastPanY - sy),
+                      );
+                      final delta =
+                          (currentDist - _bodyWidthDragLastDist) * scale;
                       widget.onSegmentWidthDelta!(seg, delta);
                       _bodyWidthDragLastDist = currentDist;
                     }
                     setState(() {});
                     return;
                   }
-                  if (_bodyDraggingNode != null || _dorsalDragFromFin || _dorsalDragStartSeg != null || _lateralDragFromSeg != null || _mouthDragFromCreature) return;
+                  if (_bodyDraggingNode != null ||
+                      _dorsalDragFromFin ||
+                      _dorsalDragStartSeg != null ||
+                      _lateralDragFromSeg != null ||
+                      _mouthDragFromCreature)
+                    return;
                   if (isSpineLocked) return;
                   final worldX = (lx - centerX) / _zoom + cameraX;
                   final worldY = (ly - centerY) / _zoom + cameraY;
@@ -1281,14 +1509,20 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                 onScaleEnd: (_) {
                   _pinchStartZoom = null;
                   if (_tailDragFromCreature) {
-                    if (!_finRemoveBounds().contains(Offset(_lastPanX, _lastPanY)) && widget.onTailRemoved != null) {
+                    if (!_finRemoveBounds().contains(
+                          Offset(_lastPanX, _lastPanY),
+                        ) &&
+                        widget.onTailRemoved != null) {
                       widget.onTailRemoved!();
                     }
                     setState(() => _tailDragFromCreature = false);
                     return;
                   }
                   if (_mouthDragFromCreature) {
-                    if (!_finRemoveBounds().contains(Offset(_lastPanX, _lastPanY)) && widget.onMouthRemoved != null) {
+                    if (!_finRemoveBounds().contains(
+                          Offset(_lastPanX, _lastPanY),
+                        ) &&
+                        widget.onMouthRemoved != null) {
                       widget.onMouthRemoved!();
                     }
                     setState(() => _mouthDragFromCreature = false);
@@ -1302,8 +1536,17 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                     setState(() => _bodyWidthDragSeg = null);
                     return;
                   }
-                  if (_bodyDraggingNode != null && widget.onSegmentCountChanged != null) {
-                    widget.onSegmentCountChanged!(_segmentCountFromTailDrag(centerX, centerY, cameraX, cameraY, positions));
+                  if (_bodyDraggingNode != null &&
+                      widget.onSegmentCountChanged != null) {
+                    widget.onSegmentCountChanged!(
+                      _segmentCountFromTailDrag(
+                        centerX,
+                        centerY,
+                        cameraX,
+                        cameraY,
+                        positions,
+                      ),
+                    );
                     setState(() => _bodyDraggingNode = null);
                     return;
                   }
@@ -1311,35 +1554,54 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                     setState(() => _dorsalDraggingNode = null);
                     return;
                   }
-                  if (_dorsalDragFromFin && widget.onDorsalRemoved != null && widget.selectedDorsalFinIndex != null) {
-                    if (!_finRemoveBounds().contains(Offset(_lastPanX, _lastPanY))) {
+                  if (_dorsalDragFromFin &&
+                      widget.onDorsalRemoved != null &&
+                      widget.selectedDorsalFinIndex != null) {
+                    if (!_finRemoveBounds().contains(
+                      Offset(_lastPanX, _lastPanY),
+                    )) {
                       widget.onDorsalRemoved!(widget.selectedDorsalFinIndex!);
                     }
                     setState(() => _dorsalDragFromFin = false);
                     return;
                   }
-                  if (_dorsalDragStartSeg != null && widget.onDorsalRangeChanged != null) {
+                  if (_dorsalDragStartSeg != null &&
+                      widget.onDorsalRangeChanged != null) {
                     final seg = segmentAtScreen(_lastPanX, _lastPanY);
                     final a = _dorsalDragStartSeg!;
-                    widget.onDorsalRangeChanged!(a < seg ? a : seg, a < seg ? seg : a);
+                    widget.onDorsalRangeChanged!(
+                      a < seg ? a : seg,
+                      a < seg ? seg : a,
+                    );
                     setState(() => _dorsalDragStartSeg = null);
                     return;
                   }
                   if (_lateralDragFromSeg != null) {
-                    final releaseInBounds = _finRemoveBounds().contains(Offset(_lastPanX, _lastPanY));
+                    final releaseInBounds = _finRemoveBounds().contains(
+                      Offset(_lastPanX, _lastPanY),
+                    );
                     if (!releaseInBounds && widget.onLateralRemoved != null) {
                       widget.onLateralRemoved!(_lateralDragFromSeg!);
-                    } else if (releaseInBounds && widget.onLateralMoved != null) {
+                    } else if (releaseInBounds &&
+                        widget.onLateralMoved != null) {
                       final seg = segmentAtScreen(_lastPanX, _lastPanY);
                       widget.onLateralMoved!(_lateralDragFromSeg!, seg);
                     }
-                    setState(() { _lateralDragFromSeg = null; _lateralPanStartSeg = null; });
+                    setState(() {
+                      _lateralDragFromSeg = null;
+                      _lateralPanStartSeg = null;
+                    });
                     return;
                   }
                   if (editTab == 2 && widget.onDorsalFinSelected != null) {
-                    final dist2 = (_lastPanX - _panStartX) * (_lastPanX - _panStartX) + (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
+                    final dist2 =
+                        (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
+                        (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
                     if (dist2 < 100) {
-                      final dorsalFound = _dorsalFinIndexAtScreen(_lastPanX, _lastPanY);
+                      final dorsalFound = _dorsalFinIndexAtScreen(
+                        _lastPanX,
+                        _lastPanY,
+                      );
                       if (dorsalFound != null) {
                         setState(() => _tailSelected = false);
                         widget.onDorsalFinSelected!(dorsalFound);
@@ -1355,17 +1617,22 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                     }
                   }
                   if (isLateralEdit && _lateralPanStartSeg != null) {
-                    final dist2 = (_lastPanX - _panStartX) * (_lastPanX - _panStartX) + (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
+                    final dist2 =
+                        (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
+                        (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
                     if (dist2 < 100) {
                       final laterals = widget.creature.lateralFins ?? [];
-                      if (laterals.contains(_lateralPanStartSeg!) && widget.onLateralRemoved != null) {
+                      if (laterals.contains(_lateralPanStartSeg!) &&
+                          widget.onLateralRemoved != null) {
                         widget.onLateralRemoved!(_lateralPanStartSeg!);
                       }
                     }
                     setState(() => _lateralPanStartSeg = null);
                     return;
                   }
-                  final tapDist2 = (_lastPanX - _panStartX) * (_lastPanX - _panStartX) + (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
+                  final tapDist2 =
+                      (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
+                      (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
                   if (tapDist2 < 100 && !_isPointOnTail(_lastPanX, _lastPanY)) {
                     setState(() => _tailSelected = false);
                   }
@@ -1378,16 +1645,18 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                     });
                   }
                 },
-                  child: CustomPaint(
-                    size: Size(w, h),
-                    painter: CreaturePainter(
-                      creature: widget.creature,
-                      spine: _spine,
-                      view: view,
-                    ),
+                child: CustomPaint(
+                  size: Size(w, h),
+                  painter: CreaturePainter(
+                    creature: widget.creature,
+                    spine: _spine,
+                    view: view,
+                    showContourLines: true,
+                    blurBodyLayers: false,
                   ),
                 ),
               ),
+            ),
             if (isBodyEdit && widget.onSegmentCountChanged != null)
               Positioned.fill(
                 child: IgnorePointer(
@@ -1459,7 +1728,15 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                     painter: _MouthRemoveHighlightPainter(
                       headSx: centerX + (positions.last.x - cameraX) * _zoom,
                       headSy: centerY + (positions.last.y - cameraY) * _zoom,
-                      radius: widthAtSegment((positions.length - 2).clamp(0, positions.length - 1)) * _zoom * 1.2,
+                      radius:
+                          widthAtSegment(
+                            (positions.length - 2).clamp(
+                              0,
+                              positions.length - 1,
+                            ),
+                          ) *
+                          _zoom *
+                          1.2,
                     ),
                     size: Size(w, h),
                   ),
@@ -1490,7 +1767,9 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
               ),
             if (_mouthAddDragLocal != null &&
                 _mouthAddDragPayload != null &&
-                creatureScreenBounds().inflate(80).contains(_mouthAddDragLocal!) &&
+                creatureScreenBounds()
+                    .inflate(80)
+                    .contains(_mouthAddDragLocal!) &&
                 positions.length >= 2 &&
                 _spine.segmentAngles.isNotEmpty)
               Positioned.fill(
@@ -1506,83 +1785,100 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                       cameraX: cameraX,
                       cameraY: cameraY,
                       zoom: _zoom,
-                      headWidthWorld: widthAtSegment((positions.length - 2).clamp(0, positions.length - 1)),
+                      headWidthWorld: widthAtSegment(
+                        (positions.length - 2).clamp(0, positions.length - 1),
+                      ),
                       bodyColor: Color(widget.creature.color),
                     ),
                     size: Size(w, h),
                   ),
                 ),
               ),
-            if (_dorsalDragFromFin && widget.selectedDorsalFinIndex != null && !_finRemoveBounds().contains(Offset(_lastPanX, _lastPanY))) ...[
-              Builder(builder: (_) {
-                final fins = widget.creature.dorsalFins ?? [];
-                final idx = widget.selectedDorsalFinIndex!;
-                if (idx >= fins.length) return const SizedBox.shrink();
-                final range = fins[idx].$1;
-                if (range.isEmpty) return const SizedBox.shrink();
-                final startSeg = range.first.clamp(0, positions.length - 2);
-                final endSeg = range.last.clamp(0, positions.length - 2);
-                return Positioned.fill(
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      painter: _DorsalRangeHighlightPainter(
-                        startSeg: startSeg,
-                        endSeg: endSeg,
-                        positions: positions,
-                        centerX: centerX,
-                        centerY: centerY,
-                        cameraX: cameraX,
-                        cameraY: cameraY,
-                        zoom: _zoom,
+            if (_dorsalDragFromFin &&
+                widget.selectedDorsalFinIndex != null &&
+                !_finRemoveBounds().contains(Offset(_lastPanX, _lastPanY))) ...[
+              Builder(
+                builder: (_) {
+                  final fins = widget.creature.dorsalFins ?? [];
+                  final idx = widget.selectedDorsalFinIndex!;
+                  if (idx >= fins.length) return const SizedBox.shrink();
+                  final range = fins[idx].$1;
+                  if (range.isEmpty) return const SizedBox.shrink();
+                  final startSeg = range.first.clamp(0, positions.length - 2);
+                  final endSeg = range.last.clamp(0, positions.length - 2);
+                  return Positioned.fill(
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: _DorsalRangeHighlightPainter(
+                          startSeg: startSeg,
+                          endSeg: endSeg,
+                          positions: positions,
+                          centerX: centerX,
+                          centerY: centerY,
+                          cameraX: cameraX,
+                          cameraY: cameraY,
+                          zoom: _zoom,
+                        ),
+                        size: Size(w, h),
                       ),
-                      size: Size(w, h),
                     ),
-                  ),
-                );
-              }),
+                  );
+                },
+              ),
             ],
             if (isDorsalEdit && widget.selectedDorsalFinIndex != null) ...[
-              Builder(builder: (context) {
-                final fins = widget.creature.dorsalFins ?? [];
-                final idx = widget.selectedDorsalFinIndex!;
-                if (idx >= fins.length) return const SizedBox.shrink();
-                final range = fins[idx].$1;
-                if (range.isEmpty) return const SizedBox.shrink();
-                final startSeg = range.first.clamp(0, positions.length - 2);
-                final endSeg = range.last.clamp(0, positions.length - 2);
-                return Positioned.fill(
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      painter: _DorsalNodesOverlayPainter(
-                        positions: positions,
-                        startSeg: startSeg,
-                        endSeg: endSeg,
-                        centerX: centerX,
-                        centerY: centerY,
-                        cameraX: cameraX,
-                        cameraY: cameraY,
-                        zoom: _zoom,
-                        activeNode: _dorsalDraggingNode,
+              Builder(
+                builder: (context) {
+                  final fins = widget.creature.dorsalFins ?? [];
+                  final idx = widget.selectedDorsalFinIndex!;
+                  if (idx >= fins.length) return const SizedBox.shrink();
+                  final range = fins[idx].$1;
+                  if (range.isEmpty) return const SizedBox.shrink();
+                  final startSeg = range.first.clamp(0, positions.length - 2);
+                  final endSeg = range.last.clamp(0, positions.length - 2);
+                  return Positioned.fill(
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: _DorsalNodesOverlayPainter(
+                          positions: positions,
+                          startSeg: startSeg,
+                          endSeg: endSeg,
+                          centerX: centerX,
+                          centerY: centerY,
+                          cameraX: cameraX,
+                          cameraY: cameraY,
+                          zoom: _zoom,
+                          activeNode: _dorsalDraggingNode,
+                        ),
+                        size: Size(w, h),
                       ),
-                      size: Size(w, h),
                     ),
-                  ),
-                );
-              }),
+                  );
+                },
+              ),
             ],
             if (_dorsalAddDragLocal != null)
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
                     painter: _DorsalDropHighlightPainter(
-                      startSeg: _segmentAtLocal(_dorsalAddDragLocal!.dx, _dorsalAddDragLocal!.dy).clamp(0, (positions.length - 4).clamp(0, 999)),
+                      startSeg: _segmentAtLocal(
+                        _dorsalAddDragLocal!.dx,
+                        _dorsalAddDragLocal!.dy,
+                      ).clamp(0, (positions.length - 4).clamp(0, 999)),
                       positions: positions,
                       centerX: centerX,
                       centerY: centerY,
                       cameraX: cameraX,
                       cameraY: cameraY,
                       zoom: _zoom,
-                      finColor: widget.creature.finColor != null ? Color(widget.creature.finColor!) : Color.lerp(Color(widget.creature.color), Colors.white, 0.15)!,
+                      finColor: widget.creature.finColor != null
+                          ? Color(widget.creature.finColor!)
+                          : Color.lerp(
+                              Color(widget.creature.color),
+                              Colors.white,
+                              0.15,
+                            )!,
                     ),
                     size: Size(w, h),
                   ),
@@ -1593,7 +1889,10 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                 child: IgnorePointer(
                   child: CustomPaint(
                     painter: _LateralFinAtSegmentPainter(
-                      segment: segmentAtScreen(_lateralAddDragLocal!.dx, _lateralAddDragLocal!.dy),
+                      segment: segmentAtScreen(
+                        _lateralAddDragLocal!.dx,
+                        _lateralAddDragLocal!.dy,
+                      ),
                       positions: positions,
                       segmentAngles: _spine.segmentAngles,
                       centerX: centerX,
@@ -1601,8 +1900,19 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                       cameraX: cameraX,
                       cameraY: cameraY,
                       zoom: _zoom,
-                      segWidth: widthAtSegment(segmentAtScreen(_lateralAddDragLocal!.dx, _lateralAddDragLocal!.dy)),
-                      finColor: widget.creature.finColor != null ? Color(widget.creature.finColor!) : Color.lerp(Color(widget.creature.color), Colors.white, 0.15)!,
+                      segWidth: widthAtSegment(
+                        segmentAtScreen(
+                          _lateralAddDragLocal!.dx,
+                          _lateralAddDragLocal!.dy,
+                        ),
+                      ),
+                      finColor: widget.creature.finColor != null
+                          ? Color(widget.creature.finColor!)
+                          : Color.lerp(
+                              Color(widget.creature.color),
+                              Colors.white,
+                              0.15,
+                            )!,
                       highlight: false,
                     ),
                     size: Size(w, h),
@@ -1616,7 +1926,10 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                   child: IgnorePointer(
                     child: CustomPaint(
                       painter: _LateralFinAtSegmentPainter(
-                        segment: segmentAtScreen(_lastPanX, _lastPanY).clamp(0, positions.length - 2),
+                        segment: segmentAtScreen(
+                          _lastPanX,
+                          _lastPanY,
+                        ).clamp(0, positions.length - 2),
                         positions: positions,
                         segmentAngles: _spine.segmentAngles,
                         centerX: centerX,
@@ -1624,8 +1937,19 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                         cameraX: cameraX,
                         cameraY: cameraY,
                         zoom: _zoom,
-                        segWidth: widthAtSegment(segmentAtScreen(_lastPanX, _lastPanY).clamp(0, positions.length - 2)),
-                        finColor: widget.creature.finColor != null ? Color(widget.creature.finColor!) : Color.lerp(Color(widget.creature.color), Colors.white, 0.15)!,
+                        segWidth: widthAtSegment(
+                          segmentAtScreen(
+                            _lastPanX,
+                            _lastPanY,
+                          ).clamp(0, positions.length - 2),
+                        ),
+                        finColor: widget.creature.finColor != null
+                            ? Color(widget.creature.finColor!)
+                            : Color.lerp(
+                                Color(widget.creature.color),
+                                Colors.white,
+                                0.15,
+                              )!,
                         highlight: false,
                       ),
                       size: Size(w, h),
@@ -1646,7 +1970,13 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                         cameraY: cameraY,
                         zoom: _zoom,
                         segWidth: widthAtSegment(_lateralDragFromSeg!),
-                        finColor: widget.creature.finColor != null ? Color(widget.creature.finColor!) : Color.lerp(Color(widget.creature.color), Colors.white, 0.15)!,
+                        finColor: widget.creature.finColor != null
+                            ? Color(widget.creature.finColor!)
+                            : Color.lerp(
+                                Color(widget.creature.color),
+                                Colors.white,
+                                0.15,
+                              )!,
                         highlight: false,
                         highlightForRemove: true,
                       ),
@@ -1665,12 +1995,31 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _zoomBtn(() => setState(() => _zoom = (_zoom - _zoomStep).clamp(_minZoom, _maxZoom)), '−'),
+                      _zoomBtn(
+                        () => setState(
+                          () => _zoom = (_zoom - _zoomStep).clamp(
+                            _minZoom,
+                            _maxZoom,
+                          ),
+                        ),
+                        '−',
+                      ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text('${(_zoom * 100).round()}%', style: const TextStyle(color: Colors.white)),
+                        child: Text(
+                          '${(_zoom * 100).round()}%',
+                          style: const TextStyle(color: Colors.white),
+                        ),
                       ),
-                      _zoomBtn(() => setState(() => _zoom = (_zoom + _zoomStep).clamp(_minZoom, _maxZoom)), '+'),
+                      _zoomBtn(
+                        () => setState(
+                          () => _zoom = (_zoom + _zoomStep).clamp(
+                            _minZoom,
+                            _maxZoom,
+                          ),
+                        ),
+                        '+',
+                      ),
                     ],
                   ),
                 ],
@@ -1684,17 +2033,24 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           inner = DragTarget<TailDragPayload>(
             onWillAcceptWithDetails: (_) => true,
             onAcceptWithDetails: (d) {
-              final box = _previewContentKey.currentContext?.findRenderObject() as RenderBox?;
+              final box =
+                  _previewContentKey.currentContext?.findRenderObject()
+                      as RenderBox?;
               if (box != null && box.hasSize) {
                 final local = box.globalToLocal(d.offset);
                 if (creatureScreenBounds().inflate(80).contains(local)) {
                   widget.onTailAdded!(d.data.tailFin);
                 }
               }
-              setState(() { _tailAddDragLocal = null; _tailAddDragPayload = null; });
+              setState(() {
+                _tailAddDragLocal = null;
+                _tailAddDragPayload = null;
+              });
             },
             onMove: (d) {
-              final box = _previewContentKey.currentContext?.findRenderObject() as RenderBox?;
+              final box =
+                  _previewContentKey.currentContext?.findRenderObject()
+                      as RenderBox?;
               if (box != null && box.hasSize) {
                 setState(() {
                   _tailAddDragLocal = box.globalToLocal(d.offset);
@@ -1702,7 +2058,10 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                 });
               }
             },
-            onLeave: (_) => setState(() { _tailAddDragLocal = null; _tailAddDragPayload = null; }),
+            onLeave: (_) => setState(() {
+              _tailAddDragLocal = null;
+              _tailAddDragPayload = null;
+            }),
             builder: (context, candidateData, rejectedData) => child,
           );
         }
@@ -1711,7 +2070,9 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           inner = DragTarget<LateralDragPayload>(
             onWillAcceptWithDetails: (_) => true,
             onAcceptWithDetails: (d) {
-              final box = _previewContentKey.currentContext?.findRenderObject() as RenderBox?;
+              final box =
+                  _previewContentKey.currentContext?.findRenderObject()
+                      as RenderBox?;
               if (box != null && box.hasSize) {
                 final local = box.globalToLocal(d.offset);
                 widget.onLateralAdded!(_segmentAtLocal(local.dx, local.dy));
@@ -1719,9 +2080,13 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
               setState(() => _lateralAddDragLocal = null);
             },
             onMove: (d) {
-              final box = _previewContentKey.currentContext?.findRenderObject() as RenderBox?;
+              final box =
+                  _previewContentKey.currentContext?.findRenderObject()
+                      as RenderBox?;
               if (box != null && box.hasSize) {
-                setState(() => _lateralAddDragLocal = box.globalToLocal(d.offset));
+                setState(
+                  () => _lateralAddDragLocal = box.globalToLocal(d.offset),
+                );
               }
             },
             onLeave: (_) => setState(() => _lateralAddDragLocal = null),
@@ -1733,17 +2098,24 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           inner = DragTarget<MouthDragPayload>(
             onWillAcceptWithDetails: (_) => true,
             onAcceptWithDetails: (d) {
-              final box = _previewContentKey.currentContext?.findRenderObject() as RenderBox?;
+              final box =
+                  _previewContentKey.currentContext?.findRenderObject()
+                      as RenderBox?;
               if (box != null && box.hasSize) {
                 final local = box.globalToLocal(d.offset);
                 if (creatureScreenBounds().inflate(80).contains(local)) {
                   widget.onMouthAdded!(d.data.mouthType);
                 }
               }
-              setState(() { _mouthAddDragLocal = null; _mouthAddDragPayload = null; });
+              setState(() {
+                _mouthAddDragLocal = null;
+                _mouthAddDragPayload = null;
+              });
             },
             onMove: (d) {
-              final box = _previewContentKey.currentContext?.findRenderObject() as RenderBox?;
+              final box =
+                  _previewContentKey.currentContext?.findRenderObject()
+                      as RenderBox?;
               if (box != null && box.hasSize) {
                 setState(() {
                   _mouthAddDragLocal = box.globalToLocal(d.offset);
@@ -1751,7 +2123,10 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                 });
               }
             },
-            onLeave: (_) => setState(() { _mouthAddDragLocal = null; _mouthAddDragPayload = null; }),
+            onLeave: (_) => setState(() {
+              _mouthAddDragLocal = null;
+              _mouthAddDragPayload = null;
+            }),
             builder: (context, candidateData, rejectedData) => child,
           );
         }
@@ -1760,7 +2135,9 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           return DragTarget<DorsalDragPayload>(
             onWillAcceptWithDetails: (_) => true,
             onAcceptWithDetails: (d) {
-              final box = _previewContentKey.currentContext?.findRenderObject() as RenderBox?;
+              final box =
+                  _previewContentKey.currentContext?.findRenderObject()
+                      as RenderBox?;
               if (box != null && box.hasSize) {
                 final local = box.globalToLocal(d.offset);
                 widget.onDorsalAdded!(_segmentAtLocal(local.dx, local.dy));
@@ -1768,9 +2145,13 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
               setState(() => _dorsalAddDragLocal = null);
             },
             onMove: (d) {
-              final box = _previewContentKey.currentContext?.findRenderObject() as RenderBox?;
+              final box =
+                  _previewContentKey.currentContext?.findRenderObject()
+                      as RenderBox?;
               if (box != null && box.hasSize) {
-                setState(() => _dorsalAddDragLocal = box.globalToLocal(d.offset));
+                setState(
+                  () => _dorsalAddDragLocal = box.globalToLocal(d.offset),
+                );
               }
             },
             onLeave: (_) => setState(() => _dorsalAddDragLocal = null),
@@ -1794,7 +2175,10 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
           border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
         ),
         alignment: Alignment.center,
-        child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 18)),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white, fontSize: 18),
+        ),
       ),
     );
   }
