@@ -896,6 +896,12 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
                         setState(() {});
                         return;
                       }
+                      // Tap elsewhere: deselect dorsal so user can interact with laterals or empty space.
+                      if (widget.selectedDorsalFinIndex != null &&
+                          _hitDorsalNode(_lastPanX, _lastPanY) == null) {
+                        widget.onDorsalFinSelected!(null);
+                        setState(() {});
+                      }
                     }
                   }
                   if (isLateralEdit && _lateralPanStartSeg != null) {
