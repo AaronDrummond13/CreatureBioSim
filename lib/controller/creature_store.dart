@@ -60,6 +60,9 @@ class CreatureStore {
     bool isBaby = false,
     bool isEpic = false,
   }) {
+    final pos = spine.positions;
+    final homeX = pos.isNotEmpty ? pos.last.x : null;
+    final homeY = pos.isNotEmpty ? pos.last.y : null;
     list.add(
       StoredCreature(
         chunkCx: chunkCx,
@@ -70,6 +73,8 @@ class CreatureStore {
           spine: spine,
           wanderRadius: _botWanderRadius,
           ticksPerNewTarget: _botTicksPerNewTarget,
+          homeX: homeX,
+          homeY: homeY,
         ),
         isBaby: isBaby,
         isEpic: isEpic,

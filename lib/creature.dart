@@ -29,7 +29,7 @@ class TailConfig {
   static const double maxWidthMin = 10.0;
   static const double maxWidthMax = 40.0;
   static const double lengthMin = 50.0;
-  static const double lengthMax = 200.0;
+  static const double lengthMax = 150.0;
 
   TailConfig(this.type, {double? rootWidth, double? maxWidth, double? length})
     : rootWidth = rootWidth?.clamp(rootWidthMin, rootWidthMax),

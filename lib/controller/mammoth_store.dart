@@ -92,11 +92,17 @@ class MammothStore {
     final spawnX = x0 + _random.nextDouble() * cell;
     final spawnY = y0 + _random.nextDouble() * cell;
     final (creature, spine) = spawner.createRandomAt(spawnX, spawnY);
+    final pos = spine.positions;
+    final homeX = pos.isNotEmpty ? pos.last.x : null;
+    final homeY = pos.isNotEmpty ? pos.last.y : null;
     final botController = BotController(
       spine: spine,
       wanderRadius: 1400.0 + _random.nextDouble() * 600.0,
       ticksPerNewTarget: 350 + _random.nextInt(140),
       speed: 0.9,
+      homeX: homeX,
+      homeY: homeY,
+      allowStandAndSpin: false,
     );
     final layerOpacity = 0.01 + _random.nextDouble() * 0.49;
     _byChunk[key] = StoredMammoth(
