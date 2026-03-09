@@ -741,12 +741,9 @@ class _EditorPreviewState extends State<EditorPreview> with SingleTickerProvider
     double cameraX = 0.0;
     double cameraY = 0.0;
     if (positions.isNotEmpty) {
-      for (final p in positions) {
-        cameraX += p.x;
-        cameraY += p.y;
-      }
-      cameraX /= positions.length;
-      cameraY /= positions.length;
+      final head = positions.last;
+      cameraX = head.x;
+      cameraY = head.y;
     }
     _lastCameraX = cameraX;
     _lastCameraY = cameraY;
