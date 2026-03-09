@@ -417,7 +417,15 @@ class _SimulationScreenState extends State<SimulationScreen>
     final (left, right, top, bottom) = _viewState.renderRectWithBuffer(0.15);
     final r = _foodStore.radiusWorld;
     final visibleItems = _foodStore.items
-        .where((i) => circleOverlapsRect(i.x, i.y, r, left, right, top, bottom))
+        .where((i) =>
+            !i.isGiant &&
+            circleOverlapsRect(i.x, i.y, r, left, right, top, bottom))
+        .toList();
+    final visibleGiantItems = _foodStore.items
+        .where((i) =>
+            i.isGiant &&
+            circleOverlapsRect(
+                i.x, i.y, i.radiusWorld ?? r, left, right, top, bottom))
         .toList();
     const remnantRadius = 220.0;
     final visibleRemnants = _foodStore.consumedRemnants
@@ -554,12 +562,12 @@ class _SimulationScreenState extends State<SimulationScreen>
           ),
         ),
       ],
-      // On top of creatures: remnants; future new food can be drawn here too.
+      // On top of creatures: remnants + giant (inedible) plants for visual cover.
       Positioned.fill(
         child: CustomPaint(
           painter: FoodPainter(
             view: cameraView,
-            items: const [],
+            items: visibleGiantItems,
             consumedRemnants: visibleRemnants,
             timeSeconds: t,
             foodRadiusWorld: _foodStore.radiusWorld,

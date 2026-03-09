@@ -43,6 +43,7 @@ class FoodStore {
     var count = 0;
     for (var i = _items.length - 1; i >= 0; i--) {
       final item = _items[i];
+      if (item.isGiant) continue;
       if (allowedCellTypes != null && !allowedCellTypes.contains(item.cellType)) continue;
       final dx = item.x - headX;
       final dy = item.y - headY;
@@ -67,6 +68,40 @@ class FoodStore {
         }
         _items.removeAt(i);
         count++;
+      }
+    }
+    for (final item in _items) {
+      if (!item.isGiant || item.attachedOffsets == null || item.attachedOffsets!.isEmpty) continue;
+      if (allowedCellTypes != null && !allowedCellTypes.contains(CellType.plant)) continue;
+      final list = item.attachedOffsets!;
+      for (var j = list.length - 1; j >= 0; j--) {
+        final (ox, oy) = list[j];
+        final ax = item.x + ox;
+        final ay = item.y + oy;
+        final ddx = ax - headX;
+        final ddy = ay - headY;
+        if (ddx * ddx + ddy * ddy <= r2) {
+          if (timeSeconds != null) {
+            final n = _random.nextInt(3) + 1;
+            final bubbleSizes = List<int>.generate(n, (_) => _random.nextInt(3));
+            _consumedRemnants.add(
+              ConsumedRemnant(
+                x: ax,
+                y: ay,
+                nucleusOffsetX: 0,
+                nucleusOffsetY: 0,
+                cellType: CellType.plant,
+                consumedAt: timeSeconds,
+                headX: headX,
+                headY: headY,
+                bubbleSizes: bubbleSizes,
+                consumedByPlayer: consumedByPlayer,
+              ),
+            );
+          }
+          list.removeAt(j);
+          count++;
+        }
       }
     }
     return count;
@@ -102,17 +137,23 @@ class FoodStore {
     );
   }
 
-  /// Only checks items in the same chunk (ci, cj).
-  bool _tooCloseInChunk(int ci, int cj, double x, double y, double minDist) {
-    final minDist2 = minDist * minDist;
+  /// Only checks items in the same chunk (ci, cj). [newItemRadius] = radius of item being placed (world units).
+  bool _tooCloseInChunk(int ci, int cj, double x, double y, double newItemRadius) {
     for (final item in _items) {
       if (item.chunkCx != ci || item.chunkCy != cj) continue;
+      final itemRadius = item.radiusWorld ?? radiusWorld;
+      final minDist = newItemRadius + itemRadius;
+      final minDist2 = minDist * minDist;
       final dx = x - item.x;
       final dy = y - item.y;
       if (dx * dx + dy * dy < minDist2) return true;
     }
     return false;
   }
+
+  static const double giantPlantRadiusWorld = 95.0;
+  static const double giantAnimalRadiusWorld = 95.0;
+  static const double giantBubbleRadiusWorld = 95.0;
 
   /// Remove all food linked to chunk (ci, cj). Called by [ChunkManager] when chunk goes out of range.
   void clearChunk(int ci, int cj) {
@@ -154,7 +195,6 @@ class FoodStore {
     types.shuffle(_random);
     final count = types.length;
     final fillRadius = cellSize / 2;
-    final minDist = minSpacing;
     final r2 = fillRadius * fillRadius;
     var attempts = 0;
     const maxAttemptsPerItem = 500;
@@ -165,7 +205,7 @@ class FoodStore {
       final x = centerX + dist * cos(theta);
       final y = centerY + dist * sin(theta);
       if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <= r2 &&
-          !_tooCloseInChunk(i, j, x, y, minDist)) {
+          !_tooCloseInChunk(i, j, x, y, radiusWorld)) {
         final nux = (_random.nextDouble() * 2 - 1) * radiusWorld * 0.12;
         final nuy = (_random.nextDouble() * 2 - 1) * radiusWorld * 0.12;
         _items.add(
@@ -182,6 +222,100 @@ class FoodStore {
         added++;
       }
       attempts++;
+    }
+    final numGiant = _countFromRate(config.giantPlantPerChunk);
+    for (var g = 0; g < numGiant; g++) {
+      var attemptsG = 0;
+      while (attemptsG < 80) {
+        final dist = sqrt(_random.nextDouble()) * fillRadius;
+        final theta = _random.nextDouble() * 2 * pi;
+        final x = centerX + dist * cos(theta);
+        final y = centerY + dist * sin(theta);
+        if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <= r2 &&
+            !_tooCloseInChunk(i, j, x, y, giantPlantRadiusWorld)) {
+          final nux = (_random.nextDouble() * 2 - 1) * giantPlantRadiusWorld * 0.08;
+          final nuy = (_random.nextDouble() * 2 - 1) * giantPlantRadiusWorld * 0.08;
+          const int sides = 6;
+          const double outFrac = 1.08;
+          final offsets = <(double, double)>[];
+          for (var vi = 0; vi < sides; vi++) {
+            final angle = (vi / sides) * 2 * pi - pi / 2;
+            offsets.add((giantPlantRadiusWorld * outFrac * cos(angle), giantPlantRadiusWorld * outFrac * sin(angle)));
+          }
+          _items.add(
+            FoodItem(
+              x,
+              y,
+              i,
+              j,
+              nucleusOffsetX: nux,
+              nucleusOffsetY: nuy,
+              cellType: CellType.plant,
+              isGiant: true,
+              radiusWorld: giantPlantRadiusWorld,
+              attachedOffsets: offsets,
+            ),
+          );
+          break;
+        }
+        attemptsG++;
+      }
+    }
+    final numGiantAnimal = _countFromRate(config.giantAnimalPerChunk);
+    for (var g = 0; g < numGiantAnimal; g++) {
+      var attemptsG = 0;
+      while (attemptsG < 80) {
+        final dist = sqrt(_random.nextDouble()) * fillRadius;
+        final theta = _random.nextDouble() * 2 * pi;
+        final x = centerX + dist * cos(theta);
+        final y = centerY + dist * sin(theta);
+        if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <= r2 &&
+            !_tooCloseInChunk(i, j, x, y, giantAnimalRadiusWorld)) {
+          final nux = (_random.nextDouble() * 2 - 1) * giantAnimalRadiusWorld * 0.08;
+          final nuy = (_random.nextDouble() * 2 - 1) * giantAnimalRadiusWorld * 0.08;
+          _items.add(
+            FoodItem(
+              x,
+              y,
+              i,
+              j,
+              nucleusOffsetX: nux,
+              nucleusOffsetY: nuy,
+              cellType: CellType.animal,
+              isGiant: true,
+              radiusWorld: giantAnimalRadiusWorld,
+            ),
+          );
+          break;
+        }
+        attemptsG++;
+      }
+    }
+    final numGiantBubble = _countFromRate(config.giantBubblePerChunk);
+    for (var g = 0; g < numGiantBubble; g++) {
+      var attemptsG = 0;
+      while (attemptsG < 80) {
+        final dist = sqrt(_random.nextDouble()) * fillRadius;
+        final theta = _random.nextDouble() * 2 * pi;
+        final x = centerX + dist * cos(theta);
+        final y = centerY + dist * sin(theta);
+        if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <= r2 &&
+            !_tooCloseInChunk(i, j, x, y, giantBubbleRadiusWorld)) {
+          _items.add(
+            FoodItem(
+              x,
+              y,
+              i,
+              j,
+              cellType: CellType.bubble,
+              isGiant: true,
+              radiusWorld: giantBubbleRadiusWorld,
+            ),
+          );
+          break;
+        }
+        attemptsG++;
+      }
     }
   }
 
@@ -203,10 +337,14 @@ class FoodStore {
     if (dt <= 0 || dt > 0.1) dt = 1 / 60.0;
     final t = timeSeconds;
     final newItems = _items.map((item) {
-      final dx =
+      var dx =
           driftSpeed * (sin(t * 0.3) + 0.4 * sin(t + item.x * 0.015)) * dt;
-      final dy =
+      var dy =
           driftSpeed * (cos(t * 0.4) + 0.4 * cos(t + item.y * 0.015)) * dt;
+      if (item.isGiant) {
+        dx *= 0.35;
+        dy *= 0.35;
+      }
       final newX = item.x + dx;
       final newY = item.y + dy;
       return FoodItem(
@@ -217,6 +355,9 @@ class FoodStore {
         nucleusOffsetX: item.nucleusOffsetX,
         nucleusOffsetY: item.nucleusOffsetY,
         cellType: item.cellType,
+        isGiant: item.isGiant,
+        radiusWorld: item.radiusWorld,
+        attachedOffsets: item.attachedOffsets,
       );
     }).toList();
     _items

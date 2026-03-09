@@ -303,7 +303,6 @@ class FoodPainter extends CustomPainter {
     }
 
     if (items.isEmpty) return;
-    final rScreen = foodRadiusWorld * z;
     final strokePaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
@@ -353,6 +352,8 @@ class FoodPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     for (final food in items) {
+      final rWorld = food.radiusWorld ?? foodRadiusWorld;
+      final rScreen = rWorld * z;
       final cx = sx(food.x);
       final cy = sy(food.y);
       final rInner = rScreen * innerRadiusFrac.clamp(0.01, 0.99);
@@ -366,18 +367,58 @@ class FoodPainter extends CustomPainter {
           bubblePrimaryPaint,
           bubbleSecondaryPaint,
         );
+        final baseStroke = (2.0 * z).clamp(1.0, 2.0);
+        if (food.isGiant) {
+          final scale = (rScreen / (foodRadiusWorld * z)).clamp(1.0, 3.0);
+          strokePaint.strokeWidth = (baseStroke * scale).clamp(2.0, 6.0);
+        }
         canvas.drawCircle(Offset(cx, cy), rScreen, strokePaint);
+        if (food.isGiant) strokePaint.strokeWidth = baseStroke;
       } else if (food.cellType == CellType.animal) {
         final outer = Path()
           ..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: rScreen));
         final inner = Path()
           ..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: rInner));
         final ring = Path.combine(PathOperation.difference, outer, inner);
+        final baseStroke = (2.0 * z).clamp(1.0, 2.0);
+        if (food.isGiant) {
+          final scale = (rScreen / (foodRadiusWorld * z)).clamp(1.0, 3.0);
+          strokePaint.strokeWidth = (baseStroke * scale).clamp(2.0, 6.0);
+          innerStrokePaint.strokeWidth = strokePaint.strokeWidth;
+        }
         canvas.drawPath(inner, animalInnerFillPaint);
         canvas.drawPath(ring, animalFillPaint);
         canvas.drawPath(outer, strokePaint);
         canvas.drawPath(inner, innerStrokePaint);
+        if (food.isGiant) {
+          strokePaint.strokeWidth = baseStroke;
+          innerStrokePaint.strokeWidth = baseStroke;
+        }
       } else {
+        if (food.isGiant && food.attachedOffsets != null)
+          _drawGiantPlantAttachedCells(
+            canvas,
+            food.x,
+            food.y,
+            food.attachedOffsets!,
+            sx,
+            sy,
+            foodRadiusWorld * z,
+            innerRadiusFrac,
+            nucleusRadiusFrac,
+            fillPaint,
+            innerFillPaint,
+            strokePaint,
+            innerStrokePaint,
+            nucleusPaint,
+            nucleusStrokePaint,
+          );
+        final baseStroke = (2.0 * z).clamp(1.0, 2.0);
+        if (food.isGiant) {
+          final scale = (rScreen / (foodRadiusWorld * z)).clamp(1.0, 3.0);
+          strokePaint.strokeWidth = (baseStroke * scale).clamp(2.0, 6.0);
+          innerStrokePaint.strokeWidth = strokePaint.strokeWidth;
+        }
         final outer = _smoothHexagonPath(cx, cy, rScreen);
         final inner = _smoothHexagonPath(cx, cy, rInner);
         final ring = Path.combine(PathOperation.difference, outer, inner);
@@ -385,6 +426,10 @@ class FoodPainter extends CustomPainter {
         canvas.drawPath(ring, fillPaint);
         canvas.drawPath(outer, strokePaint);
         canvas.drawPath(inner, innerStrokePaint);
+        if (food.isGiant) {
+          strokePaint.strokeWidth = baseStroke;
+          innerStrokePaint.strokeWidth = baseStroke;
+        }
       }
       if (food.cellType != CellType.bubble) {
         final nx = sx(food.x + food.nucleusOffsetX);
@@ -396,13 +441,49 @@ class FoodPainter extends CustomPainter {
     }
   }
 
-  /// Closed path: smooth curved hexagon (rounded edges via quadratic bezier).
-  Path _smoothHexagonPath(double cx, double cy, double radius) {
+  /// Small “bud” circles at hex vertices so the giant plant reads as a big cell with attached smaller cells.
+  void _drawGiantPlantAttachedCells(
+    Canvas canvas,
+    double giantX,
+    double giantY,
+    List<(double, double)> offsets,
+    double Function(double) sx,
+    double Function(double) sy,
+    double rScreen,
+    double innerRadiusFracVal,
+    double nucleusRadiusFracVal,
+    Paint fillPaint,
+    Paint innerFillPaint,
+    Paint strokePaint,
+    Paint innerStrokePaint,
+    Paint nucleusPaint,
+    Paint nucleusStrokePaint,
+  ) {
+    const double attachedCellRotation = pi / 6;
+    final rInner = rScreen * innerRadiusFracVal.clamp(0.01, 0.99);
+    for (final (ox, oy) in offsets) {
+      final cx = sx(giantX + ox);
+      final cy = sy(giantY + oy);
+      final outer = _smoothHexagonPath(cx, cy, rScreen, attachedCellRotation);
+      final inner = _smoothHexagonPath(cx, cy, rInner, attachedCellRotation);
+      final ring = Path.combine(PathOperation.difference, outer, inner);
+      canvas.drawPath(inner, innerFillPaint);
+      canvas.drawPath(ring, fillPaint);
+      canvas.drawPath(outer, strokePaint);
+      canvas.drawPath(inner, innerStrokePaint);
+      final nr = rScreen * nucleusRadiusFracVal;
+      canvas.drawCircle(Offset(cx, cy), nr, nucleusPaint);
+      canvas.drawCircle(Offset(cx, cy), nr, nucleusStrokePaint);
+    }
+  }
+
+  /// Closed path: smooth curved hexagon (rounded edges via quadratic bezier). [rotation] rotates the hex in radians.
+  Path _smoothHexagonPath(double cx, double cy, double radius, [double rotation = 0]) {
     const int sides = 6;
     final path = Path();
     final points = <Offset>[];
     for (var i = 0; i < sides; i++) {
-      final t = (i / sides) * 2 * pi - pi / 2;
+      final t = (i / sides) * 2 * pi - pi / 2 + rotation;
       points.add(Offset(cx + radius * cos(t), cy + radius * sin(t)));
     }
     path.moveTo(points[0].dx, points[0].dy);

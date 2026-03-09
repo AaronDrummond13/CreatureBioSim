@@ -3,6 +3,8 @@ enum CellType { plant, animal, bubble }
 
 /// A plant or animal cell (food) in world space. See [FoodPainter].
 /// Linked to chunk [chunkCx], [chunkCy] for culling (updated on drift so culling only removes food in that chunk).
+/// When [isGiant] is true, cannot be eaten; [radiusWorld] is its size; renders on top layer as cover.
+/// [attachedOffsets] on a giant: relative (dx, dy) for edible normal plant cells at the corners; consumed ones are removed from the list.
 class FoodItem {
   FoodItem(
     this.x,
@@ -12,6 +14,9 @@ class FoodItem {
     this.nucleusOffsetX = 0,
     this.nucleusOffsetY = 0,
     this.cellType = CellType.plant,
+    this.isGiant = false,
+    this.radiusWorld,
+    this.attachedOffsets,
   });
 
   final double x;
@@ -21,4 +26,9 @@ class FoodItem {
   final double nucleusOffsetX;
   final double nucleusOffsetY;
   final CellType cellType;
+  final bool isGiant;
+  final double? radiusWorld;
+
+  /// Mutable: remove an element when that corner cell is eaten.
+  final List<(double, double)>? attachedOffsets;
 }
