@@ -208,6 +208,7 @@ class _SimulationScreenState extends State<SimulationScreen>
             intendedTargetX: _viewState.touchX,
             intendedTargetY: _viewState.touchY,
           );
+          // No global nudge when arrived — avoids wiggle from curve spread and nudge fighting.
         } else {
           final step = _headMoveSpeed / len;
           final nx = head.x + dx * step;
@@ -218,22 +219,21 @@ class _SimulationScreenState extends State<SimulationScreen>
             intendedTargetX: _viewState.touchX,
             intendedTargetY: _viewState.touchY,
           );
-        }
-
-        // When player asks for a turn sharper than one joint allows, nudge whole creature so we don't get stuck.
-        if (_spine.segmentCount >= 2) {
-          final headPos = _spine.positions.last;
-          final headDir = _spine.segmentAngles.last;
-          final towardTouch = atan2(
-            _viewState.touchY - headPos.y,
-            _viewState.touchX - headPos.x,
-          );
-          final turn = relativeAngleDiff(headDir, towardTouch);
-          if (turn.abs() > _spine.maxJointAngleRad) {
-            final nudge = turn.abs() < _kGlobalTurnNudge
-                ? turn
-                : (turn > 0 ? _kGlobalTurnNudge : -_kGlobalTurnNudge);
-            _spine.rotateAroundBase(nudge);
+          // When moving, nudge whole creature if turn is sharper than one joint allows.
+          if (_spine.segmentCount >= 2) {
+            final headPos = _spine.positions.last;
+            final headDir = _spine.segmentAngles.last;
+            final towardTouch = atan2(
+              _viewState.touchY - headPos.y,
+              _viewState.touchX - headPos.x,
+            );
+            final turn = relativeAngleDiff(headDir, towardTouch);
+            if (turn.abs() > _spine.maxJointAngleRad) {
+              final nudge = turn.abs() < _kGlobalTurnNudge
+                  ? turn
+                  : (turn > 0 ? _kGlobalTurnNudge : -_kGlobalTurnNudge);
+              _spine.rotateAroundBase(nudge);
+            }
           }
         }
 
