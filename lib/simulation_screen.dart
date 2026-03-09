@@ -36,19 +36,8 @@ class SimulationScreen extends StatefulWidget {
   final VoidCallback? onEdit;
 
   /// Default creature when [initialCreature] is null (e.g. first run).
-  static Creature defaultCreature() => Creature(
-    vertexWidths: [20, 20, 20, 20, 20, 20, 20, 20, 20, 10, 10, 20, 30, 30],
-    dorsalFins: [
-      ([14, 15, 16, 17, 18, 19], 8.0),
-      ([2, 3, 4, 5, 6, 7, 8, 9, 10], null),
-    ],
-    color: 0xFF777777,
-    finColor: 0xFF777777,
-    tail: TailConfig(CaudalFinType.lunate),
-    lateralFins: [4],
-    trophicType: TrophicType.omnivore,
-    mouth: MouthType.mandible,
-  );
+  static Creature defaultCreature() =>
+      Creature(vertexWidths: [20, 20], color: 0xFF987987, finColor: 0xFF987987);
 
   @override
   State<SimulationScreen> createState() => _SimulationScreenState();
