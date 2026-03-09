@@ -12,7 +12,16 @@ class BiomeCreatureConfig {
   final double epicsPerChunk;
 }
 
-/// Creature rates per biome. For now all biomes use default; add switch later for per-biome tuning.
+/// Creature rates per biome.
 BiomeCreatureConfig biomeCreatureConfig(Biome biome) {
-  return const BiomeCreatureConfig();
+  switch (biome) {
+    case Biome.wasteland:
+      return const BiomeCreatureConfig(
+        groupsPerChunk: 0,
+        singlesPerChunk: 0,
+        epicsPerChunk: 0,
+      );
+    default:
+      return const BiomeCreatureConfig();
+  }
 }

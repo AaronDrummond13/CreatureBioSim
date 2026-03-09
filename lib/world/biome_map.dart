@@ -15,8 +15,17 @@ class BiomeMap {
     return Biome.values[index];
   }
 
-  /// Biome at world (x, y) — single region (no blending).
+  /// Wasteland: 2×2 chunks (1000×1000) around origin. Used for starting area; no food/creatures spawn.
+  static const double _wastelandHalfSize = 1500.0;
+
+  /// Biome at world (x, y) — single region (no blending). Wasteland at origin returns [Biome.wasteland].
   Biome biomeAt(double x, double y) {
+    if (x >= -_wastelandHalfSize &&
+        x < _wastelandHalfSize &&
+        y >= -_wastelandHalfSize &&
+        y < _wastelandHalfSize) {
+      return Biome.wasteland;
+    }
     final bx = wrapBiomeRegion((x / kBiomeRegionSizeWorld).floor());
     final by = wrapBiomeRegion((y / kBiomeRegionSizeWorld).floor());
     return biomeAtRegion(bx, by);
@@ -33,17 +42,19 @@ class BiomeMap {
     final v = fy.clamp(0.0, 1.0);
 
     final c00 = biomeAtRegion(wrapBiomeRegion(cx), wrapBiomeRegion(cy)).color;
-    final c10 =
-        biomeAtRegion(wrapBiomeRegion(cx + 1), wrapBiomeRegion(cy)).color;
-    final c01 =
-        biomeAtRegion(wrapBiomeRegion(cx), wrapBiomeRegion(cy + 1)).color;
-    final c11 =
-        biomeAtRegion(wrapBiomeRegion(cx + 1), wrapBiomeRegion(cy + 1)).color;
+    final c10 = biomeAtRegion(
+      wrapBiomeRegion(cx + 1),
+      wrapBiomeRegion(cy),
+    ).color;
+    final c01 = biomeAtRegion(
+      wrapBiomeRegion(cx),
+      wrapBiomeRegion(cy + 1),
+    ).color;
+    final c11 = biomeAtRegion(
+      wrapBiomeRegion(cx + 1),
+      wrapBiomeRegion(cy + 1),
+    ).color;
 
-    return Color.lerp(
-      Color.lerp(c00, c10, u)!,
-      Color.lerp(c01, c11, u)!,
-      v,
-    )!;
+    return Color.lerp(Color.lerp(c00, c10, u)!, Color.lerp(c01, c11, u)!, v)!;
   }
 }

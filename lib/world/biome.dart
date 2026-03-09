@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// World biome. Used for background and dot/bubble/blob tint; later for creatures, objects, etc.
-enum Biome { clear, deep, algae, poisoned, dirty }
+enum Biome { clear, deep, algae, poisoned, dirty, wasteland }
 
 extension BiomeColors on Biome {
   /// Base colour for this biome (background tint, dot tint).
@@ -17,6 +17,8 @@ extension BiomeColors on Biome {
         return const Color.fromARGB(255, 139, 116, 190); // purplish
       case Biome.dirty:
         return const Color.fromARGB(255, 162, 149, 108); // brownish
+      case Biome.wasteland:
+        return const Color.fromARGB(255, 121, 166, 190); // same as clear
     }
   }
 }

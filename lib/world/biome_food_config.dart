@@ -41,5 +41,11 @@ BiomeFoodConfig biomeFoodConfig(Biome biome) {
         animalPerChunk: 0.4,
         bubblePerChunk: 0.1,
       );
+    case Biome.wasteland:
+      return const BiomeFoodConfig(
+        plantPerChunk: 0,
+        animalPerChunk: 0,
+        bubblePerChunk: 0.2,
+      );
   }
 }
