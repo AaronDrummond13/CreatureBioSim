@@ -54,6 +54,9 @@ class TailConfig {
   );
 }
 
+/// What a creature can eat. Herbivore = plant cells only; carnivore = animal cells + babies; omnivore = all (balance TBD).
+enum TrophicType { herbivore, carnivore, omnivore }
+
 /// Creature definition: identity and appearance, outside engine and renderer.
 /// Spine length is implied by [vertexWidths] (segmentCount = vertexWidths.length - 1). Capped at [maxSegmentCount].
 class Creature {
@@ -80,6 +83,9 @@ class Creature {
   /// Rendered under the body as rotated ellipses. Only indices < segmentCount (not head) are valid.
   final List<int>? lateralFins;
 
+  /// Diet: herbivore (plant only), carnivore (animal + babies), omnivore (all).
+  final TrophicType trophicType;
+
   /// Number of spine segments (vertexWidths.length - 1), capped at [maxSegmentCount].
   int get segmentCount => vertexWidths.length - 1;
 
@@ -89,6 +95,7 @@ class Creature {
     this.finColor,
     this.tail,
     this.lateralFins,
+    this.trophicType = TrophicType.omnivore,
     this.color = 0xFF2E7D32,
   }) : vertexWidths = vertexWidths
            .take(maxSegmentCount + 1)

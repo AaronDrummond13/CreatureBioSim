@@ -181,6 +181,7 @@ class EditorScreenState extends State<EditorScreen> {
       finColor: _creature.finColor,
       tail: _creature.tail,
       lateralFins: _creature.lateralFins,
+      trophicType: _creature.trophicType,
     ));
   }
 
@@ -196,6 +197,7 @@ class EditorScreenState extends State<EditorScreen> {
       finColor: _creature.finColor,
       tail: _creature.tail,
       lateralFins: _creature.lateralFins,
+      trophicType: _creature.trophicType,
     ));
   }
 
@@ -213,6 +215,7 @@ class EditorScreenState extends State<EditorScreen> {
       finColor: _creature.finColor,
       tail: _creature.tail,
       lateralFins: _creature.lateralFins,
+      trophicType: _creature.trophicType,
     ));
     _selectedDorsalFinIndex = fins.length - 1;
   }
@@ -254,6 +257,7 @@ class EditorScreenState extends State<EditorScreen> {
         finColor: _creature.finColor,
         tail: _creature.tail,
         lateralFins: _creature.lateralFins,
+        trophicType: _creature.trophicType,
       );
       _selectedDorsalFinIndex = null;
     });
@@ -268,6 +272,7 @@ class EditorScreenState extends State<EditorScreen> {
       finColor: _creature.finColor,
       tail: _creature.tail?.copyWith(rootWidth: v),
       lateralFins: _creature.lateralFins,
+      trophicType: _creature.trophicType,
     ));
   }
 
@@ -280,6 +285,7 @@ class EditorScreenState extends State<EditorScreen> {
       finColor: _creature.finColor,
       tail: _creature.tail?.copyWith(maxWidth: v),
       lateralFins: _creature.lateralFins,
+      trophicType: _creature.trophicType,
     ));
   }
 
@@ -292,6 +298,7 @@ class EditorScreenState extends State<EditorScreen> {
       finColor: _creature.finColor,
       tail: _creature.tail?.copyWith(length: v),
       lateralFins: _creature.lateralFins,
+      trophicType: _creature.trophicType,
     ));
   }
 
@@ -310,6 +317,7 @@ class EditorScreenState extends State<EditorScreen> {
             )
           : null,
       lateralFins: _creature.lateralFins,
+      trophicType: _creature.trophicType,
     ));
   }
 
@@ -321,6 +329,7 @@ class EditorScreenState extends State<EditorScreen> {
       finColor: _creature.finColor,
       tail: null,
       lateralFins: _creature.lateralFins,
+      trophicType: _creature.trophicType,
     ));
   }
 
@@ -335,6 +344,7 @@ class EditorScreenState extends State<EditorScreen> {
       finColor: _creature.finColor,
       tail: _creature.tail,
       lateralFins: list.isEmpty ? null : list,
+      trophicType: _creature.trophicType,
     ));
   }
 
@@ -351,6 +361,7 @@ class EditorScreenState extends State<EditorScreen> {
       finColor: _creature.finColor,
       tail: _creature.tail,
       lateralFins: list,
+      trophicType: _creature.trophicType,
     ));
   }
 
@@ -366,6 +377,7 @@ class EditorScreenState extends State<EditorScreen> {
       finColor: _creature.finColor,
       tail: _creature.tail,
       lateralFins: list,
+      trophicType: _creature.trophicType,
     ));
   }
 
@@ -379,6 +391,7 @@ class EditorScreenState extends State<EditorScreen> {
       finColor: _creature.finColor,
       tail: _creature.tail,
       lateralFins: list.isEmpty ? null : list,
+      trophicType: _creature.trophicType,
     ));
   }
 }
@@ -403,6 +416,7 @@ Creature _creatureWith(Creature creature, {
     finColor: creature.finColor,
     tail: creature.tail,
     lateralFins: lateral,
+    trophicType: creature.trophicType,
   );
 }
 

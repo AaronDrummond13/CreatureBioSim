@@ -27,16 +27,19 @@ class FoodStore {
   double get minSpacing => 2.0 * radiusWorld;
 
   /// Remove any food whose centre is within [radius] of (headX, headY). If [timeSeconds] is set, adds a [ConsumedRemnant] for rendering burst + fading nucleus.
+  /// When [allowedCellTypes] is non-null, only food with [FoodItem.cellType] in the set is consumed (e.g. herbivore = plant only).
   void consumeNear(
     double headX,
     double headY, [
     double? radius,
     double? timeSeconds,
+    Set<CellType>? allowedCellTypes,
   ]) {
     final r = radius ?? radiusWorld;
     final r2 = r * r;
     for (var i = _items.length - 1; i >= 0; i--) {
       final item = _items[i];
+      if (allowedCellTypes != null && !allowedCellTypes.contains(item.cellType)) continue;
       final dx = item.x - headX;
       final dy = item.y - headY;
       if (dx * dx + dy * dy <= r2) {

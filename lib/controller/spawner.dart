@@ -76,6 +76,7 @@ class Spawner {
             length: _inRange(TailConfig.lengthMin, TailConfig.lengthMax),
           )
         : null;
+    final trophicType = TrophicType.values[_rng.nextInt(TrophicType.values.length)];
     return Creature(
       vertexWidths: widths,
       color: color,
@@ -86,6 +87,7 @@ class Spawner {
       lateralFins: (lateralFins == null || lateralFins.isEmpty)
           ? null
           : lateralFins,
+      trophicType: trophicType,
     );
   }
 

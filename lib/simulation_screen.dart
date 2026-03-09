@@ -1,11 +1,11 @@
 import 'dart:math' show atan2, cos, sin, sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
-import 'package:creature_bio_sim/controller/mammoth_store.dart'
-    hide aabbOverlapsRect;
+import 'package:creature_bio_sim/controller/mammoth_store.dart';
 import 'package:creature_bio_sim/controller/creature_store.dart';
 import 'package:creature_bio_sim/controller/spawner.dart';
-import 'package:creature_bio_sim/creature.dart' show Creature, CaudalFinType, TailConfig;
+import 'package:creature_bio_sim/creature.dart'
+    show Creature, CaudalFinType, TailConfig, TrophicType;
 import 'package:creature_bio_sim/input/simulation_gesture_region.dart';
 import 'package:creature_bio_sim/render/mammoth_painter.dart';
 import 'package:creature_bio_sim/render/background_painter.dart'
@@ -46,6 +46,7 @@ class SimulationScreen extends StatefulWidget {
     finColor: 0xFF777777,
     tail: TailConfig(CaudalFinType.lunate),
     lateralFins: [4],
+    trophicType: TrophicType.herbivore,
   );
 
   @override
@@ -241,30 +242,38 @@ class _SimulationScreenState extends State<SimulationScreen>
         _viewState.cameraX = headAfter.x;
         _viewState.cameraY = headAfter.y;
         final consumeRadius = _foodStore.radiusWorld + headCollision;
+        final allowedFood = _creature.trophicType == TrophicType.herbivore
+            ? {CellType.plant, CellType.bubble}
+            : (_creature.trophicType == TrophicType.carnivore
+                  ? {CellType.animal, CellType.bubble}
+                  : null);
         _foodStore.consumeNear(
           headAfter.x,
           headAfter.y,
           consumeRadius,
           _viewState.timeSeconds,
+          allowedFood,
         );
-        for (final e in _creatureStore.entities) {
-          if (!e.isBaby) continue;
-          final pos = e.spine.positions;
-          if (pos.isEmpty) continue;
-          final bx = pos.last.x;
-          final by = pos.last.y;
-          final bdx = headAfter.x - bx;
-          final bdy = headAfter.y - by;
-          if (bdx * bdx + bdy * bdy <= consumeRadius * consumeRadius) {
-            _foodStore.addConsumedRemnantAt(
-              bx,
-              by,
-              _viewState.timeSeconds,
-              headAfter.x,
-              headAfter.y,
-              cellType: CellType.animal,
-            );
-            _creatureStore.removeCreature(e);
+        if (_creature.trophicType != TrophicType.herbivore) {
+          for (final e in _creatureStore.entities) {
+            if (!e.isBaby) continue;
+            final pos = e.spine.positions;
+            if (pos.isEmpty) continue;
+            final bx = pos.last.x;
+            final by = pos.last.y;
+            final bdx = headAfter.x - bx;
+            final bdy = headAfter.y - by;
+            if (bdx * bdx + bdy * bdy <= consumeRadius * consumeRadius) {
+              _foodStore.addConsumedRemnantAt(
+                bx,
+                by,
+                _viewState.timeSeconds,
+                headAfter.x,
+                headAfter.y,
+                cellType: CellType.animal,
+              );
+              _creatureStore.removeCreature(e);
+            }
           }
         }
       }

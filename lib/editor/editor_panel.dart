@@ -236,6 +236,7 @@ class _ColourTabState extends State<_ColourTab> {
                   finColor: creature.color,
                   tail: creature.tail,
                   lateralFins: creature.lateralFins,
+                  trophicType: creature.trophicType,
                 )),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -260,6 +261,7 @@ class _ColourTabState extends State<_ColourTab> {
                   finColor: _editingFin ? value : creature.finColor,
                   tail: creature.tail,
                   lateralFins: creature.lateralFins,
+                  trophicType: creature.trophicType,
                 ));
               },
             ),
