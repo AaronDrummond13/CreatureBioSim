@@ -40,7 +40,10 @@ void paintTailFin(
   var sumAbsBend = 0.0;
   var count = 0;
   for (var i = 1; i < segmentAngles.length; i++) {
-    sumAbsBend += relativeAngleDiff(segmentAngles[i], segmentAngles[i - 1]).abs();
+    sumAbsBend += relativeAngleDiff(
+      segmentAngles[i],
+      segmentAngles[i - 1],
+    ).abs();
     count++;
   }
   const caudalFinBaseFrac = 0.2;
@@ -51,8 +54,12 @@ void paintTailFin(
   final vws = creature.vertexWidths
       .map((w) => w.clamp(Creature.minVertexWidth, Creature.maxVertexWidth))
       .toList();
-  final derivedRoot = vws.isEmpty ? widthAt(0) / bodyScale : vws.reduce((a, b) => a < b ? a : b);
-  final derivedMax = vws.isEmpty ? derivedRoot / 2 : vws.reduce((a, b) => a > b ? a : b) / 2;
+  final derivedRoot = vws.isEmpty
+      ? widthAt(0) / bodyScale
+      : vws.reduce((a, b) => a < b ? a : b);
+  final derivedMax = vws.isEmpty
+      ? derivedRoot / 2
+      : vws.reduce((a, b) => a > b ? a : b) / 2;
   final derivedLen = widthAt(0) * 3.0;
 
   final tailCfg = creature.tail!;
@@ -87,65 +94,111 @@ void paintTailFin(
   final pts = <Offset>[];
   pts.add(Offset(sx(leftTailX), sy(leftTailY)));
   if (tailFinType == CaudalFinType.rounded) {
-    pts.add(Offset(
-      sx(leftTailX + cos(back) * len * 0.3 + leftDirX * leftMax * 0.8),
-      sy(leftTailY + sin(back) * len * 0.3 + leftDirY * leftMax * 0.8),
-    ));
+    pts.add(
+      Offset(
+        sx(leftTailX + cos(back) * len * 0.3 + leftDirX * leftMax * 0.8),
+        sy(leftTailY + sin(back) * len * 0.3 + leftDirY * leftMax * 0.8),
+      ),
+    );
   }
   if (tailFinType != CaudalFinType.pointed) {
-    pts.add(Offset(
-      sx(leftTailX + cos(back) * len * 0.7 + leftDirX * leftMax),
-      sy(leftTailY + sin(back) * len * 0.7 + leftDirY * leftMax),
-    ));
+    pts.add(
+      Offset(
+        sx(leftTailX + cos(back) * len * 0.7 + leftDirX * leftMax),
+        sy(leftTailY + sin(back) * len * 0.7 + leftDirY * leftMax),
+      ),
+    );
   }
   if (tailFinType == CaudalFinType.lunate) {
-    pts.add(Offset(
-      sx(leftTailX + cos(back) * len * 0.6 + leftDirX * leftMax * 0.7),
-      sy(leftTailY + sin(back) * len * 0.6 + leftDirY * leftMax * 0.7),
-    ));
+    pts.add(
+      Offset(
+        sx(leftTailX + cos(back) * len * 0.6 + leftDirX * leftMax * 0.7),
+        sy(leftTailY + sin(back) * len * 0.6 + leftDirY * leftMax * 0.7),
+      ),
+    );
   }
-  if (tailFinType == CaudalFinType.pointed || tailFinType == CaudalFinType.rhomboid) {
+  if (tailFinType == CaudalFinType.pointed ||
+      tailFinType == CaudalFinType.rhomboid) {
     pts.add(Offset(sx(tipCx), sy(tipCy)));
   } else if (tailFinType == CaudalFinType.rounded) {
-    pts.add(Offset(sx(tailX + cos(back) * len * 0.9), sy(tailY + sin(back) * len * 0.9)));
+    pts.add(
+      Offset(
+        sx(tailX + cos(back) * len * 0.9),
+        sy(tailY + sin(back) * len * 0.9),
+      ),
+    );
   } else if (tailFinType == CaudalFinType.forked) {
-    pts.add(Offset(sx(tailX + cos(back) * len * 0.35), sy(tailY + sin(back) * len * 0.35)));
+    pts.add(
+      Offset(
+        sx(tailX + cos(back) * len * 0.35),
+        sy(tailY + sin(back) * len * 0.35),
+      ),
+    );
   } else if (tailFinType == CaudalFinType.lunate) {
-    pts.add(Offset(sx(tailX + cos(back) * len * 0.45), sy(tailY + sin(back) * len * 0.45)));
+    pts.add(
+      Offset(
+        sx(tailX + cos(back) * len * 0.45),
+        sy(tailY + sin(back) * len * 0.45),
+      ),
+    );
   } else if (tailFinType == CaudalFinType.emarginate) {
-    pts.add(Offset(sx(tailX + cos(back) * len * 0.65), sy(tailY + sin(back) * len * 0.65)));
+    pts.add(
+      Offset(
+        sx(tailX + cos(back) * len * 0.65),
+        sy(tailY + sin(back) * len * 0.65),
+      ),
+    );
   } else if (tailFinType == CaudalFinType.truncate) {
-    pts.add(Offset(sx(tailX + cos(back) * len * 0.8), sy(tailY + sin(back) * len * 0.8)));
+    pts.add(
+      Offset(
+        sx(tailX + cos(back) * len * 0.8),
+        sy(tailY + sin(back) * len * 0.8),
+      ),
+    );
   }
   if (tailFinType == CaudalFinType.lunate) {
-    pts.add(Offset(
-      sx(rightTailX + cos(back) * len * 0.6 + rightDirX * rightMax * 0.7),
-      sy(rightTailY + sin(back) * len * 0.6 + rightDirY * rightMax * 0.7),
-    ));
+    pts.add(
+      Offset(
+        sx(rightTailX + cos(back) * len * 0.6 + rightDirX * rightMax * 0.7),
+        sy(rightTailY + sin(back) * len * 0.6 + rightDirY * rightMax * 0.7),
+      ),
+    );
   }
   if (tailFinType != CaudalFinType.pointed) {
-    pts.add(Offset(
-      sx(rightTailX + cos(back) * len * 0.7 + rightDirX * rightMax),
-      sy(rightTailY + sin(back) * len * 0.7 + rightDirY * rightMax),
-    ));
+    pts.add(
+      Offset(
+        sx(rightTailX + cos(back) * len * 0.7 + rightDirX * rightMax),
+        sy(rightTailY + sin(back) * len * 0.7 + rightDirY * rightMax),
+      ),
+    );
   }
   if (tailFinType == CaudalFinType.rounded) {
-    pts.add(Offset(
-      sx(rightTailX + cos(back) * len * 0.3 + rightDirX * rightMax * 0.8),
-      sy(rightTailY + sin(back) * len * 0.3 + rightDirY * rightMax * 0.8),
-    ));
+    pts.add(
+      Offset(
+        sx(rightTailX + cos(back) * len * 0.3 + rightDirX * rightMax * 0.8),
+        sy(rightTailY + sin(back) * len * 0.3 + rightDirY * rightMax * 0.8),
+      ),
+    );
   }
   pts.add(Offset(sx(rightTailX), sy(rightTailY)));
 
   final path = Path();
   path.moveTo(pts[0].dx, pts[0].dy);
-  appendSmoothCurve(path, pts, 1.0 / 6.0);
+  final tension = tailFinType == CaudalFinType.rounded
+      ? 0.2
+      : (tailFinType == CaudalFinType.lunate
+            ? .2
+            : (tailFinType == CaudalFinType.rhomboid ? 0.05 : 0.15));
+  appendSmoothCurve(path, pts, tension);
   path.close();
-  final finColor = overrideFinColor ??
+  final finColor =
+      overrideFinColor ??
       (creature.finColor != null
           ? Color(creature.finColor!)
           : Color.lerp(bodyColor, Colors.white, 0.12)!);
-  final finPaint = Paint()..color = finColor..style = PaintingStyle.fill;
+  final finPaint = Paint()
+    ..color = finColor
+    ..style = PaintingStyle.fill;
   final strokePaint = Paint()
     ..color = Colors.white
     ..style = PaintingStyle.stroke
