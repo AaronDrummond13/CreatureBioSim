@@ -207,11 +207,13 @@ class FoodStore {
           driftSpeed * (sin(t * 0.3) + 0.4 * sin(t + item.x * 0.015)) * dt;
       final dy =
           driftSpeed * (cos(t * 0.4) + 0.4 * cos(t + item.y * 0.015)) * dt;
+      final newX = item.x + dx;
+      final newY = item.y + dy;
       return FoodItem(
-        item.x + dx,
-        item.y + dy,
-        item.chunkCx,
-        item.chunkCy,
+        newX,
+        newY,
+        chunkIndexX(newX),
+        chunkIndexY(newY),
         nucleusOffsetX: item.nucleusOffsetX,
         nucleusOffsetY: item.nucleusOffsetY,
         cellType: item.cellType,

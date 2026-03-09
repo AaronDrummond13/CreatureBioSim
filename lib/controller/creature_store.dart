@@ -10,6 +10,7 @@ import 'package:creature_bio_sim/controller/bot_controller.dart';
 import 'package:creature_bio_sim/controller/spawner.dart';
 
 /// A creature plus spine and bot controller, tied to a chunk for culling.
+/// [chunkCx]/[chunkCy] track current position chunk so culling only removes creatures actually in that chunk.
 class StoredCreature {
   StoredCreature({
     required this.chunkCx,
@@ -21,8 +22,8 @@ class StoredCreature {
     this.isEpic = false,
   });
 
-  final int chunkCx;
-  final int chunkCy;
+  int chunkCx;
+  int chunkCy;
   final Creature creature;
   final Spine spine;
   final BotController botController;
@@ -157,10 +158,32 @@ class CreatureStore {
   }
 
   void tick() {
+    final moves = <StoredCreature, (int, int)>{};
     for (final list in _byChunk.values) {
       for (final e in list) {
         e.botController.tick();
+        final pos = e.spine.positions;
+        if (pos.isEmpty) continue;
+        final head = pos.last;
+        final cx = chunkIndexX(head.x);
+        final cy = chunkIndexY(head.y);
+        if (cx != e.chunkCx || cy != e.chunkCy) moves[e] = (cx, cy);
       }
+    }
+    for (final entry in moves.entries) {
+      final e = entry.key;
+      final (cx, cy) = entry.value;
+      final oldKey = chunkKey(e.chunkCx, e.chunkCy);
+      final newKey = chunkKey(cx, cy);
+      if (oldKey == newKey) continue;
+      final oldList = _byChunk[oldKey];
+      if (oldList != null) {
+        oldList.remove(e);
+        if (oldList.isEmpty) _byChunk.remove(oldKey);
+      }
+      _byChunk.putIfAbsent(newKey, () => []).add(e);
+      e.chunkCx = cx;
+      e.chunkCy = cy;
     }
   }
 }

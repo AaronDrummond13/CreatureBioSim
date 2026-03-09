@@ -2,7 +2,7 @@
 enum CellType { plant, animal, bubble }
 
 /// A plant or animal cell (food) in world space. See [FoodPainter].
-/// Linked to chunk [chunkCx], [chunkCy] for culling (stays linked even if it drifts out of chunk).
+/// Linked to chunk [chunkCx], [chunkCy] for culling (updated on drift so culling only removes food in that chunk).
 class FoodItem {
   FoodItem(
     this.x,
