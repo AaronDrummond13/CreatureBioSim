@@ -22,8 +22,8 @@ class Spine {
 
   Spine({
     int segmentCount = 1,
-    double segmentLength = 10.0,
-    double maxJointAngleRad = 0.45,
+    double segmentLength = 12.0,
+    double maxJointAngleRad = 0.4,
   }) : segmentCount = segmentCount.clamp(1, maxSegmentCount),
        segmentLength = segmentLength.clamp(minSegmentLength, maxSegmentLength),
        maxJointAngleRad = maxJointAngleRad.clamp(
