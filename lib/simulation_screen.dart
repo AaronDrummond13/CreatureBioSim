@@ -5,7 +5,7 @@ import 'package:creature_bio_sim/controller/mammoth_store.dart';
 import 'package:creature_bio_sim/controller/creature_store.dart';
 import 'package:creature_bio_sim/controller/spawner.dart';
 import 'package:creature_bio_sim/creature.dart'
-    show Creature, CaudalFinType, TailConfig, TrophicType;
+    show CaudalFinType, Creature, MouthType, TailConfig, TrophicType;
 import 'package:creature_bio_sim/input/simulation_gesture_region.dart';
 import 'package:creature_bio_sim/render/mammoth_painter.dart';
 import 'package:creature_bio_sim/render/background_painter.dart'
@@ -46,7 +46,8 @@ class SimulationScreen extends StatefulWidget {
     finColor: 0xFF777777,
     tail: TailConfig(CaudalFinType.lunate),
     lateralFins: [4],
-    trophicType: TrophicType.herbivore,
+    trophicType: TrophicType.carnivore,
+    mouth: MouthType.teeth,
   );
 
   @override
