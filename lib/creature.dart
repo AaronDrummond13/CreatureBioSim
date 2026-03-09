@@ -54,8 +54,8 @@ class TailConfig {
   );
 }
 
-/// What a creature can eat. Herbivore = plant cells only; carnivore = animal cells + babies; omnivore = all (balance TBD).
-enum TrophicType { herbivore, carnivore, omnivore }
+/// What a creature can eat. None = no mouth, bubbles only; herbivore = plant + bubbles; carnivore = animal + bubbles + babies; omnivore = all (balance TBD).
+enum TrophicType { none, herbivore, carnivore, omnivore }
 
 /// Mouth style. Null = no mouth. Tentacle = shrimp/herbivore (wiggly). Teeth = carnivore (rigid spikes). Mandible = omnivore (ant-like, open/close).
 enum MouthType { tentacle, teeth, mandible }
@@ -101,8 +101,8 @@ class Creature {
     this.finColor,
     this.tail,
     this.lateralFins,
-    this.trophicType = TrophicType.omnivore,
-    this.mouth = MouthType.tentacle,
+    this.trophicType = TrophicType.herbivore,
+    this.mouth,
     this.color = 0xFF2E7D32,
   }) : vertexWidths = vertexWidths
            .take(maxSegmentCount + 1)

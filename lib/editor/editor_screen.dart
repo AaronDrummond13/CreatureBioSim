@@ -413,7 +413,7 @@ class EditorScreenState extends State<EditorScreen> {
   void _onMouthAddedFromViewport(MouthType? type) {
     final trophicType = type == MouthType.teeth
         ? TrophicType.carnivore
-        : (type == MouthType.tentacle ? TrophicType.herbivore : (type == MouthType.mandible ? TrophicType.omnivore : _creature.trophicType));
+        : (type == MouthType.tentacle ? TrophicType.herbivore : (type == MouthType.mandible ? TrophicType.omnivore : TrophicType.none));
     setState(() => _creature = Creature(
       vertexWidths: _creature.vertexWidths,
       color: _creature.color,
@@ -434,7 +434,7 @@ class EditorScreenState extends State<EditorScreen> {
       finColor: _creature.finColor,
       tail: _creature.tail,
       lateralFins: _creature.lateralFins,
-      trophicType: _creature.trophicType,
+      trophicType: TrophicType.none,
       mouth: null,
     ));
   }

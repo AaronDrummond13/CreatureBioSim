@@ -1,28 +1,27 @@
 import 'dart:math' show atan2, cos, sin, sqrt;
-import 'package:flutter/scheduler.dart';
-import 'package:flutter/material.dart';
-import 'package:creature_bio_sim/controller/mammoth_store.dart';
+import 'package:creature_bio_sim/controller/chunk_manager.dart';
 import 'package:creature_bio_sim/controller/creature_store.dart';
+import 'package:creature_bio_sim/controller/food_store.dart';
+import 'package:creature_bio_sim/controller/mammoth_store.dart';
 import 'package:creature_bio_sim/controller/spawner.dart';
-import 'package:creature_bio_sim/creature.dart'
-    show CaudalFinType, Creature, MouthType, TailConfig, TrophicType;
+import 'package:creature_bio_sim/creature.dart' show Creature, TrophicType;
 import 'package:creature_bio_sim/input/simulation_gesture_region.dart';
-import 'package:creature_bio_sim/render/mammoth_painter.dart';
 import 'package:creature_bio_sim/render/background_painter.dart'
     show BackgroundPainter, SolidBackgroundPainter;
-import 'package:creature_bio_sim/render/food_painter.dart';
 import 'package:creature_bio_sim/render/creature_painter.dart';
+import 'package:creature_bio_sim/render/food_painter.dart';
 import 'package:creature_bio_sim/render/joystick_overlay_painter.dart';
+import 'package:creature_bio_sim/render/mammoth_painter.dart';
 import 'package:creature_bio_sim/simulation/angle_util.dart'
     show relativeAngleDiff;
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation_view_state.dart';
 import 'package:creature_bio_sim/world/biome_map.dart';
-import 'package:creature_bio_sim/controller/chunk_manager.dart';
-import 'package:creature_bio_sim/controller/food_store.dart';
 import 'package:creature_bio_sim/world/food.dart' show CellType;
 import 'package:creature_bio_sim/world/world.dart'
     show aabbOverlapsRect, circleOverlapsRect, kFoodActiveRadiusWorld;
+import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 /// Screen that runs the spine simulation. Hold and drag on the screen:
 /// the head moves toward the touch point; drag to change direction.
@@ -66,8 +65,9 @@ class _SimulationScreenState extends State<SimulationScreen>
   final SimulationViewState _viewState = SimulationViewState();
   late Ticker _ticker;
 
-  static const double _headMoveSpeed = 6.0;
-  static const double _arrivalThreshold = 10.0;
+  static const double _headMoveSpeed =
+      4.5; //maybe start slow 3ish, have speed boosters like tail and fins ect. max 9ish
+  static const double _arrivalThreshold = 20.0;
 
   /// Fraction of head (vertex) size used for head/mouth collision (epic touch and consume radius).
   static const double _kHeadMouthSizeFrac = 0.8;
@@ -77,7 +77,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   static const int _kMaxSimStepsPerFrame = 5;
 
   /// When neck is at bend limit, nudge whole creature this much (rad) toward touch per step. Only tuning for tight turns.
-  static const double _kGlobalTurnNudge = 0.02;
+  static const double _kGlobalTurnNudge = 0.000000001;
 
   /// Fixed target distance from head when using joystick (angle only).
   static const double _kJoystickTargetDistance = 120.0;
@@ -233,11 +233,13 @@ class _SimulationScreenState extends State<SimulationScreen>
         _viewState.cameraX = headAfter.x;
         _viewState.cameraY = headAfter.y;
         final consumeRadius = _foodStore.radiusWorld + headCollision;
-        final allowedFood = _creature.trophicType == TrophicType.herbivore
-            ? {CellType.plant, CellType.bubble}
-            : (_creature.trophicType == TrophicType.carnivore
-                  ? {CellType.animal, CellType.bubble}
-                  : null);
+        final allowedFood = _creature.mouth == null || _creature.trophicType == TrophicType.none
+            ? {CellType.bubble}
+            : (_creature.trophicType == TrophicType.herbivore
+                  ? {CellType.plant, CellType.bubble}
+                  : (_creature.trophicType == TrophicType.carnivore
+                        ? {CellType.animal, CellType.bubble}
+                        : null));
         final consumed = _foodStore.consumeNear(
           headAfter.x,
           headAfter.y,
@@ -247,7 +249,7 @@ class _SimulationScreenState extends State<SimulationScreen>
           true, // consumedByPlayer
         );
         if (consumed > 0) _lastAteTimeSeconds = _viewState.timeSeconds;
-        if (_creature.trophicType != TrophicType.herbivore) {
+        if (_creature.trophicType != TrophicType.herbivore && _creature.trophicType != TrophicType.none) {
           for (final e in _creatureStore.entities) {
             if (!e.isBaby) continue;
             final pos = e.spine.positions;
@@ -297,11 +299,13 @@ class _SimulationScreenState extends State<SimulationScreen>
           : _foodStore.radiusWorld;
       final headCollision = headSize * _kHeadMouthSizeFrac;
       final consumeRadius = _foodStore.radiusWorld + headCollision;
-      final allowedFood = e.creature.trophicType == TrophicType.herbivore
-          ? {CellType.plant, CellType.bubble}
-          : (e.creature.trophicType == TrophicType.carnivore
-                ? {CellType.animal, CellType.bubble}
-                : null);
+      final allowedFood = e.creature.mouth == null || e.creature.trophicType == TrophicType.none
+          ? {CellType.bubble}
+          : (e.creature.trophicType == TrophicType.herbivore
+                ? {CellType.plant, CellType.bubble}
+                : (e.creature.trophicType == TrophicType.carnivore
+                      ? {CellType.animal, CellType.bubble}
+                      : null));
       _foodStore.consumeNear(
         head.x,
         head.y,
@@ -312,7 +316,7 @@ class _SimulationScreenState extends State<SimulationScreen>
     }
     final babiesToRemove = <StoredCreature>[];
     for (final e in _creatureStore.entities) {
-      if (e.isBaby || e.creature.trophicType == TrophicType.herbivore) continue;
+      if (e.isBaby || e.creature.trophicType == TrophicType.herbivore || e.creature.trophicType == TrophicType.none) continue;
       final pos = e.spine.positions;
       if (pos.isEmpty) continue;
       final head = pos.last;
