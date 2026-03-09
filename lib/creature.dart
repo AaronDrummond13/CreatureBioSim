@@ -57,6 +57,9 @@ class TailConfig {
 /// What a creature can eat. Herbivore = plant cells only; carnivore = animal cells + babies; omnivore = all (balance TBD).
 enum TrophicType { herbivore, carnivore, omnivore }
 
+/// Mouth style. Null = no mouth. Tentacle = shrimp/herbivore style (wiggly feelers in front of head).
+enum MouthType { tentacle }
+
 /// Creature definition: identity and appearance, outside engine and renderer.
 /// Spine length is implied by [vertexWidths] (segmentCount = vertexWidths.length - 1). Capped at [maxSegmentCount].
 class Creature {
@@ -86,6 +89,9 @@ class Creature {
   /// Diet: herbivore (plant only), carnivore (animal + babies), omnivore (all).
   final TrophicType trophicType;
 
+  /// Mouth style. Null = no mouth drawn. Default tentacle (shrimp/herbivore feelers).
+  final MouthType? mouth;
+
   /// Number of spine segments (vertexWidths.length - 1), capped at [maxSegmentCount].
   int get segmentCount => vertexWidths.length - 1;
 
@@ -96,6 +102,7 @@ class Creature {
     this.tail,
     this.lateralFins,
     this.trophicType = TrophicType.omnivore,
+    this.mouth = MouthType.tentacle,
     this.color = 0xFF2E7D32,
   }) : vertexWidths = vertexWidths
            .take(maxSegmentCount + 1)

@@ -7,6 +7,7 @@ import 'package:creature_bio_sim/creature.dart';
 import 'package:creature_bio_sim/simulation/angle_util.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:creature_bio_sim/render/mouth_painter.dart';
 import 'package:creature_bio_sim/render/render_utils.dart';
 import 'package:creature_bio_sim/render/tail_painter.dart';
 import 'package:creature_bio_sim/render/view.dart';
@@ -249,13 +250,37 @@ class CreaturePainter extends CustomPainter {
     if (useBlurLayer) canvas.restore();
   }
 
-  /// Draw order: tail fin (under body) → lateral fins → body → dorsal fins → eyes.
+  /// Draw order: tail fin (under body) → lateral fins → mouth → body → dorsal fins → eyes.
   void _drawCreature(Canvas canvas) {
     _drawTailFin(canvas);
     _drawLateralFins(canvas);
+    _drawMouth(canvas);
     _drawBody(canvas);
     _drawDorsalFins(canvas);
     if (drawEyes && !isBaby) _drawEyes(canvas);
+  }
+
+  void _drawMouth(Canvas canvas) {
+    if (creature.mouth == null) return;
+    final n = _paintN;
+    final headWidthWorld = n < creature.vertexWidths.length
+        ? creature.vertexWidths[n].clamp(Creature.minVertexWidth, Creature.maxVertexWidth)
+        : _fallbackWidth;
+    paintMouth(
+      canvas,
+      creature,
+      _paintPositions,
+      _paintSegmentAngles,
+      _paintCenterX,
+      _paintCenterY,
+      _paintZ,
+      view.cameraX,
+      view.cameraY,
+      _bodyScale,
+      _paintFillColor,
+      headWidthWorld,
+      timeSeconds,
+    );
   }
 
   void _drawTailFin(Canvas canvas) {

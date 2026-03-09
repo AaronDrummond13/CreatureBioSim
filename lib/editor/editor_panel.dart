@@ -237,6 +237,7 @@ class _ColourTabState extends State<_ColourTab> {
                   tail: creature.tail,
                   lateralFins: creature.lateralFins,
                   trophicType: creature.trophicType,
+                  mouth: creature.mouth,
                 )),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -262,6 +263,7 @@ class _ColourTabState extends State<_ColourTab> {
                   tail: creature.tail,
                   lateralFins: creature.lateralFins,
                   trophicType: creature.trophicType,
+                  mouth: creature.mouth,
                 ));
               },
             ),
