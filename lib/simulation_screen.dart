@@ -255,6 +255,7 @@ class _SimulationScreenState extends State<SimulationScreen>
           consumeRadius,
           _viewState.timeSeconds,
           allowedFood,
+          true, // consumedByPlayer
         );
         if (consumed > 0) _lastAteTimeSeconds = _viewState.timeSeconds;
         if (_creature.trophicType != TrophicType.herbivore) {
@@ -274,6 +275,7 @@ class _SimulationScreenState extends State<SimulationScreen>
                 headAfter.x,
                 headAfter.y,
                 cellType: CellType.animal,
+                consumedByPlayer: true,
               );
               _creatureStore.removeCreature(e);
               _lastAteTimeSeconds = _viewState.timeSeconds;
@@ -291,8 +293,74 @@ class _SimulationScreenState extends State<SimulationScreen>
         kFoodActiveRadiusWorld,
       );
       _creatureStore.tick();
+      _botConsumeFoodAndBabies();
     }
     _foodStore.tick(_viewState.timeSeconds);
+  }
+
+  void _botConsumeFoodAndBabies() {
+    final timeSeconds = _viewState.timeSeconds;
+    for (final e in _creatureStore.entities) {
+      if (e.isBaby || e.spine.positions.isEmpty) continue;
+      final head = e.spine.positions.last;
+      final headSize = e.creature.vertexWidths.isNotEmpty
+          ? e.creature.vertexWidths.last
+          : _foodStore.radiusWorld;
+      final headCollision = headSize * _kHeadMouthSizeFrac;
+      final consumeRadius = _foodStore.radiusWorld + headCollision;
+      final allowedFood = e.creature.trophicType == TrophicType.herbivore
+          ? {CellType.plant, CellType.bubble}
+          : (e.creature.trophicType == TrophicType.carnivore
+              ? {CellType.animal, CellType.bubble}
+              : null);
+      _foodStore.consumeNear(
+        head.x,
+        head.y,
+        consumeRadius,
+        timeSeconds,
+        allowedFood,
+      );
+    }
+    final babiesToRemove = <StoredCreature>[];
+    for (final e in _creatureStore.entities) {
+      if (e.isBaby || e.creature.trophicType == TrophicType.herbivore) continue;
+      final pos = e.spine.positions;
+      if (pos.isEmpty) continue;
+      final head = pos.last;
+      final headSize = e.creature.vertexWidths.isNotEmpty
+          ? e.creature.vertexWidths.last
+          : _foodStore.radiusWorld;
+      final headCollision = headSize * _kHeadMouthSizeFrac;
+      final consumeRadius = _foodStore.radiusWorld + headCollision;
+      for (final other in _creatureStore.entities) {
+        if (!other.isBaby || identical(e, other)) continue;
+        final opos = other.spine.positions;
+        if (opos.isEmpty) continue;
+        final ox = opos.last.x;
+        final oy = opos.last.y;
+        final ddx = head.x - ox;
+        final ddy = head.y - oy;
+        if (ddx * ddx + ddy * ddy <= consumeRadius * consumeRadius) {
+          babiesToRemove.add(other);
+          break;
+        }
+      }
+    }
+    for (final b in babiesToRemove) {
+      final pos = b.spine.positions;
+      if (pos.isEmpty) continue;
+      final bx = pos.last.x;
+      final by = pos.last.y;
+      _foodStore.addConsumedRemnantAt(
+        bx,
+        by,
+        timeSeconds,
+        bx,
+        by,
+        cellType: CellType.animal,
+      );
+      _creatureStore.removeCreature(b);
+    }
   }
 
   List<Widget> _buildViewStack(Size size) {
@@ -390,7 +458,7 @@ class _SimulationScreenState extends State<SimulationScreen>
           painter: FoodPainter(
             view: cameraView,
             items: visibleItems,
-            consumedRemnants: visibleRemnants,
+            consumedRemnants: const [],
             timeSeconds: t,
             foodRadiusWorld: _foodStore.radiusWorld,
           ),
@@ -428,7 +496,7 @@ class _SimulationScreenState extends State<SimulationScreen>
             painter: InnerBodyCloudPainter(
               view: cameraView,
               spine: _spine,
-              consumedRemnants: visibleRemnants,
+              consumedRemnants: visibleRemnants.where((r) => r.consumedByPlayer).toList(),
               timeSeconds: t,
               bodyClipPath: CreaturePainter.buildBodyPath(
                 _creature,
@@ -452,6 +520,18 @@ class _SimulationScreenState extends State<SimulationScreen>
           ),
         ),
       ],
+      // On top of creatures: remnants; future new food can be drawn here too.
+      Positioned.fill(
+        child: CustomPaint(
+          painter: FoodPainter(
+            view: cameraView,
+            items: const [],
+            consumedRemnants: visibleRemnants,
+            timeSeconds: t,
+            foodRadiusWorld: _foodStore.radiusWorld,
+          ),
+        ),
+      ),
     ];
   }
 

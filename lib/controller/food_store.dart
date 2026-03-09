@@ -28,6 +28,7 @@ class FoodStore {
 
   /// Remove any food whose centre is within [radius] of (headX, headY). If [timeSeconds] is set, adds a [ConsumedRemnant] for rendering burst + fading nucleus.
   /// When [allowedCellTypes] is non-null, only food with [FoodItem.cellType] in the set is consumed (e.g. herbivore = plant only).
+  /// [consumedByPlayer] marks the remnant so only the player's body shows the inner cloud effect.
   /// Returns the number of items consumed.
   int consumeNear(
     double headX,
@@ -35,6 +36,7 @@ class FoodStore {
     double? radius,
     double? timeSeconds,
     Set<CellType>? allowedCellTypes,
+    bool consumedByPlayer = false,
   ]) {
     final r = radius ?? radiusWorld;
     final r2 = r * r;
@@ -59,6 +61,7 @@ class FoodStore {
               headX: headX,
               headY: headY,
               bubbleSizes: bubbleSizes,
+              consumedByPlayer: consumedByPlayer,
             ),
           );
         }
@@ -78,6 +81,7 @@ class FoodStore {
     double headY, {
     CellType cellType = CellType.animal,
     double scale = 1.0,
+    bool consumedByPlayer = false,
   }) {
     final n = _random.nextInt(3) + 1;
     final bubbleSizes = List<int>.generate(n, (_) => _random.nextInt(3));
@@ -93,6 +97,7 @@ class FoodStore {
         headY: headY,
         bubbleSizes: bubbleSizes,
         scale: scale,
+        consumedByPlayer: consumedByPlayer,
       ),
     );
   }
