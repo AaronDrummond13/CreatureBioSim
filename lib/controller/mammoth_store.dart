@@ -29,7 +29,7 @@ class StoredMammoth {
 /// Mammoths' universe: own chunk grid (same as main chunk 500×500), no biome coupling.
 /// Procedural only; when cleared, state is discarded ("moved away").
 double get _kParallaxChunkSize => 500; // 500
-const double _kParallaxRadius = 3000.0;
+const double _kParallaxRadius = 500.0;
 const double _kParallaxFactor = 0.25;
 const double _kParallaxZoomScale = 5.0;
 

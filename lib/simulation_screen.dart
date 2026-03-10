@@ -18,7 +18,7 @@ import 'package:creature_bio_sim/simulation_view_state.dart';
 import 'package:creature_bio_sim/world/biome_map.dart';
 import 'package:creature_bio_sim/world/food.dart' show CellType;
 import 'package:creature_bio_sim/world/world.dart'
-    show aabbOverlapsRect, circleOverlapsRect, kFoodActiveRadiusWorld;
+    show aabbOverlapsRect, circleOverlapsRect, kChunkLoadRadiusWorld;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -276,7 +276,7 @@ class _SimulationScreenState extends State<SimulationScreen>
       _chunkManager.update(
         _viewState.cameraX,
         _viewState.cameraY,
-        kFoodActiveRadiusWorld,
+        kChunkLoadRadiusWorld,
       );
       _creatureStore.tick();
       _botConsumeFoodAndBabies();
@@ -403,7 +403,7 @@ class _SimulationScreenState extends State<SimulationScreen>
       _chunkManager.update(
         _viewState.cameraX,
         _viewState.cameraY,
-        kFoodActiveRadiusWorld,
+        kChunkLoadRadiusWorld,
       );
       _chunksInitialized = true;
     }
