@@ -9,6 +9,7 @@ import 'package:creature_bio_sim/render/tail_painter.dart';
 import 'package:creature_bio_sim/render/view.dart';
 import 'package:creature_bio_sim/simulation/angle_util.dart'
     show relativeAngleDiff;
+import 'package:creature_bio_sim/simulation/camera_follow.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
 import 'package:creature_bio_sim/editor/editor_shared.dart';
@@ -735,10 +736,18 @@ class _EditorPreviewState extends State<EditorPreview>
   Size _lastPreviewSize = Size.zero;
   double _lastCameraX = 0;
   double _lastCameraY = 0;
+  double _editorCameraX = 0;
+  double _editorCameraY = 0;
+  bool _editorCameraInitialized = false;
+  /// Test mode (panel closed): store touch so we refresh target from camera each tick (same as play mode).
+  Offset? _editorTouchLocal;
+  Size? _editorTouchScreenSize;
+  bool _editorTouchFrozen = false;
+  int _editorPointerCount = 0;
   Offset? _lateralAddDragLocal;
   Offset? _dorsalAddDragLocal;
   double _backgroundTimeSeconds = 0.0;
-  double _editorSimTimeSeconds = 0.0;
+  double? _lastEditorRealTimeSeconds;
   final GlobalKey _previewKey = GlobalKey();
   final GlobalKey _previewContentKey = GlobalKey();
 
@@ -801,9 +810,9 @@ class _EditorPreviewState extends State<EditorPreview>
   static const double _zoomStep = 0.15;
 
   /// Same as SimulationScreen: fixed distance per step so speed is constant.
-  static const double _headMoveSpeed = 6.0;
-  static const double _arrivalThreshold = 10.0;
-  static const double _kGlobalTurnNudge = 0.02;
+  static const double _headMoveSpeed = 4.5;
+  static const double _arrivalThreshold = 20.0;
+  static const double _kGlobalTurnNudge = 0.000000001;
 
   /// Fixed sim step so editor movement matches play mode speed (60 steps/sec).
   static const double _kFixedDt = 1 / 60.0;
@@ -834,6 +843,15 @@ class _EditorPreviewState extends State<EditorPreview>
         _dragTargetY = head.y;
       }
     }
+    if (widget.panelClosed && !oldWidget.panelClosed) {
+      _editorCameraInitialized = false;
+    }
+    if (!widget.panelClosed && oldWidget.panelClosed) {
+      _editorTouchLocal = null;
+      _editorTouchScreenSize = null;
+      _editorTouchFrozen = false;
+      _editorPointerCount = 0;
+    }
   }
 
   @override
@@ -853,12 +871,13 @@ class _EditorPreviewState extends State<EditorPreview>
 
   void _onTick(Duration d) {
     if (!mounted) return;
-    final realElapsed = d.inMilliseconds / 1000.0;
-    _backgroundTimeSeconds = realElapsed;
+    final realTimeSeconds = d.inMilliseconds / 1000.0;
+    _backgroundTimeSeconds = realTimeSeconds;
+    _lastEditorRealTimeSeconds ??= realTimeSeconds;
+    final realDt = realTimeSeconds - _lastEditorRealTimeSeconds!;
+    _lastEditorRealTimeSeconds = realTimeSeconds;
     final isSpineLocked = !widget.panelClosed;
-    final steps = ((realElapsed - _editorSimTimeSeconds) / _kFixedDt)
-        .floor()
-        .clamp(0, _kMaxStepsPerFrame);
+    final steps = (realDt / _kFixedDt).round().clamp(0, _kMaxStepsPerFrame);
     for (var i = 0; i < steps; i++) {
       final head = _spine.positions.isNotEmpty ? _spine.positions.last : null;
       if (isSpineLocked) {
@@ -866,6 +885,14 @@ class _EditorPreviewState extends State<EditorPreview>
           _dragTargetX = head.x;
           _dragTargetY = head.y;
         }
+      } else if (head != null &&
+          _editorTouchLocal != null &&
+          _editorTouchScreenSize != null &&
+          !_editorTouchFrozen) {
+        final local = _editorTouchLocal!;
+        final size = _editorTouchScreenSize!;
+        _dragTargetX = head.x + (local.dx - size.width / 2) / _zoom;
+        _dragTargetY = head.y + (local.dy - size.height / 2) / _zoom;
       }
       if (head != null) {
         final dx = _dragTargetX - head.x;
@@ -907,8 +934,28 @@ class _EditorPreviewState extends State<EditorPreview>
         }
       }
     }
-    _editorSimTimeSeconds += steps * _kFixedDt;
-    if (steps > 0) setState(() {});
+    if (widget.panelClosed) {
+      final pos = _spine.positions;
+      if (pos.isNotEmpty) {
+        final head = pos.last;
+        if (!_editorCameraInitialized) {
+          _editorCameraX = head.x;
+          _editorCameraY = head.y;
+          _editorCameraInitialized = true;
+        } else {
+          final (nx, ny) = lerpCameraToward(
+            _editorCameraX,
+            _editorCameraY,
+            head.x,
+            head.y,
+          );
+          _editorCameraX = nx;
+          _editorCameraY = ny;
+        }
+        setState(() {});
+      }
+    }
+    if (steps > 0 && !widget.panelClosed) setState(() {});
   }
 
   @override
@@ -918,8 +965,13 @@ class _EditorPreviewState extends State<EditorPreview>
     double cameraY = 0.0;
     if (positions.isNotEmpty) {
       final head = positions.last;
-      cameraX = head.x;
-      cameraY = head.y;
+      if (widget.panelClosed) {
+        cameraX = _editorCameraX;
+        cameraY = _editorCameraY;
+      } else {
+        cameraX = head.x;
+        cameraY = head.y;
+      }
     }
     _lastCameraX = cameraX;
     _lastCameraY = cameraY;
@@ -1250,18 +1302,58 @@ class _EditorPreviewState extends State<EditorPreview>
               key: _previewContentKey,
               width: w,
               height: h,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onScaleStart: (d) {
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (_) {
+                  _editorPointerCount++;
+                },
+                onPointerUp: (_) {
+                  _editorPointerCount = (_editorPointerCount - 1).clamp(0, 10);
+                  if (_editorPointerCount == 0 && widget.panelClosed) {
+                    _editorTouchLocal = null;
+                    _editorTouchScreenSize = null;
+                    _editorTouchFrozen = false;
+                    setState(() {});
+                  }
+                },
+                onPointerCancel: (_) {
+                  _editorPointerCount = (_editorPointerCount - 1).clamp(0, 10);
+                  if (_editorPointerCount == 0 && widget.panelClosed) {
+                    _editorTouchLocal = null;
+                    _editorTouchScreenSize = null;
+                    _editorTouchFrozen = false;
+                    setState(() {});
+                  }
+                },
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onScaleStart: (d) {
                   final lx = d.localFocalPoint.dx;
                   final ly = d.localFocalPoint.dy;
                   if (d.pointerCount >= 2) {
                     _pinchStartZoom = _zoom;
+                    if (widget.panelClosed) {
+                      final pos = _spine.positions;
+                      if (pos.isNotEmpty) {
+                        final head = pos.last;
+                        _dragTargetX = head.x;
+                        _dragTargetY = head.y;
+                      }
+                      _editorTouchFrozen = true;
+                      _editorTouchLocal = null;
+                      _editorTouchScreenSize = null;
+                      setState(() {});
+                    }
                   } else {
                     _panStartX = lx;
                     _panStartY = ly;
                     _lastPanX = lx;
                     _lastPanY = ly;
+                    if (widget.panelClosed) {
+                      _editorTouchLocal = Offset(lx, ly);
+                      _editorTouchScreenSize = Size(w, h);
+                      _editorTouchFrozen = false;
+                    }
                     if (isBodyEdit) {
                       final node = _hitBodyNode(lx, ly);
                       if (node != null &&
@@ -1372,6 +1464,11 @@ class _EditorPreviewState extends State<EditorPreview>
                       );
                     });
                     return;
+                  }
+                  if (widget.panelClosed &&
+                      d.pointerCount == 1 &&
+                      !_editorTouchFrozen) {
+                    _editorTouchLocal = Offset(lx, ly);
                   }
                   _lastPanX = lx;
                   _lastPanY = ly;
@@ -1499,6 +1596,7 @@ class _EditorPreviewState extends State<EditorPreview>
                       _mouthDragFromCreature)
                     return;
                   if (isSpineLocked) return;
+                  if (widget.panelClosed) return;
                   final worldX = (lx - centerX) / _zoom + cameraX;
                   final worldY = (ly - centerY) / _zoom + cameraY;
                   setState(() {
@@ -1508,6 +1606,11 @@ class _EditorPreviewState extends State<EditorPreview>
                 },
                 onScaleEnd: (_) {
                   _pinchStartZoom = null;
+                  if (widget.panelClosed) {
+                    _editorTouchLocal = null;
+                    _editorTouchScreenSize = null;
+                    _editorTouchFrozen = false;
+                  }
                   if (_tailDragFromCreature) {
                     if (!_finRemoveBounds().contains(
                           Offset(_lastPanX, _lastPanY),
@@ -1636,13 +1739,15 @@ class _EditorPreviewState extends State<EditorPreview>
                   if (tapDist2 < 100 && !_isPointOnTail(_lastPanX, _lastPanY)) {
                     setState(() => _tailSelected = false);
                   }
-                  final pos = _spine.positions;
-                  if (pos.isNotEmpty) {
-                    final head = pos.last;
-                    setState(() {
-                      _dragTargetX = head.x;
-                      _dragTargetY = head.y;
-                    });
+                  if (!widget.panelClosed) {
+                    final pos = _spine.positions;
+                    if (pos.isNotEmpty) {
+                      final head = pos.last;
+                      setState(() {
+                        _dragTargetX = head.x;
+                        _dragTargetY = head.y;
+                      });
+                    }
                   }
                 },
                 child: CustomPaint(
@@ -1656,6 +1761,7 @@ class _EditorPreviewState extends State<EditorPreview>
                   ),
                 ),
               ),
+            ),
             ),
             if (isBodyEdit && widget.onSegmentCountChanged != null)
               Positioned.fill(

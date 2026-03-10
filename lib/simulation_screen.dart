@@ -14,6 +14,7 @@ import 'package:creature_bio_sim/render/joystick_overlay_painter.dart';
 import 'package:creature_bio_sim/render/mammoth_painter.dart';
 import 'package:creature_bio_sim/simulation/angle_util.dart'
     show relativeAngleDiff;
+import 'package:creature_bio_sim/simulation/camera_follow.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation_view_state.dart';
 import 'package:creature_bio_sim/world/biome_map.dart';
@@ -135,14 +136,17 @@ class _SimulationScreenState extends State<SimulationScreen>
       _runSimulationStep();
     }
 
-    const double cameraFollowK = 0.1;
     final pos = _spine.positions;
     if (pos.isNotEmpty) {
       final head = pos.last;
-      _viewState.cameraX =
-          _viewState.cameraX + (head.x - _viewState.cameraX) * cameraFollowK;
-      _viewState.cameraY =
-          _viewState.cameraY + (head.y - _viewState.cameraY) * cameraFollowK;
+      final (nx, ny) = lerpCameraToward(
+        _viewState.cameraX,
+        _viewState.cameraY,
+        head.x,
+        head.y,
+      );
+      _viewState.cameraX = nx;
+      _viewState.cameraY = ny;
     }
 
     if (mounted) _viewState.onTick();
