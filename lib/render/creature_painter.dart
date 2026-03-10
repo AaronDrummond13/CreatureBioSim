@@ -469,11 +469,11 @@ class CreaturePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = (2.0 * _paintZ).clamp(1.0, 2.0);
     const flareRad = 45.0 * pi / 180.0; // 35° from inline when neutral
-    for (final seg in fins) {
+    for (final config in fins) {
+      final seg = config.segment;
       if (seg < 0 || seg >= n) continue;
-      final segW = _widthAt(seg);
-      final len = segW * 1.5;
-      final wid = len / 3.0;
+      final len = config.length;
+      final wid = config.width;
       final lenScreen = len * _paintZ;
       final widScreen = wid * _paintZ;
       final rect = Rect.fromCenter(
@@ -484,6 +484,7 @@ class CreaturePainter extends CustomPainter {
       final aAttach = segmentAngles[seg < segmentAngles.length ? seg : seg - 1];
       final segHead = seg + 1 < segmentAngles.length ? seg + 1 : seg;
       final aLock = segmentAngles[segHead];
+      final segW = _widthAt(seg);
       final halfW = segW;
       final px = positions[seg].x;
       final py = positions[seg].y;

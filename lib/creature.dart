@@ -22,6 +22,31 @@ enum CaudalFinType {
   rhomboid,
 }
 
+/// Pectoral/lateral fin: segment index and size. Length = along fin axis, width = perpendicular.
+class LateralFinConfig {
+  static const double lengthMin = 12.0;
+  static const double lengthMax = 60.0;
+  static const double lengthDefault = 30.0;
+  static const double widthMin = 6.0;
+  static const double widthMax = 20.0;
+  static const double widthDefault = 10.0;
+
+  LateralFinConfig(this.segment, {double? length, double? width})
+    : length = (length ?? lengthDefault).clamp(lengthMin, lengthMax),
+      width = (width ?? widthDefault).clamp(widthMin, widthMax);
+
+  final int segment;
+  final double length;
+  final double width;
+
+  LateralFinConfig copyWith({int? segment, double? length, double? width}) =>
+      LateralFinConfig(
+        segment ?? this.segment,
+        length: length ?? this.length,
+        width: width ?? this.width,
+      );
+}
+
 /// Tail (caudal) fin config: type and optional dimensions. Null dimension = derive in renderer.
 class TailConfig {
   static const double rootWidthMin = 1.0;
@@ -82,9 +107,8 @@ class Creature {
   /// Tail (caudal) fin. Null = no tail. Rendered under the body; null dimensions in config are derived.
   final TailConfig? tail;
 
-  /// Lateral fins (pectoral, pelvic, anal, etc.): segment indices where a fin is attached.
-  /// Rendered under the body as rotated ellipses. Only indices < segmentCount are valid.
-  final List<int>? lateralFins;
+  /// Lateral (pectoral) fins: segment and size per fin. Rendered under the body as rotated ellipses.
+  final List<LateralFinConfig>? lateralFins;
 
   /// Diet: herbivore (plant only), carnivore (animal + babies), omnivore (all).
   final TrophicType trophicType;
@@ -99,9 +123,14 @@ class Creature {
   double widthAtVertex(int vertexIndex) {
     if (segmentWidths.isEmpty) return maxVertexWidth;
     final n = segmentWidths.length;
-    if (vertexIndex <= 0) return segmentWidths[0].clamp(minVertexWidth, maxVertexWidth);
-    if (vertexIndex >= n) return segmentWidths[n - 1].clamp(minVertexWidth, maxVertexWidth);
-    final a = segmentWidths[vertexIndex - 1].clamp(minVertexWidth, maxVertexWidth);
+    if (vertexIndex <= 0)
+      return segmentWidths[0].clamp(minVertexWidth, maxVertexWidth);
+    if (vertexIndex >= n)
+      return segmentWidths[n - 1].clamp(minVertexWidth, maxVertexWidth);
+    final a = segmentWidths[vertexIndex - 1].clamp(
+      minVertexWidth,
+      maxVertexWidth,
+    );
     final b = segmentWidths[vertexIndex].clamp(minVertexWidth, maxVertexWidth);
     return (a + b) / 2;
   }

@@ -28,7 +28,7 @@ class EditorPanel extends StatelessWidget {
   final int? selectedDorsalFinIndex;
   final void Function(int?) onDorsalFinSelected;
 
-  static const List<String> _tabs = ['Body', 'Colour', 'Fins'];
+  static const List<String> _tabs = ['Body', 'Colour', 'Parts'];
 
   static const double _panelMargin = 12.0;
 
@@ -137,7 +137,7 @@ class _BodyTab extends StatelessWidget {
   }
 }
 
-/// Shared helper for draggable tail box (used from Fins tab).
+/// Shared helper for draggable tail box (used from Parts tab).
 Widget _draggableTailBox(Creature c, CaudalFinType tailFin) {
   const boxW = 52.0;
   const boxH = 36.0;
@@ -868,7 +868,7 @@ class _DorsalStripPainter extends CustomPainter {
       old.segmentCount != segmentCount || old.start != start || old.end != end;
 }
 
-/// Fins tab: dorsal and lateral add buttons (small, like tail); both on one page.
+/// Parts tab: Head (mouth types) and Fins (tail, dorsal, pectoral). Drag to add; tap in view to select or edit.
 class _FinsTab extends StatelessWidget {
   const _FinsTab({
     required this.creature,
@@ -890,11 +890,50 @@ class _FinsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        Text('Fins — drag to add; tap in view to select or edit.', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
-        const SizedBox(height: 12),
-        Text('Dorsal', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
-        Text('Drag to creature to add. Tap a fin in view to select; drag nodes to adjust or drag fin off to remove.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
+        Text('Parts', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
+        Text('Drag to add; tap in view to select or edit.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
+        const SizedBox(height: 14),
+        Text('Head', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
+        Text('Drag onto creature to add or replace. Drag off in view to remove.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
         const SizedBox(height: 6),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _draggableMouthBox(creature, MouthType.tentacle),
+            const SizedBox(width: 6),
+            _draggableMouthBox(creature, MouthType.teeth),
+            const SizedBox(width: 6),
+            _draggableMouthBox(creature, MouthType.mandible),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Herbivore', style: TextStyle(fontSize: 10, color: EditorStyle.textMuted)),
+              const SizedBox(width: 12),
+              Text('Carnivore', style: TextStyle(fontSize: 10, color: EditorStyle.textMuted)),
+              const SizedBox(width: 12),
+              Text('Omnivore', style: TextStyle(fontSize: 10, color: EditorStyle.textMuted)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text('Fins', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
+        Text('Drag to creature to add. Tap in view to select; drag off to remove.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
+        const SizedBox(height: 6),
+        Text('Tail Fin', style: TextStyle(color: EditorStyle.text, fontSize: 11)),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: CaudalFinType.values.map((e) => _draggableTailBox(creature, e)).toList(),
+        ),
+        const SizedBox(height: 8),
+        Text('Dorsal Fin', style: TextStyle(color: EditorStyle.text, fontSize: 11)),
+        const SizedBox(height: 4),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -929,10 +968,9 @@ class _FinsTab extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        Text('Lateral', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
-        Text('Drag to creature to add. Drag a fin in view to move; drag off creature to remove.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
+        Text('Pectoral Fin', style: TextStyle(color: EditorStyle.text, fontSize: 11)),
+        const SizedBox(height: 4),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -963,30 +1001,6 @@ class _FinsTab extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        Text('Tail (caudal)', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
-        Text('Drag onto creature to add. Tap tail in view to select; drag off to remove.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: CaudalFinType.values.map((e) => _draggableTailBox(creature, e)).toList(),
-        ),
-        const SizedBox(height: 16),
-        Text('Carnivore heads', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
-        Text('Drag onto creature to add or replace. Drag mouth off in view to remove.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
-        const SizedBox(height: 6),
-        Row(mainAxisSize: MainAxisSize.min, children: [_draggableMouthBox(creature, MouthType.teeth)]),
-        const SizedBox(height: 16),
-        Text('Herbivore heads', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
-        Text('Drag onto creature to add or replace. Drag mouth off in view to remove.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
-        const SizedBox(height: 6),
-        Row(mainAxisSize: MainAxisSize.min, children: [_draggableMouthBox(creature, MouthType.tentacle)]),
-        const SizedBox(height: 16),
-        Text('Omnivore heads', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
-        Text('Drag onto creature to add or replace. Drag mouth off in view to remove.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
-        const SizedBox(height: 6),
-        Row(mainAxisSize: MainAxisSize.min, children: [_draggableMouthBox(creature, MouthType.mandible)]),
       ],
     );
   }

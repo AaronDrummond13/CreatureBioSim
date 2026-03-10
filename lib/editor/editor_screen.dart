@@ -71,7 +71,14 @@ class EditorScreenState extends State<EditorScreen> {
       editTabIndex: _panelClosed ? null : _editorTabIndex,
       panelClosed: _panelClosed,
       selectedDorsalFinIndex: _selectedDorsalFinIndex,
-      onDorsalFinSelected: (i) => setState(() => _selectedDorsalFinIndex = i),
+      onDorsalFinSelected: (i) => setState(() {
+        _selectedDorsalFinIndex = i;
+        if (i != null) _selectedLateralFinIndex = null;
+      }),
+      selectedLateralFinIndex: _selectedLateralFinIndex,
+      onLateralFinSelected: _onLateralFinSelectedFromViewport,
+      onLateralLengthChanged: _onLateralLengthChangedFromViewport,
+      onLateralWidthChanged: _onLateralWidthChangedFromViewport,
       onDorsalRangeChanged: _onDorsalRangeFromViewport,
       onDorsalHeightChanged: _onDorsalHeightFromViewport,
       onDorsalAdded: _onDorsalAddedFromViewport,
@@ -170,6 +177,7 @@ class EditorScreenState extends State<EditorScreen> {
   set _tabIndex(int v) => _editorTabIndex = v;
   int _editorTabIndex = 0;
   int? _selectedDorsalFinIndex;
+  int? _selectedLateralFinIndex;
 
   void _onDorsalRangeFromViewport(int start, int end) {
     final fins = List<(List<int>, double?)>.from(_creature.dorsalFins ?? []);
@@ -344,69 +352,68 @@ class EditorScreenState extends State<EditorScreen> {
   }
 
   void _onLateralToggledFromViewport(int seg) {
-    final list = List<int>.from(_creature.lateralFins ?? []);
-    if (list.contains(seg)) list.remove(seg); else list.add(seg);
-    list.sort();
-    setState(() => _creature = Creature(
-      segmentWidths: _creature.segmentWidths,
-      color: _creature.color,
-      dorsalFins: _creature.dorsalFins,
-      finColor: _creature.finColor,
-      tail: _creature.tail,
-      lateralFins: list.isEmpty ? null : list,
-      trophicType: _creature.trophicType,
-      mouth: _creature.mouth,
-    ));
+    final list = List<LateralFinConfig>.from(_creature.lateralFins ?? []);
+    final idx = list.indexWhere((c) => c.segment == seg);
+    if (idx >= 0) list.removeAt(idx);
+    else list.add(LateralFinConfig(seg));
+    list.sort((a, b) => a.segment.compareTo(b.segment));
+    setState(() => _creature = _creatureWith(_creature, lateralFins: list.isEmpty ? null : list));
   }
 
-  void _onLateralMovedFromViewport(int fromSeg, int toSeg) {
-    final list = List<int>.from(_creature.lateralFins ?? []);
-    final idx = list.indexOf(fromSeg);
-    if (idx < 0) return;
-    list[idx] = toSeg;
-    list.sort();
-    setState(() => _creature = Creature(
-      segmentWidths: _creature.segmentWidths,
-      color: _creature.color,
-      dorsalFins: _creature.dorsalFins,
-      finColor: _creature.finColor,
-      tail: _creature.tail,
-      lateralFins: list,
-      trophicType: _creature.trophicType,
-      mouth: _creature.mouth,
-    ));
+  void _onLateralMovedFromViewport(int fromIndex, int toSeg) {
+    final list = List<LateralFinConfig>.from(_creature.lateralFins ?? []);
+    if (fromIndex < 0 || fromIndex >= list.length) return;
+    final config = list[fromIndex];
+    list[fromIndex] = config.copyWith(segment: toSeg);
+    list.sort((a, b) => a.segment.compareTo(b.segment));
+    setState(() => _creature = _creatureWith(_creature, lateralFins: list));
   }
 
   void _onLateralAddedFromViewport(int seg) {
-    final list = List<int>.from(_creature.lateralFins ?? []);
-    if (list.contains(seg)) return;
-    list.add(seg);
-    list.sort();
-    setState(() => _creature = Creature(
-      segmentWidths: _creature.segmentWidths,
-      color: _creature.color,
-      dorsalFins: _creature.dorsalFins,
-      finColor: _creature.finColor,
-      tail: _creature.tail,
-      lateralFins: list,
-      trophicType: _creature.trophicType,
-      mouth: _creature.mouth,
-    ));
+    final list = List<LateralFinConfig>.from(_creature.lateralFins ?? []);
+    if (list.any((c) => c.segment == seg)) return;
+    list.add(LateralFinConfig(seg));
+    list.sort((a, b) => a.segment.compareTo(b.segment));
+    setState(() => _creature = _creatureWith(_creature, lateralFins: list));
   }
 
-  void _onLateralRemovedFromViewport(int seg) {
-    final list = List<int>.from(_creature.lateralFins ?? []);
-    list.remove(seg);
-    setState(() => _creature = Creature(
-      segmentWidths: _creature.segmentWidths,
-      color: _creature.color,
-      dorsalFins: _creature.dorsalFins,
-      finColor: _creature.finColor,
-      tail: _creature.tail,
-      lateralFins: list.isEmpty ? null : list,
-      trophicType: _creature.trophicType,
-      mouth: _creature.mouth,
-    ));
+  void _onLateralRemovedFromViewport(int index) {
+    final list = List<LateralFinConfig>.from(_creature.lateralFins ?? []);
+    if (index < 0 || index >= list.length) return;
+    list.removeAt(index);
+    setState(() {
+      _creature = _creatureWith(_creature, lateralFins: list.isEmpty ? null : list);
+      if (list.isEmpty) {
+        _selectedLateralFinIndex = null;
+      } else if (_selectedLateralFinIndex != null) {
+        if (_selectedLateralFinIndex == index) {
+          _selectedLateralFinIndex = null;
+        } else if (_selectedLateralFinIndex! > index) {
+          _selectedLateralFinIndex = _selectedLateralFinIndex! - 1;
+        }
+      }
+    });
+  }
+
+  void _onLateralFinSelectedFromViewport(int? index) {
+    setState(() {
+      _selectedLateralFinIndex = index;
+      if (index != null) _selectedDorsalFinIndex = null;
+    });
+  }
+
+  void _onLateralLengthChangedFromViewport(int index, double value) {
+    final list = List<LateralFinConfig>.from(_creature.lateralFins ?? []);
+    if (index < 0 || index >= list.length) return;
+    list[index] = list[index].copyWith(length: value);
+    setState(() => _creature = _creatureWith(_creature, lateralFins: list));
+  }
+
+  void _onLateralWidthChangedFromViewport(int index, double value) {
+    final list = List<LateralFinConfig>.from(_creature.lateralFins ?? []);
+    if (index < 0 || index >= list.length) return;
+    list[index] = list[index].copyWith(width: value);
+    setState(() => _creature = _creatureWith(_creature, lateralFins: list));
   }
 
   void _onMouthAddedFromViewport(MouthType? type) {
@@ -442,15 +449,17 @@ class EditorScreenState extends State<EditorScreen> {
 Creature _creatureWith(Creature creature, {
   List<double>? segmentWidths,
   int? color,
+  List<(List<int>, double?)>? dorsalFins,
+  List<LateralFinConfig>? lateralFins,
   bool filterDorsalLateral = false,
   int? newSegmentCount,
 }) {
   final seg = newSegmentCount ?? (segmentWidths?.length ?? creature.segmentWidths.length);
-  List<(List<int>, double?)>? dorsal = creature.dorsalFins;
-  List<int>? lateral = creature.lateralFins;
+  List<(List<int>, double?)>? dorsal = dorsalFins ?? creature.dorsalFins;
+  List<LateralFinConfig>? lateral = lateralFins ?? creature.lateralFins;
   if (filterDorsalLateral && seg >= 1) {
-    dorsal = _filterDorsalForSegmentCount(creature.dorsalFins, seg);
-    lateral = _filterLateralForSegmentCount(creature.lateralFins, seg);
+    dorsal = _filterDorsalForSegmentCount(dorsal, seg);
+    lateral = _filterLateralForSegmentCount(lateral, seg);
   }
   return Creature(
     segmentWidths: segmentWidths ?? creature.segmentWidths,
@@ -474,8 +483,8 @@ List<(List<int>, double?)>? _filterDorsalForSegmentCount(List<(List<int>, double
   return out.isEmpty ? null : out;
 }
 
-List<int>? _filterLateralForSegmentCount(List<int>? indices, int segCount) {
-  if (indices == null) return null;
-  final out = indices.where((i) => i >= 0 && i < segCount).toList();
+List<LateralFinConfig>? _filterLateralForSegmentCount(List<LateralFinConfig>? configs, int segCount) {
+  if (configs == null) return null;
+  final out = configs.where((c) => c.segment >= 0 && c.segment < segCount).toList();
   return out.isEmpty ? null : out;
 }

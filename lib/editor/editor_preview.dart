@@ -18,6 +18,8 @@ import 'package:creature_bio_sim/editor/editor_style.dart';
 class _LateralFinAtSegmentPainter extends CustomPainter {
   _LateralFinAtSegmentPainter({
     required this.segment,
+    required this.length,
+    required this.width,
     required this.positions,
     required this.segmentAngles,
     required this.centerX,
@@ -32,6 +34,8 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
   });
 
   final int segment;
+  final double length;
+  final double width;
   final List<Vector2> positions;
   final List<double> segmentAngles;
   final double centerX;
@@ -52,8 +56,8 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
     double sx(double wx) => centerX + (wx - cameraX) * zoom;
     double sy(double wy) => centerY + (wy - cameraY) * zoom;
     const flareRad = 45.0 * pi / 180.0;
-    final len = segWidth * 1.5;
-    final wid = len / 3.0;
+    final len = length;
+    final wid = width;
     final lenScreen = len * zoom;
     final widScreen = wid * zoom;
     final rect = Rect.fromCenter(
@@ -104,6 +108,8 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _LateralFinAtSegmentPainter old) =>
       old.segment != segment ||
+      old.length != length ||
+      old.width != width ||
       old.highlight != highlight ||
       old.highlightForRemove != highlightForRemove;
 }
@@ -616,7 +622,7 @@ class _BodyNodesOverlayPainter extends CustomPainter {
   /// 0 = tail; null = none active (inactive look).
   final int? activeNode;
 
-  static const double _outsideOffset = 88.0;
+  static const double _outsideOffset = 48.0;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -697,6 +703,38 @@ class _SegmentWidthNodesOverlayPainter extends CustomPainter {
       old.positions.length != positions.length;
 }
 
+/// Four nodes for selected lateral fin (mirrored left/right): 0,2 = length; 1,3 = width. activeNode 0 = length, 1 = width.
+class _LateralNodesOverlayPainter extends CustomPainter {
+  _LateralNodesOverlayPainter({
+    required this.positions,
+    this.activeNode,
+  });
+
+  final List<Offset> positions;
+  final int? activeNode;
+
+  static const double nodeRadius = 14.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var i = 0; i < positions.length; i++) {
+      final active = (i == 0 || i == 2) && activeNode == 0 || (i == 1 || i == 3) && activeNode == 1;
+      final stroke = Paint()
+        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5;
+      final fill = Paint()
+        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
+      canvas.drawCircle(positions[i], nodeRadius, fill);
+      canvas.drawCircle(positions[i], nodeRadius, stroke);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LateralNodesOverlayPainter old) =>
+      old.activeNode != activeNode || old.positions.length != positions.length;
+}
+
 /// Preview: creature centered, draggable target, zoom. Optional viewport fin editing.
 class EditorPreview extends StatefulWidget {
   const EditorPreview({
@@ -720,7 +758,11 @@ class EditorPreview extends StatefulWidget {
     this.onLateralToggled,
     this.onLateralMoved,
     this.onLateralAdded,
+    this.selectedLateralFinIndex,
     this.onLateralRemoved,
+    this.onLateralFinSelected,
+    this.onLateralLengthChanged,
+    this.onLateralWidthChanged,
     this.onMouthAdded,
     this.onMouthRemoved,
   });
@@ -742,9 +784,13 @@ class EditorPreview extends StatefulWidget {
   final void Function(CaudalFinType? type)? onTailAdded;
   final void Function()? onTailRemoved;
   final void Function(int seg)? onLateralToggled;
-  final void Function(int fromSeg, int toSeg)? onLateralMoved;
+  final void Function(int fromIndex, int toSeg)? onLateralMoved;
   final void Function(int seg)? onLateralAdded;
-  final void Function(int seg)? onLateralRemoved;
+  final int? selectedLateralFinIndex;
+  final void Function(int index)? onLateralRemoved;
+  final void Function(int? index)? onLateralFinSelected;
+  final void Function(int index, double value)? onLateralLengthChanged;
+  final void Function(int index, double value)? onLateralWidthChanged;
   final void Function(MouthType? type)? onMouthAdded;
   final void Function()? onMouthRemoved;
 
@@ -774,8 +820,9 @@ class _EditorPreviewState extends State<EditorPreview>
   Offset? _mouthAddDragLocal;
   MouthDragPayload? _mouthAddDragPayload;
   bool _mouthDragFromCreature = false;
-  int? _lateralDragFromSeg;
-  int? _lateralPanStartSeg;
+  int? _lateralDragFromIndex;
+  int? _lateralPanStartIndex;
+  int? _lateralDraggingNode; // 0=length, 1=width
   double _lastPanX = 0;
   double _lastPanY = 0;
   double _panStartX = 0;
@@ -790,6 +837,8 @@ class _EditorPreviewState extends State<EditorPreview>
   double _editorPanOffsetX = 0;
   double _editorPanOffsetY = 0;
   bool _editorPanning = false;
+  bool _editorPotentialPan = false;
+  static const double _panDragSlop = 10.0;
   /// Test mode (panel closed): store touch so we refresh target from camera each tick (same as play mode).
   Offset? _editorTouchLocal;
   Size? _editorTouchScreenSize;
@@ -903,6 +952,15 @@ class _EditorPreviewState extends State<EditorPreview>
       _editorPointerCount = 0;
       _editorPanOffsetX = 0;
       _editorPanOffsetY = 0;
+    }
+    if (widget.panelClosed && !oldWidget.panelClosed) {
+      _editorPotentialPan = false;
+    }
+    final newLaterals = widget.creature.lateralFins?.length ?? 0;
+    if (_lateralDragFromIndex != null &&
+        (newLaterals == 0 || _lateralDragFromIndex! >= newLaterals)) {
+      _lateralDragFromIndex = null;
+      _lateralPanStartIndex = null;
     }
   }
 
@@ -1022,7 +1080,6 @@ class _EditorPreviewState extends State<EditorPreview>
         editTab == 2 &&
         widget.selectedDorsalFinIndex != null &&
         !widget.panelClosed;
-    final isLateralEdit = editTab == 2 && !widget.panelClosed;
     final isSpineLocked = !widget.panelClosed;
 
     return LayoutBuilder(
@@ -1057,6 +1114,10 @@ class _EditorPreviewState extends State<EditorPreview>
           if (seg < 0 || seg >= v.length) return 20.0;
           return v[seg];
         }
+
+        /// Half-width at vertex (matches CreaturePainter / widthAtVertex for lateral fin attachment).
+        double widthAtVertex(int vertexIndex) =>
+            widget.creature.widthAtVertex(vertexIndex);
 
         Rect creatureScreenBounds() {
           final pos = _spine.positions;
@@ -1108,35 +1169,56 @@ class _EditorPreviewState extends State<EditorPreview>
           return null;
         }
 
-        int? _lateralSegNearScreen(double px, double py) {
+        /// Point-in-ellipse: (px,py) in screen space, ellipse center (cx,cy), angle, semi-axes a,b in screen space.
+        bool _pointInEllipseScreen(double px, double py, double cx, double cy, double angle, double a, double b) {
+          final dx = px - cx;
+          final dy = py - cy;
+          final cosA = cos(angle);
+          final sinA = sin(angle);
+          final localX = dx * cosA + dy * sinA;
+          final localY = -dx * sinA + dy * cosA;
+          if (a <= 0 || b <= 0) return false;
+          return (localX / a) * (localX / a) + (localY / b) * (localY / b) <= 1.0;
+        }
+
+        int? _lateralIndexNearScreen(double px, double py) {
           final laterals = widget.creature.lateralFins ?? [];
           if (laterals.isEmpty || positions.length < 2) return null;
           final segAngles = _spine.segmentAngles;
           if (segAngles.isEmpty) return null;
-          final r2 = kLateralGrabRadius * kLateralGrabRadius;
+          const flareRad = 45.0 * pi / 180.0;
           double sx(double wx) => centerX + (wx - cameraX) * _zoom;
           double sy(double wy) => centerY + (wy - cameraY) * _zoom;
-          for (final seg in laterals) {
+          for (var i = 0; i < laterals.length; i++) {
+            final config = laterals[i];
+            final seg = config.segment;
             if (seg < 0 ||
                 seg >= positions.length - 1 ||
                 seg >= segAngles.length)
               continue;
-            final halfW = widthAtSegment(seg);
+            final halfW = widthAtVertex(seg);
             final aAttach = segAngles[seg];
+            final segHead = seg + 1 < segAngles.length ? seg + 1 : seg;
+            final aLock = segAngles[segHead];
+            final leftAngle = aLock + flareRad;
+            final rightAngle = aLock - flareRad;
+            final lenScreen = config.length * _zoom;
+            final widScreen = config.width * _zoom;
+            final aScreen = lenScreen / 2;
+            final bScreen = widScreen / 2;
             final pxW = positions[seg].x, pyW = positions[seg].y;
-            final leftCx = pxW + sin(aAttach) * halfW,
-                leftCy = pyW - cos(aAttach) * halfW;
-            final rightCx = pxW - sin(aAttach) * halfW,
-                rightCy = pyW + cos(aAttach) * halfW;
-            final leftSx = sx(leftCx), leftSy = sy(leftCy);
-            final rightSx = sx(rightCx), rightSy = sy(rightCy);
-            if ((px - leftSx) * (px - leftSx) + (py - leftSy) * (py - leftSy) <=
-                r2)
-              return seg;
-            if ((px - rightSx) * (px - rightSx) +
-                    (py - rightSy) * (py - rightSy) <=
-                r2)
-              return seg;
+            final leftCx = pxW + sin(aAttach) * halfW;
+            final leftCy = pyW - cos(aAttach) * halfW;
+            final rightCx = pxW - sin(aAttach) * halfW;
+            final rightCy = pyW + cos(aAttach) * halfW;
+            final leftSx = sx(leftCx);
+            final leftSy = sy(leftCy);
+            final rightSx = sx(rightCx);
+            final rightSy = sy(rightCy);
+            if (_pointInEllipseScreen(px, py, leftSx, leftSy, leftAngle, aScreen, bScreen))
+              return i;
+            if (_pointInEllipseScreen(px, py, rightSx, rightSy, rightAngle, aScreen, bScreen))
+              return i;
           }
           return null;
         }
@@ -1191,6 +1273,63 @@ class _EditorPreviewState extends State<EditorPreview>
             final o = nodes[i];
             if ((px - o.dx) * (px - o.dx) + (py - o.dy) * (py - o.dy) <=
                 _dorsalNodeRadius * _dorsalNodeRadius)
+              return i;
+          }
+          return null;
+        }
+
+        const double _lateralNodeRadius = 14.0;
+        /// Returns 4 positions: [lengthLeft, widthLeft, lengthRight, widthRight]. Index 0,2 = length; 1,3 = width.
+        List<Offset>? _lateralNodePositions() {
+          final laterals = widget.creature.lateralFins ?? [];
+          final idx = widget.selectedLateralFinIndex;
+          if (idx == null || idx >= laterals.length || positions.length < 2)
+            return null;
+          final segAngles = _spine.segmentAngles;
+          if (segAngles.isEmpty) return null;
+          final config = laterals[idx];
+          final seg = config.segment;
+          if (seg < 0 || seg >= positions.length - 1 || seg >= segAngles.length)
+            return null;
+          double sx(double wx) => centerX + (wx - cameraX) * _zoom;
+          double sy(double wy) => centerY + (wy - cameraY) * _zoom;
+          const flareRad = 45.0 * pi / 180.0;
+          final halfW = widthAtVertex(seg);
+          final aAttach = segAngles[seg];
+          final segHead = seg + 1 < segAngles.length ? seg + 1 : seg;
+          final aLock = segAngles[segHead];
+          final leftAngle = aLock + flareRad;
+          final rightAngle = aLock - flareRad;
+          final pxW = positions[seg].x, pyW = positions[seg].y;
+          final leftCx = pxW + sin(aAttach) * halfW;
+          final leftCy = pyW - cos(aAttach) * halfW;
+          final rightCx = pxW - sin(aAttach) * halfW;
+          final rightCy = pyW + cos(aAttach) * halfW;
+          // Length node on the outside of each fin; width node perpendicular.
+          final lengthLeftX = leftCx - (config.length / 2) * cos(leftAngle);
+          final lengthLeftY = leftCy - (config.length / 2) * sin(leftAngle);
+          final widthLeftX = leftCx - (config.width / 2) * sin(leftAngle);
+          final widthLeftY = leftCy + (config.width / 2) * cos(leftAngle);
+          final lengthRightX = rightCx - (config.length / 2) * cos(rightAngle);
+          final lengthRightY = rightCy - (config.length / 2) * sin(rightAngle);
+          final widthRightX = rightCx - (config.width / 2) * sin(rightAngle);
+          final widthRightY = rightCy + (config.width / 2) * cos(rightAngle);
+          return [
+            Offset(sx(lengthLeftX), sy(lengthLeftY)),
+            Offset(sx(widthLeftX), sy(widthLeftY)),
+            Offset(sx(lengthRightX), sy(lengthRightY)),
+            Offset(sx(widthRightX), sy(widthRightY)),
+          ];
+        }
+
+        /// Returns 0 or 2 = length node (left/right), 1 or 3 = width node (left/right). Caller maps to logical 0=length, 1=width.
+        int? _hitLateralNode(double px, double py) {
+          final nodes = _lateralNodePositions();
+          if (nodes == null) return null;
+          final r2 = _lateralNodeRadius * _lateralNodeRadius;
+          for (var i = 0; i < nodes.length; i++) {
+            final o = nodes[i];
+            if ((px - o.dx) * (px - o.dx) + (py - o.dy) * (py - o.dy) <= r2)
               return i;
           }
           return null;
@@ -1427,11 +1566,11 @@ class _EditorPreviewState extends State<EditorPreview>
                             _dragTargetY = worldY;
                           });
                         } else {
-                          setState(() => _editorPanning = true);
+                          setState(() => _editorPotentialPan = true);
                         }
                       }
                     } else if (editTab == 2 && !widget.panelClosed) {
-                      // Fins tab: dorsal (body then node) -> lateral -> tail -> target (same one-drag-to-remove as tail)
+                      // Parts tab: dorsal (body then node) -> lateral -> tail -> target (same one-drag-to-remove as tail)
                       final dorsalIdx = _dorsalFinIndexAtScreen(lx, ly);
                       final dorsalNode = _hitDorsalNode(lx, ly);
                       if (dorsalIdx != null && dorsalNode == null) {
@@ -1444,12 +1583,22 @@ class _EditorPreviewState extends State<EditorPreview>
                           dorsalNode != null) {
                         _dorsalDraggingNode = dorsalNode;
                       } else {
-                        final lateralSeg = _lateralSegNearScreen(lx, ly);
-                        if (lateralSeg != null) {
-                          _lateralPanStartSeg = lateralSeg;
-                          if (widget.onLateralMoved != null)
-                            _lateralDragFromSeg = lateralSeg;
-                        } else if (_isPointOnMouth(lx, ly) &&
+                        // Prioritise lateral nodes (when a lateral is selected) then lateral fin body over pan.
+                        final lateralNodeHit = widget.selectedLateralFinIndex != null
+                            ? _hitLateralNode(lx, ly)
+                            : null;
+                        final lateralNode = lateralNodeHit != null
+                            ? (lateralNodeHit == 0 || lateralNodeHit == 2 ? 0 : 1)
+                            : null;
+                        if (lateralNode != null &&
+                            widget.onLateralLengthChanged != null &&
+                            widget.onLateralWidthChanged != null) {
+                          _lateralDraggingNode = lateralNode;
+                        } else {
+                          final lateralIdx = _lateralIndexNearScreen(lx, ly);
+                          if (lateralIdx != null) {
+                            _lateralPanStartIndex = lateralIdx;
+                          } else if (_isPointOnMouth(lx, ly) &&
                             widget.creature.mouth != null &&
                             widget.onMouthRemoved != null) {
                           widget.onDorsalFinSelected?.call(null);
@@ -1475,6 +1624,7 @@ class _EditorPreviewState extends State<EditorPreview>
                               widget.creature.tail != null &&
                               widget.onTailRemoved != null) {
                             widget.onDorsalFinSelected?.call(null);
+                            widget.onLateralFinSelected?.call(null);
                             setState(() {
                               _tailSelected = true;
                               _tailDragFromCreature = true;
@@ -1487,8 +1637,9 @@ class _EditorPreviewState extends State<EditorPreview>
                               _dragTargetY = worldY;
                             });
                           } else {
-                            setState(() => _editorPanning = true);
+                            setState(() => _editorPotentialPan = true);
                           }
+                        }
                         }
                       }
                     } else if (widget.panelClosed) {
@@ -1499,7 +1650,7 @@ class _EditorPreviewState extends State<EditorPreview>
                         _dragTargetY = worldY;
                       });
                     } else {
-                      setState(() => _editorPanning = true);
+                      setState(() => _editorPotentialPan = true);
                     }
                   }
                 },
@@ -1520,13 +1671,65 @@ class _EditorPreviewState extends State<EditorPreview>
                       !_editorTouchFrozen) {
                     _editorTouchLocal = Offset(lx, ly);
                   }
+                  if (_editorPotentialPan) {
+                    final dx = lx - _panStartX;
+                    final dy = ly - _panStartY;
+                    if (dx * dx + dy * dy > _panDragSlop * _panDragSlop) {
+                      setState(() {
+                        _editorPotentialPan = false;
+                        _editorPanning = true;
+                        _lastPanX = lx;
+                        _lastPanY = ly;
+                      });
+                      return;
+                    }
+                    return;
+                  }
                   if (_editorPanning) {
                     setState(() {
-                      _editorPanOffsetX += (lx - _lastPanX) / _zoom;
-                      _editorPanOffsetY += (ly - _lastPanY) / _zoom;
+                      _editorPanOffsetX += (_lastPanX - lx) / _zoom;
+                      _editorPanOffsetY += (_lastPanY - ly) / _zoom;
                       _lastPanX = lx;
                       _lastPanY = ly;
                     });
+                    return;
+                  }
+                  if (_lateralPanStartIndex != null &&
+                      _lateralDragFromIndex == null) {
+                    final dx = lx - _panStartX;
+                    final dy = ly - _panStartY;
+                    if (dx * dx + dy * dy >
+                        _EditorPreviewState._panDragSlop *
+                            _EditorPreviewState._panDragSlop) {
+                      setState(() => _lateralDragFromIndex = _lateralPanStartIndex);
+                    }
+                  }
+                  if (_lateralDraggingNode != null &&
+                      widget.selectedLateralFinIndex != null) {
+                    const scale = 0.2;
+                    final idx = widget.selectedLateralFinIndex!;
+                    final delta = (ly - _lastPanY) * scale;
+                    final laterals = widget.creature.lateralFins!;
+                    if (idx < laterals.length) {
+                      if (_lateralDraggingNode == 0 &&
+                          widget.onLateralLengthChanged != null) {
+                        final v = (laterals[idx].length + delta).clamp(
+                          LateralFinConfig.lengthMin,
+                          LateralFinConfig.lengthMax,
+                        );
+                        widget.onLateralLengthChanged!(idx, v);
+                      } else if (_lateralDraggingNode == 1 &&
+                          widget.onLateralWidthChanged != null) {
+                        final v = (laterals[idx].width + delta).clamp(
+                          LateralFinConfig.widthMin,
+                          LateralFinConfig.widthMax,
+                        );
+                        widget.onLateralWidthChanged!(idx, v);
+                      }
+                    }
+                    _lastPanX = lx;
+                    _lastPanY = ly;
+                    setState(() {});
                     return;
                   }
                   _lastPanX = lx;
@@ -1639,7 +1842,9 @@ class _EditorPreviewState extends State<EditorPreview>
                   if (_bodyDraggingNode != null ||
                       _dorsalDragFromFin ||
                       _dorsalDragStartSeg != null ||
-                      _lateralDragFromSeg != null ||
+                      _lateralDragFromIndex != null ||
+                      _lateralDraggingNode != null ||
+                      _lateralPanStartIndex != null ||
                       _mouthDragFromCreature)
                     return;
                   if (isSpineLocked) return;
@@ -1654,6 +1859,15 @@ class _EditorPreviewState extends State<EditorPreview>
                 onScaleEnd: (_) {
                   if (_editorPanning) {
                     setState(() => _editorPanning = false);
+                    return;
+                  }
+                  if (_editorPotentialPan) {
+                    setState(() {
+                      _editorPotentialPan = false;
+                      _tailSelected = false;
+                    });
+                    widget.onDorsalFinSelected?.call(null);
+                    widget.onLateralFinSelected?.call(null);
                     return;
                   }
                   _pinchStartZoom = null;
@@ -1730,21 +1944,50 @@ class _EditorPreviewState extends State<EditorPreview>
                     setState(() => _dorsalDragStartSeg = null);
                     return;
                   }
-                  if (_lateralDragFromSeg != null) {
+                  if (_lateralDragFromIndex != null) {
                     final releaseInBounds = _finRemoveBounds().contains(
                       Offset(_lastPanX, _lastPanY),
                     );
                     if (!releaseInBounds && widget.onLateralRemoved != null) {
-                      widget.onLateralRemoved!(_lateralDragFromSeg!);
+                      widget.onLateralRemoved!(_lateralDragFromIndex!);
                     } else if (releaseInBounds &&
                         widget.onLateralMoved != null) {
                       final seg = segmentAtScreen(_lastPanX, _lastPanY);
-                      widget.onLateralMoved!(_lateralDragFromSeg!, seg);
+                      widget.onLateralMoved!(_lateralDragFromIndex!, seg);
                     }
                     setState(() {
-                      _lateralDragFromSeg = null;
-                      _lateralPanStartSeg = null;
+                      _lateralDragFromIndex = null;
+                      _lateralPanStartIndex = null;
                     });
+                    return;
+                  }
+                  if (_lateralDraggingNode != null) {
+                    final laterals = widget.creature.lateralFins ?? [];
+                    final releaseInBounds = _finRemoveBounds().contains(
+                      Offset(_lastPanX, _lastPanY),
+                    );
+                    if (laterals.length == 1 &&
+                        !releaseInBounds &&
+                        widget.onLateralRemoved != null) {
+                      widget.onLateralRemoved!(0);
+                      widget.onLateralFinSelected?.call(null);
+                    }
+                    setState(() => _lateralDraggingNode = null);
+                    return;
+                  }
+                  if (_lateralPanStartIndex != null) {
+                    final dist2 =
+                        (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
+                        (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
+                    if (dist2 < 100) {
+                      widget.onLateralFinSelected?.call(_lateralPanStartIndex);
+                      setState(() {
+                        _tailSelected = false;
+                        _lateralPanStartIndex = null;
+                      });
+                    } else {
+                      setState(() => _lateralPanStartIndex = null);
+                    }
                     return;
                   }
                   if (editTab == 2 && widget.onDorsalFinSelected != null) {
@@ -1769,20 +2012,6 @@ class _EditorPreviewState extends State<EditorPreview>
                         setState(() {});
                       }
                     }
-                  }
-                  if (isLateralEdit && _lateralPanStartSeg != null) {
-                    final dist2 =
-                        (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
-                        (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
-                    if (dist2 < 100) {
-                      final laterals = widget.creature.lateralFins ?? [];
-                      if (laterals.contains(_lateralPanStartSeg!) &&
-                          widget.onLateralRemoved != null) {
-                        widget.onLateralRemoved!(_lateralPanStartSeg!);
-                      }
-                    }
-                    setState(() => _lateralPanStartSeg = null);
-                    return;
                   }
                   final tapDist2 =
                       (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
@@ -1843,6 +2072,19 @@ class _EditorPreviewState extends State<EditorPreview>
                       cameraY: cameraY,
                       zoom: _zoom,
                       activeSegment: _bodyWidthDragSeg,
+                    ),
+                    size: Size(w, h),
+                  ),
+                ),
+              ),
+            if (widget.selectedLateralFinIndex != null &&
+                _lateralNodePositions() != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _LateralNodesOverlayPainter(
+                      positions: _lateralNodePositions()!,
+                      activeNode: _lateralDraggingNode,
                     ),
                     size: Size(w, h),
                   ),
@@ -2067,6 +2309,8 @@ class _EditorPreviewState extends State<EditorPreview>
                         _lateralAddDragLocal!.dx,
                         _lateralAddDragLocal!.dy,
                       ),
+                      length: LateralFinConfig.lengthDefault,
+                      width: LateralFinConfig.widthDefault,
                       positions: positions,
                       segmentAngles: _spine.segmentAngles,
                       centerX: centerX,
@@ -2074,7 +2318,7 @@ class _EditorPreviewState extends State<EditorPreview>
                       cameraX: cameraX,
                       cameraY: cameraY,
                       zoom: _zoom,
-                      segWidth: widthAtSegment(
+                      segWidth: widthAtVertex(
                         segmentAtScreen(
                           _lateralAddDragLocal!.dx,
                           _lateralAddDragLocal!.dy,
@@ -2094,7 +2338,9 @@ class _EditorPreviewState extends State<EditorPreview>
                 ),
               ),
             ],
-            if (_lateralDragFromSeg != null) ...[
+            if (_lateralDragFromIndex != null &&
+                widget.creature.lateralFins != null &&
+                _lateralDragFromIndex! < widget.creature.lateralFins!.length) ...[
               if (_finRemoveBounds().contains(Offset(_lastPanX, _lastPanY)))
                 Positioned.fill(
                   child: IgnorePointer(
@@ -2104,6 +2350,12 @@ class _EditorPreviewState extends State<EditorPreview>
                           _lastPanX,
                           _lastPanY,
                         ).clamp(0, positions.length - 2),
+                        length: _lateralDragFromIndex! < (widget.creature.lateralFins?.length ?? 0)
+                            ? widget.creature.lateralFins![_lateralDragFromIndex!].length
+                            : LateralFinConfig.lengthDefault,
+                        width: _lateralDragFromIndex! < (widget.creature.lateralFins?.length ?? 0)
+                            ? widget.creature.lateralFins![_lateralDragFromIndex!].width
+                            : LateralFinConfig.widthDefault,
                         positions: positions,
                         segmentAngles: _spine.segmentAngles,
                         centerX: centerX,
@@ -2111,7 +2363,7 @@ class _EditorPreviewState extends State<EditorPreview>
                         cameraX: cameraX,
                         cameraY: cameraY,
                         zoom: _zoom,
-                        segWidth: widthAtSegment(
+                        segWidth: widthAtVertex(
                           segmentAtScreen(
                             _lastPanX,
                             _lastPanY,
@@ -2135,7 +2387,15 @@ class _EditorPreviewState extends State<EditorPreview>
                   child: IgnorePointer(
                     child: CustomPaint(
                       painter: _LateralFinAtSegmentPainter(
-                        segment: _lateralDragFromSeg!,
+                        segment: _lateralDragFromIndex! < (widget.creature.lateralFins?.length ?? 0)
+                            ? widget.creature.lateralFins![_lateralDragFromIndex!].segment
+                            : 0,
+                        length: _lateralDragFromIndex! < (widget.creature.lateralFins?.length ?? 0)
+                            ? widget.creature.lateralFins![_lateralDragFromIndex!].length
+                            : LateralFinConfig.lengthDefault,
+                        width: _lateralDragFromIndex! < (widget.creature.lateralFins?.length ?? 0)
+                            ? widget.creature.lateralFins![_lateralDragFromIndex!].width
+                            : LateralFinConfig.widthDefault,
                         positions: positions,
                         segmentAngles: _spine.segmentAngles,
                         centerX: centerX,
@@ -2143,7 +2403,11 @@ class _EditorPreviewState extends State<EditorPreview>
                         cameraX: cameraX,
                         cameraY: cameraY,
                         zoom: _zoom,
-                        segWidth: widthAtSegment(_lateralDragFromSeg!),
+                        segWidth: widthAtVertex(
+                          _lateralDragFromIndex! < (widget.creature.lateralFins?.length ?? 0)
+                              ? widget.creature.lateralFins![_lateralDragFromIndex!].segment
+                              : 0,
+                        ),
                         finColor: widget.creature.finColor != null
                             ? Color(widget.creature.finColor!)
                             : Color.lerp(

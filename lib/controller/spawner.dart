@@ -100,13 +100,17 @@ class Spawner {
 
   double _inRange(double min, double max) => min + _rng.nextDouble() * (max - min);
 
-  /// ~1/6 chance per segment (excluding head) to get a lateral fin.
-  List<int>? _randomLateralFins(int segmentCount) {
+  /// ~1/6 chance per segment (excluding head) to get a lateral fin with default or random size in range.
+  List<LateralFinConfig>? _randomLateralFins(int segmentCount) {
     final n = segmentCount;
     if (n < 1) return null;
-    final list = <int>[];
+    final list = <LateralFinConfig>[];
     for (var seg = 0; seg < n; seg++) {
-      if (_rng.nextDouble() < 1 / 6) list.add(seg);
+      if (_rng.nextDouble() < 1 / 6) {
+        final length = _inRange(LateralFinConfig.lengthMin, LateralFinConfig.lengthMax);
+        final width = _inRange(LateralFinConfig.widthMin, LateralFinConfig.widthMax);
+        list.add(LateralFinConfig(seg, length: length, width: width));
+      }
     }
     return list.isEmpty ? null : list;
   }
