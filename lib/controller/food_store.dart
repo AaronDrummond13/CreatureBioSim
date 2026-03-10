@@ -67,14 +67,19 @@ class FoodStore {
         count++;
       }
     }
+    // Match food_painter rotation so collision matches visual position of attached cells.
+    const rotationSpeed = 0.12;
     for (final item in _items) {
       if (!item.isGiant || item.attachedOffsets == null || item.attachedOffsets!.isEmpty) continue;
       if (allowedCellTypes != null && !allowedCellTypes.contains(CellType.plant)) continue;
       final list = item.attachedOffsets!;
+      final angle = (timeSeconds ?? 0) * rotationSpeed * item.rotationSign + item.rotationPhase;
+      final c = cos(angle);
+      final s = sin(angle);
       for (var j = list.length - 1; j >= 0; j--) {
         final (ox, oy) = list[j];
-        final ax = item.x + ox;
-        final ay = item.y + oy;
+        final ax = item.x + (c * ox - s * oy);
+        final ay = item.y + (s * ox + c * oy);
         final ddx = ax - headX;
         final ddy = ay - headY;
         if (ddx * ddx + ddy * ddy <= r2) {
