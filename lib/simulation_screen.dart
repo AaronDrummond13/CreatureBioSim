@@ -10,6 +10,7 @@ import 'package:creature_bio_sim/render/background_painter.dart'
     show BackgroundPainter, SolidBackgroundPainter;
 import 'package:creature_bio_sim/render/creature_painter.dart';
 import 'package:creature_bio_sim/render/food_painter.dart';
+import 'package:creature_bio_sim/render/inner_body_cloud_painter.dart';
 import 'package:creature_bio_sim/render/joystick_overlay_painter.dart';
 import 'package:creature_bio_sim/render/mammoth_painter.dart';
 import 'package:creature_bio_sim/simulation/camera_follow.dart';
