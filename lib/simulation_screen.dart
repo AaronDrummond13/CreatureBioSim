@@ -651,6 +651,14 @@ class _SimulationScreenState extends State<SimulationScreen>
                       }
                     },
                     onScaleStart: (details) {
+                      if (details.pointerCount >= 2) {
+                        final pos = _spine.positions;
+                        if (pos.isNotEmpty) {
+                          final head = pos.last;
+                          _viewState.touchX = head.x;
+                          _viewState.touchY = head.y;
+                        }
+                      }
                       _viewState.startPinch(details.pointerCount >= 2);
                     },
                     onScaleUpdate: (details) {
