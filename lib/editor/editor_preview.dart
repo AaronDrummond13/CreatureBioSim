@@ -10,6 +10,7 @@ import 'package:creature_bio_sim/render/view.dart';
 import 'package:creature_bio_sim/simulation/camera_follow.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:creature_bio_sim/simulation_view_state.dart';
 import 'package:creature_bio_sim/editor/editor_shared.dart';
 import 'package:creature_bio_sim/editor/editor_style.dart';
 
@@ -647,6 +648,55 @@ class _BodyNodesOverlayPainter extends CustomPainter {
       old.activeNode != activeNode;
 }
 
+/// One node per spine segment for width edit: drag up = grow, down = shrink.
+class _SegmentWidthNodesOverlayPainter extends CustomPainter {
+  _SegmentWidthNodesOverlayPainter({
+    required this.positions,
+    required this.centerX,
+    required this.centerY,
+    required this.cameraX,
+    required this.cameraY,
+    required this.zoom,
+    this.activeSegment,
+  });
+
+  final List<Vector2> positions;
+  final double centerX;
+  final double centerY;
+  final double cameraX;
+  final double cameraY;
+  final double zoom;
+  final int? activeSegment;
+
+  static const double nodeRadius = 18.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (positions.length < 2) return;
+    final n = positions.length - 1;
+    for (var seg = 0; seg < n; seg++) {
+      final cx = (positions[seg].x + positions[seg + 1].x) / 2;
+      final cy = (positions[seg].y + positions[seg + 1].y) / 2;
+      final sx = centerX + (cx - cameraX) * zoom;
+      final sy = centerY + (cy - cameraY) * zoom;
+      final active = activeSegment == seg;
+      final stroke = Paint()
+        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5;
+      final fill = Paint()
+        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
+      canvas.drawCircle(Offset(sx, sy), nodeRadius, fill);
+      canvas.drawCircle(Offset(sx, sy), nodeRadius, stroke);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SegmentWidthNodesOverlayPainter old) =>
+      old.activeSegment != activeSegment ||
+      old.positions.length != positions.length;
+}
+
 /// Preview: creature centered, draggable target, zoom. Optional viewport fin editing.
 class EditorPreview extends StatefulWidget {
   const EditorPreview({
@@ -707,14 +757,14 @@ class _EditorPreviewState extends State<EditorPreview>
   late Spine _spine;
   double _dragTargetX = 0;
   double _dragTargetY = 0;
-  double _zoom = 1.0;
+  double _zoom = 1.5;
   late Ticker _ticker;
   int? _dorsalDragStartSeg;
   bool _dorsalDragFromFin = false;
   int? _dorsalDraggingNode; // 0=start, 1=end, 2=height
   int? _bodyDraggingNode; // 0=tail
   int? _bodyWidthDragSeg;
-  double _bodyWidthDragLastDist = 0;
+  double _bodyWidthDragLastPanY = 0;
   int? _tailDraggingNode; // 0=root, 1=max, 2=length
   double _tailDragStartValue = 0;
   bool _tailDragFromCreature = false;
@@ -737,6 +787,9 @@ class _EditorPreviewState extends State<EditorPreview>
   double _editorCameraX = 0;
   double _editorCameraY = 0;
   bool _editorCameraInitialized = false;
+  double _editorPanOffsetX = 0;
+  double _editorPanOffsetY = 0;
+  bool _editorPanning = false;
   /// Test mode (panel closed): store touch so we refresh target from camera each tick (same as play mode).
   Offset? _editorTouchLocal;
   Size? _editorTouchScreenSize;
@@ -803,8 +856,8 @@ class _EditorPreviewState extends State<EditorPreview>
     return best.clamp(0, _spine.segmentCount - 1);
   }
 
-  static const double _minZoom = 0.4;
-  static const double _maxZoom = 2.5;
+  static double get _minZoom => SimulationViewState.minZoom;
+  static double get _maxZoom => SimulationViewState.maxZoom;
   static const double _zoomStep = 0.15;
 
   /// Same as SimulationScreen: fixed distance per step so speed is constant.
@@ -848,6 +901,8 @@ class _EditorPreviewState extends State<EditorPreview>
       _editorTouchScreenSize = null;
       _editorTouchFrozen = false;
       _editorPointerCount = 0;
+      _editorPanOffsetX = 0;
+      _editorPanOffsetY = 0;
     }
   }
 
@@ -946,13 +1001,14 @@ class _EditorPreviewState extends State<EditorPreview>
     double cameraX = 0.0;
     double cameraY = 0.0;
     if (positions.isNotEmpty) {
-      final head = positions.last;
       if (widget.panelClosed) {
         cameraX = _editorCameraX;
         cameraY = _editorCameraY;
       } else {
-        cameraX = head.x;
-        cameraY = head.y;
+        final mid = positions.length ~/ 2;
+        final central = positions[mid];
+        cameraX = central.x + _editorPanOffsetX;
+        cameraY = central.y + _editorPanOffsetY;
       }
     }
     _lastCameraX = cameraX;
@@ -1141,6 +1197,22 @@ class _EditorPreviewState extends State<EditorPreview>
         }
 
         const double _bodyNodeRadius = 24.0;
+        int? _hitSegmentWidthNode(double px, double py) {
+          if (positions.length < 2 || widget.onSegmentWidthDelta == null)
+            return null;
+          final r2 = _SegmentWidthNodesOverlayPainter.nodeRadius *
+              _SegmentWidthNodesOverlayPainter.nodeRadius;
+          final n = positions.length - 1;
+          for (var seg = 0; seg < n; seg++) {
+            final cx = (positions[seg].x + positions[seg + 1].x) / 2;
+            final cy = (positions[seg].y + positions[seg + 1].y) / 2;
+            final sx = centerX + (cx - cameraX) * _zoom;
+            final sy = centerY + (cy - cameraY) * _zoom;
+            if ((px - sx) * (px - sx) + (py - sy) * (py - sy) <= r2)
+              return seg;
+          }
+          return null;
+        }
         int? _hitBodyNode(double px, double py) {
           if (positions.length < 2) return null;
           const out = _BodyNodesOverlayPainter._outsideOffset;
@@ -1338,33 +1410,25 @@ class _EditorPreviewState extends State<EditorPreview>
                     }
                     if (isBodyEdit) {
                       final node = _hitBodyNode(lx, ly);
+                      final segNode = _hitSegmentWidthNode(lx, ly);
                       if (node != null &&
                           widget.onSegmentCountChanged != null) {
                         _bodyDraggingNode = node;
-                      } else if (node == null &&
+                      } else if (segNode != null &&
                           widget.onSegmentWidthDelta != null) {
-                        _bodyWidthDragSeg = segmentAtScreen(
-                          lx,
-                          ly,
-                        ).clamp(0, _spine.segmentCount - 1);
-                        final seg = _bodyWidthDragSeg!;
-                        final pos = _spine.positions;
-                        if (seg < pos.length - 1) {
-                          final cx = (pos[seg].x + pos[seg + 1].x) / 2;
-                          final cy = (pos[seg].y + pos[seg + 1].y) / 2;
-                          final sx = centerX + (cx - cameraX) * _zoom;
-                          final sy = centerY + (cy - cameraY) * _zoom;
-                          _bodyWidthDragLastDist = sqrt(
-                            (lx - sx) * (lx - sx) + (ly - sy) * (ly - sy),
-                          );
+                        _bodyWidthDragSeg = segNode;
+                        _bodyWidthDragLastPanY = ly;
+                      } else {
+                        if (widget.panelClosed) {
+                          final worldX = (lx - centerX) / _zoom + cameraX;
+                          final worldY = (ly - centerY) / _zoom + cameraY;
+                          setState(() {
+                            _dragTargetX = worldX;
+                            _dragTargetY = worldY;
+                          });
+                        } else {
+                          setState(() => _editorPanning = true);
                         }
-                      } else if (node == null) {
-                        final worldX = (lx - centerX) / _zoom + cameraX;
-                        final worldY = (ly - centerY) / _zoom + cameraY;
-                        setState(() {
-                          _dragTargetX = worldX;
-                          _dragTargetY = worldY;
-                        });
                       }
                     } else if (editTab == 2 && !widget.panelClosed) {
                       // Fins tab: dorsal (body then node) -> lateral -> tail -> target (same one-drag-to-remove as tail)
@@ -1415,23 +1479,27 @@ class _EditorPreviewState extends State<EditorPreview>
                               _tailSelected = true;
                               _tailDragFromCreature = true;
                             });
-                          } else if (!isSpineLocked) {
+                          } else if (widget.panelClosed) {
                             final worldX = (lx - centerX) / _zoom + cameraX;
                             final worldY = (ly - centerY) / _zoom + cameraY;
                             setState(() {
                               _dragTargetX = worldX;
                               _dragTargetY = worldY;
                             });
+                          } else {
+                            setState(() => _editorPanning = true);
                           }
                         }
                       }
-                    } else if (!isSpineLocked) {
+                    } else if (widget.panelClosed) {
                       final worldX = (lx - centerX) / _zoom + cameraX;
                       final worldY = (ly - centerY) / _zoom + cameraY;
                       setState(() {
                         _dragTargetX = worldX;
                         _dragTargetY = worldY;
                       });
+                    } else {
+                      setState(() => _editorPanning = true);
                     }
                   }
                 },
@@ -1451,6 +1519,15 @@ class _EditorPreviewState extends State<EditorPreview>
                       d.pointerCount == 1 &&
                       !_editorTouchFrozen) {
                     _editorTouchLocal = Offset(lx, ly);
+                  }
+                  if (_editorPanning) {
+                    setState(() {
+                      _editorPanOffsetX += (lx - _lastPanX) / _zoom;
+                      _editorPanOffsetY += (ly - _lastPanY) / _zoom;
+                      _lastPanX = lx;
+                      _lastPanY = ly;
+                    });
+                    return;
                   }
                   _lastPanX = lx;
                   _lastPanY = ly;
@@ -1551,23 +1628,11 @@ class _EditorPreviewState extends State<EditorPreview>
                   }
                   if (_bodyWidthDragSeg != null &&
                       widget.onSegmentWidthDelta != null) {
-                    const scale = 0.15;
+                    const scale = 0.2;
                     final seg = _bodyWidthDragSeg!;
-                    final pos = positions;
-                    if (seg < pos.length - 1) {
-                      final cx = (pos[seg].x + pos[seg + 1].x) / 2;
-                      final cy = (pos[seg].y + pos[seg + 1].y) / 2;
-                      final sx = centerX + (cx - cameraX) * _zoom;
-                      final sy = centerY + (cy - cameraY) * _zoom;
-                      final currentDist = sqrt(
-                        (_lastPanX - sx) * (_lastPanX - sx) +
-                            (_lastPanY - sy) * (_lastPanY - sy),
-                      );
-                      final delta =
-                          (currentDist - _bodyWidthDragLastDist) * scale;
-                      widget.onSegmentWidthDelta!(seg, delta);
-                      _bodyWidthDragLastDist = currentDist;
-                    }
+                    final delta = (_bodyWidthDragLastPanY - ly) * scale;
+                    widget.onSegmentWidthDelta!(seg, delta);
+                    _bodyWidthDragLastPanY = ly;
                     setState(() {});
                     return;
                   }
@@ -1587,6 +1652,10 @@ class _EditorPreviewState extends State<EditorPreview>
                   });
                 },
                 onScaleEnd: (_) {
+                  if (_editorPanning) {
+                    setState(() => _editorPanning = false);
+                    return;
+                  }
                   _pinchStartZoom = null;
                   if (widget.panelClosed) {
                     _editorTouchLocal = null;
@@ -1757,6 +1826,23 @@ class _EditorPreviewState extends State<EditorPreview>
                       cameraY: cameraY,
                       zoom: _zoom,
                       activeNode: _bodyDraggingNode,
+                    ),
+                    size: Size(w, h),
+                  ),
+                ),
+              ),
+            if (isBodyEdit && widget.onSegmentWidthDelta != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _SegmentWidthNodesOverlayPainter(
+                      positions: positions,
+                      centerX: centerX,
+                      centerY: centerY,
+                      cameraX: cameraX,
+                      cameraY: cameraY,
+                      zoom: _zoom,
+                      activeSegment: _bodyWidthDragSeg,
                     ),
                     size: Size(w, h),
                   ),
