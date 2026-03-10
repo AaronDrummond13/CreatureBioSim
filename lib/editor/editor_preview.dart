@@ -1,4 +1,4 @@
-import 'dart:math' show atan2, cos, pi, sin, sqrt;
+import 'dart:math' show cos, pi, sin, sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 import 'package:creature_bio_sim/creature.dart';
@@ -7,8 +7,6 @@ import 'package:creature_bio_sim/render/creature_painter.dart';
 import 'package:creature_bio_sim/render/mouth_painter.dart' show paintMouth;
 import 'package:creature_bio_sim/render/tail_painter.dart';
 import 'package:creature_bio_sim/render/view.dart';
-import 'package:creature_bio_sim/simulation/angle_util.dart'
-    show relativeAngleDiff;
 import 'package:creature_bio_sim/simulation/camera_follow.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
@@ -812,7 +810,6 @@ class _EditorPreviewState extends State<EditorPreview>
   /// Same as SimulationScreen: fixed distance per step so speed is constant.
   static const double _headMoveSpeed = 4.5;
   static const double _arrivalThreshold = 20.0;
-  static const double _kGlobalTurnNudge = 0.000000001;
 
   /// Fixed sim step so editor movement matches play mode speed (60 steps/sec).
   static const double _kFixedDt = 1 / 60.0;
@@ -834,7 +831,7 @@ class _EditorPreviewState extends State<EditorPreview>
   @override
   void didUpdateWidget(covariant EditorPreview oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.creature.segmentCount != widget.creature.segmentCount) {
+    if (_spine.segmentCount != widget.creature.segmentCount) {
       _spine = Spine(segmentCount: widget.creature.segmentCount);
       _positionSpineHeadAtOrigin();
       final head = _spine.positions.isNotEmpty ? _spine.positions.last : null;
@@ -916,21 +913,6 @@ class _EditorPreviewState extends State<EditorPreview>
             intendedTargetX: _dragTargetX,
             intendedTargetY: _dragTargetY,
           );
-          if (_spine.segmentCount >= 2) {
-            final headPos = _spine.positions.last;
-            final headDir = _spine.segmentAngles.last;
-            final towardTouch = atan2(
-              _dragTargetY - headPos.y,
-              _dragTargetX - headPos.x,
-            );
-            final turn = relativeAngleDiff(headDir, towardTouch);
-            if (turn.abs() > _spine.maxJointAngleRad) {
-              final nudge = turn.abs() < _kGlobalTurnNudge
-                  ? turn
-                  : (turn > 0 ? _kGlobalTurnNudge : -_kGlobalTurnNudge);
-              _spine.rotateAroundBase(nudge);
-            }
-          }
         }
       }
     }

@@ -12,8 +12,6 @@ import 'package:creature_bio_sim/render/creature_painter.dart';
 import 'package:creature_bio_sim/render/food_painter.dart';
 import 'package:creature_bio_sim/render/joystick_overlay_painter.dart';
 import 'package:creature_bio_sim/render/mammoth_painter.dart';
-import 'package:creature_bio_sim/simulation/angle_util.dart'
-    show relativeAngleDiff;
 import 'package:creature_bio_sim/simulation/camera_follow.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation_view_state.dart';
@@ -76,9 +74,6 @@ class _SimulationScreenState extends State<SimulationScreen>
   /// Fixed simulation timestep (seconds). Game logic runs at this rate regardless of display FPS.
   static const double _kSimFixedDt = 1 / 60.0;
   static const int _kMaxSimStepsPerFrame = 5;
-
-  /// When neck is at bend limit, nudge whole creature this much (rad) toward touch per step. Only tuning for tight turns.
-  static const double _kGlobalTurnNudge = 0.000000001;
 
   /// Fixed target distance from head when using joystick (angle only).
   static const double _kJoystickTargetDistance = 120.0;
@@ -226,22 +221,6 @@ class _SimulationScreenState extends State<SimulationScreen>
             intendedTargetX: _viewState.touchX,
             intendedTargetY: _viewState.touchY,
           );
-          // When moving, nudge whole creature if turn is sharper than one joint allows.
-          if (_spine.segmentCount >= 2) {
-            final headPos = _spine.positions.last;
-            final headDir = _spine.segmentAngles.last;
-            final towardTouch = atan2(
-              _viewState.touchY - headPos.y,
-              _viewState.touchX - headPos.x,
-            );
-            final turn = relativeAngleDiff(headDir, towardTouch);
-            if (turn.abs() > _spine.maxJointAngleRad) {
-              final nudge = turn.abs() < _kGlobalTurnNudge
-                  ? turn
-                  : (turn > 0 ? _kGlobalTurnNudge : -_kGlobalTurnNudge);
-              _spine.rotateAroundBase(nudge);
-            }
-          }
         }
 
         final headAfter = _spine.positions.last;

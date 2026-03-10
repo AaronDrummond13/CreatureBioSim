@@ -134,20 +134,27 @@ class Spine {
     }
   }
 
-  /// Rotates the entire creature around its base (first node) by [angleRad].
+  /// Rotates the entire creature around its center of mass (average of node positions) by [angleRad].
   /// Updates both node positions and segment angles so state stays consistent.
   /// Use when neck is at bend limit to "make up the difference" with global turn.
   void rotateAroundBase(double angleRad) {
     if (nodes.isEmpty) return;
-    final base = nodes[0].position;
+    var cx = 0.0;
+    var cy = 0.0;
+    for (final n in nodes) {
+      cx += n.position.x;
+      cy += n.position.y;
+    }
+    cx /= nodes.length;
+    cy /= nodes.length;
     final c = math.cos(angleRad);
     final s = math.sin(angleRad);
-    for (var i = 1; i < nodes.length; i++) {
-      final p = nodes[i].position;
-      final dx = p.x - base.x;
-      final dy = p.y - base.y;
-      p.x = base.x + dx * c - dy * s;
-      p.y = base.y + dx * s + dy * c;
+    for (final n in nodes) {
+      final p = n.position;
+      final dx = p.x - cx;
+      final dy = p.y - cy;
+      p.x = cx + dx * c - dy * s;
+      p.y = cy + dx * s + dy * c;
     }
     for (var i = 0; i < _segmentAngles.length; i++) {
       _segmentAngles[i] = simplifyAngle(_segmentAngles[i] + angleRad);
