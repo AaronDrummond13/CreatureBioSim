@@ -235,11 +235,11 @@ class FoodStore {
             !_tooCloseInChunk(i, j, x, y, giantPlantRadiusWorld)) {
           final nux = (_random.nextDouble() * 2 - 1) * giantPlantRadiusWorld * 0.08;
           final nuy = (_random.nextDouble() * 2 - 1) * giantPlantRadiusWorld * 0.08;
-          const int sides = 6;
           const double outFrac = 1.08;
+          final count = 2 + _random.nextInt(5);
           final offsets = <(double, double)>[];
-          for (var vi = 0; vi < sides; vi++) {
-            final angle = (vi / sides) * 2 * pi - pi / 2;
+          for (var vi = 0; vi < count; vi++) {
+            final angle = (vi / count) * 2 * pi - pi / 2;
             offsets.add((giantPlantRadiusWorld * outFrac * cos(angle), giantPlantRadiusWorld * outFrac * sin(angle)));
           }
           _items.add(

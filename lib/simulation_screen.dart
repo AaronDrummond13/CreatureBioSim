@@ -164,6 +164,7 @@ class _SimulationScreenState extends State<SimulationScreen>
       final headCollision = headSize * _kHeadMouthSizeFrac;
       for (final e in _creatureStore.entities) {
         if (!e.isEpic) continue;
+        if (e.creature.trophicType == TrophicType.herbivore) continue;
         final ep = e.spine.positions;
         if (ep.isEmpty) continue;
         final ex = ep.last.x;
