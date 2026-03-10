@@ -1,4 +1,4 @@
-import 'dart:math' show cos, pi, sin;
+import 'dart:math' show cos, pi, sin, sqrt;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -105,6 +105,31 @@ class CreaturePainter extends CustomPainter {
         ? _fallbackWidth.clamp(Creature.minVertexWidth, Creature.maxVertexWidth)
         : creature.widthAtVertex(i);
     return w * _bodyScale;
+  }
+
+  /// Appends a cubic Bézier cap from [p0] to [p1] with tangent continuity. [exitDir] at p0 and
+  /// [entryDir] at p1 (unnormalized); [radius] scales the control point distance (e.g. cap radius).
+  /// Uses k=0.72 so caps bulge smoothly (round ball) without pinching at the tip.
+  static void _appendCubicCap(
+    Path path,
+    Offset p0,
+    Offset p1,
+    Offset exitDir,
+    Offset entryDir,
+    double radius,
+  ) {
+    const k = 0.72; // rounder than 0.55 to avoid pinched ends
+    final exitLen = sqrt(exitDir.dx * exitDir.dx + exitDir.dy * exitDir.dy);
+    final entryLen = sqrt(entryDir.dx * entryDir.dx + entryDir.dy * entryDir.dy);
+    final uExit = exitLen >= 1e-6
+        ? Offset(exitDir.dx / exitLen, exitDir.dy / exitLen)
+        : Offset.zero;
+    final uEntry = entryLen >= 1e-6
+        ? Offset(entryDir.dx / entryLen, entryDir.dy / entryLen)
+        : Offset.zero;
+    final c0 = Offset(p0.dx + k * radius * uExit.dx, p0.dy + k * radius * uExit.dy);
+    final c1 = Offset(p1.dx - k * radius * uEntry.dx, p1.dy - k * radius * uEntry.dy);
+    path.cubicTo(c0.dx, c0.dy, c1.dx, c1.dy, p1.dx, p1.dy);
   }
 
   /// Smooth outline so both sides stay symmetric (no center split). Uses spine and half-offsets:
@@ -219,12 +244,6 @@ class CreaturePainter extends CustomPainter {
       tailCenter.dy + tailWWorld * z * sin(tailA + 3 * pi / 2),
     );
     path.moveTo(tailLeft.dx, tailLeft.dy);
-    path.arcTo(
-      Rect.fromCircle(center: tailCenter, radius: tailWWorld * z),
-      tailA + 3 * pi / 2,
-      -pi,
-      false,
-    );
     final rightSide = <Offset>[for (var i = 0; i <= n; i++) rightAt(i)];
     final leftSide = <Offset>[for (var i = n; i >= 0; i--) leftAt(i)];
     final rightOut = <Offset>[];
@@ -235,14 +254,49 @@ class CreaturePainter extends CustomPainter {
       rightOut.addAll(rightSide);
       leftOut.addAll(leftSide);
     }
-    appendSmoothCurve(path, rightOut, tension, closed: false);
-    final headCenter = Offset(sx(positions[n].x), sy(positions[n].y));
-    path.arcTo(
-      Rect.fromCircle(center: headCenter, radius: headWWorld * z),
-      headA + pi / 2,
-      -pi,
-      false,
+    final tailRadius = tailWWorld * z;
+    final tailTip = Offset(
+      tailCenter.dx - tailRadius * cos(tailA),
+      tailCenter.dy - tailRadius * sin(tailA),
     );
+    final tailLeftTangent = Offset(
+      leftOut.last.dx - leftOut[leftOut.length - 2].dx,
+      leftOut.last.dy - leftOut[leftOut.length - 2].dy,
+    );
+    CreaturePainter._appendCubicCap(
+      path,
+      tailLeft,
+      tailTip,
+      tailLeftTangent,
+      Offset(-sin(tailA), cos(tailA)),
+      tailRadius,
+    );
+    CreaturePainter._appendCubicCap(
+      path,
+      tailTip,
+      rightOut.first,
+      Offset(-sin(tailA), cos(tailA)),
+      Offset(rightOut[1].dx - rightOut[0].dx, rightOut[1].dy - rightOut[0].dy),
+      tailRadius,
+    );
+    appendSmoothCurve(path, rightOut, tension, closed: false);
+    final headRadius = headWWorld * z;
+    final headCenter = Offset(sx(positions[n].x), sy(positions[n].y));
+    final headTip = Offset(
+      headCenter.dx + headRadius * cos(headA),
+      headCenter.dy + headRadius * sin(headA),
+    );
+    final headRightTangent = Offset(
+      rightOut.last.dx - rightOut[rightOut.length - 2].dx,
+      rightOut.last.dy - rightOut[rightOut.length - 2].dy,
+    );
+    final headLeftTangent = Offset(
+      leftOut[1].dx - leftOut[0].dx,
+      leftOut[1].dy - leftOut[0].dy,
+    );
+    final headTipTangent = Offset(sin(headA), -cos(headA));
+    CreaturePainter._appendCubicCap(path, rightOut.last, headTip, headRightTangent, headTipTangent, headRadius);
+    CreaturePainter._appendCubicCap(path, headTip, leftOut.first, headTipTangent, headLeftTangent, headRadius);
     appendSmoothCurve(path, leftOut, tension, closed: false);
     path.close();
     return path;
@@ -456,12 +510,6 @@ class CreaturePainter extends CustomPainter {
       tailCenter.dy + tailWWorld * _paintZ * sin(tailA + 3 * pi / 2),
     );
     path.moveTo(tailLeft.dx, tailLeft.dy);
-    path.arcTo(
-      Rect.fromCircle(center: tailCenter, radius: tailWWorld * _paintZ),
-      tailA + 3 * pi / 2,
-      -pi,
-      false,
-    );
     final rightSide = <Offset>[for (var i = 0; i <= n; i++) rightAt(i)];
     final leftSide = <Offset>[for (var i = n; i >= 0; i--) leftAt(i)];
     final rightOut = <Offset>[];
@@ -472,14 +520,51 @@ class CreaturePainter extends CustomPainter {
       rightOut.addAll(rightSide);
       leftOut.addAll(leftSide);
     }
-    appendSmoothCurve(path, rightOut, tension, closed: false);
-    final headCenter = Offset(sx(positions[n].x), sy(positions[n].y));
-    path.arcTo(
-      Rect.fromCircle(center: headCenter, radius: headWWorld * _paintZ),
-      headA + pi / 2,
-      -pi,
-      false,
+    final tailRadius = tailWWorld * _paintZ;
+    final tailTip = Offset(
+      tailCenter.dx - tailRadius * cos(tailA),
+      tailCenter.dy - tailRadius * sin(tailA),
     );
+    // Tail cap: exit at tailLeft from left body tangent (path closes there); tip tangents = (-sin(tailA), cos(tailA)).
+    final tailLeftTangent = Offset(
+      leftOut.last.dx - leftOut[leftOut.length - 2].dx,
+      leftOut.last.dy - leftOut[leftOut.length - 2].dy,
+    );
+    _appendCubicCap(
+      path,
+      tailLeft,
+      tailTip,
+      tailLeftTangent,
+      Offset(-sin(tailA), cos(tailA)),
+      tailRadius,
+    );
+    _appendCubicCap(
+      path,
+      tailTip,
+      rightOut.first,
+      Offset(-sin(tailA), cos(tailA)),
+      Offset(rightOut[1].dx - rightOut[0].dx, rightOut[1].dy - rightOut[0].dy),
+      tailRadius,
+    );
+    appendSmoothCurve(path, rightOut, tension, closed: false);
+    // Head cap: tangents at body junctions from body curve (G1 continuity).
+    final headRadius = headWWorld * _paintZ;
+    final headCenter = Offset(sx(positions[n].x), sy(positions[n].y));
+    final headTip = Offset(
+      headCenter.dx + headRadius * cos(headA),
+      headCenter.dy + headRadius * sin(headA),
+    );
+    final headRightTangent = Offset(
+      rightOut.last.dx - rightOut[rightOut.length - 2].dx,
+      rightOut.last.dy - rightOut[rightOut.length - 2].dy,
+    );
+    final headLeftTangent = Offset(
+      leftOut[1].dx - leftOut[0].dx,
+      leftOut[1].dy - leftOut[0].dy,
+    );
+    final headTipTangent = Offset(sin(headA), -cos(headA));
+    _appendCubicCap(path, rightOut.last, headTip, headRightTangent, headTipTangent, headRadius);
+    _appendCubicCap(path, headTip, leftOut.first, headTipTangent, headLeftTangent, headRadius);
     appendSmoothCurve(path, leftOut, tension, closed: false);
     path.close();
     final strokePaint = Paint()
@@ -562,7 +647,6 @@ class CreaturePainter extends CustomPainter {
     final tailRadius = tailWWorld * (1 - t) * _paintZ;
     final headRadius = headWWorld * (1 - t) * _paintZ;
     final tailCenter = Offset(sx(positions[0].x), sy(positions[0].y));
-    final headCenter = Offset(sx(positions[n].x), sy(positions[n].y));
     final tailLeft = Offset(
       tailCenter.dx + tailRadius * cos(tailA + 3 * pi / 2),
       tailCenter.dy + tailRadius * sin(tailA + 3 * pi / 2),
@@ -591,22 +675,47 @@ class CreaturePainter extends CustomPainter {
       rightOut.addAll(rightSide);
       leftOut.addAll(leftSide);
     }
+    final tailTip = Offset(
+      tailCenter.dx - tailRadius * cos(tailA),
+      tailCenter.dy - tailRadius * sin(tailA),
+    );
+    final headCenter = Offset(sx(positions[n].x), sy(positions[n].y));
+    final headTip = Offset(
+      headCenter.dx + headRadius * cos(headA),
+      headCenter.dy + headRadius * sin(headA),
+    );
     final path = Path();
     if (!reverse) {
       path.moveTo(tailLeft.dx, tailLeft.dy);
-      path.arcTo(
-        Rect.fromCircle(center: tailCenter, radius: tailRadius),
-        tailA + 3 * pi / 2,
-        -pi,
-        false,
+      final tailLeftTan = Offset(
+        leftOut.last.dx - leftOut[leftOut.length - 2].dx,
+        leftOut.last.dy - leftOut[leftOut.length - 2].dy,
+      );
+      _appendCubicCap(
+        path,
+        tailLeft,
+        tailTip,
+        tailLeftTan,
+        Offset(-sin(tailA), cos(tailA)),
+        tailRadius,
+      );
+      _appendCubicCap(
+        path,
+        tailTip,
+        rightOut.first,
+        Offset(-sin(tailA), cos(tailA)),
+        Offset(rightOut[1].dx - rightOut[0].dx, rightOut[1].dy - rightOut[0].dy),
+        tailRadius,
       );
       appendSmoothCurve(path, rightOut, tension, closed: false);
-      path.arcTo(
-        Rect.fromCircle(center: headCenter, radius: headRadius),
-        headA + pi / 2,
-        -pi,
-        false,
+      final headRightTan = Offset(
+        rightOut.last.dx - rightOut[rightOut.length - 2].dx,
+        rightOut.last.dy - rightOut[rightOut.length - 2].dy,
       );
+      final headLeftTan = Offset(leftOut[1].dx - leftOut[0].dx, leftOut[1].dy - leftOut[0].dy);
+      final headTipTan = Offset(sin(headA), -cos(headA));
+      _appendCubicCap(path, rightOut.last, headTip, headRightTan, headTipTan, headRadius);
+      _appendCubicCap(path, headTip, leftOut.first, headTipTan, headLeftTan, headRadius);
       appendSmoothCurve(path, leftOut, tension, closed: false);
     } else {
       path.moveTo(tailLeft.dx, tailLeft.dy);
@@ -616,24 +725,29 @@ class CreaturePainter extends CustomPainter {
         tension,
         closed: false,
       );
-      path.arcTo(
-        Rect.fromCircle(center: headCenter, radius: headRadius),
-        headA + 3 * pi / 2,
-        pi,
-        false,
+      // Reverse head cap: body tangents at junctions (left = exit from body, right = entry to body).
+      final headLeftTanRev = Offset(leftOut[0].dx - leftOut[1].dx, leftOut[0].dy - leftOut[1].dy);
+      final headRightTanRev = Offset(
+        rightOut.last.dx - rightOut[rightOut.length - 2].dx,
+        rightOut.last.dy - rightOut[rightOut.length - 2].dy,
       );
+      final headTipTanRev = Offset(sin(headA), -cos(headA));
+      _appendCubicCap(path, leftOut.first, headTip, headLeftTanRev, headTipTanRev, headRadius);
+      _appendCubicCap(path, headTip, rightOut.last, headTipTanRev, headRightTanRev, headRadius);
       appendSmoothCurve(
         path,
         rightOut.reversed.toList(),
         tension,
         closed: false,
       );
-      path.arcTo(
-        Rect.fromCircle(center: tailCenter, radius: tailRadius),
-        tailA + pi / 2,
-        pi,
-        false,
+      // Reverse tail cap: body tangent at right (exit); at tailLeft match left body leave tangent (we closed from there).
+      final tailRightTanRev = Offset(rightOut[0].dx - rightOut[1].dx, rightOut[0].dy - rightOut[1].dy);
+      final tailLeftTanRev = Offset(
+        leftOut[leftOut.length - 2].dx - leftOut.last.dx,
+        leftOut[leftOut.length - 2].dy - leftOut.last.dy,
       );
+      _appendCubicCap(path, rightOut.first, tailTip, tailRightTanRev, Offset(sin(tailA), -cos(tailA)), tailRadius);
+      _appendCubicCap(path, tailTip, tailLeft, Offset(-sin(tailA), cos(tailA)), tailLeftTanRev, tailRadius);
     }
     path.close();
     return path;

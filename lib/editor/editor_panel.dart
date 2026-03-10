@@ -507,9 +507,7 @@ class _TailPreviewPainter extends CustomPainter {
       Vector2(_TailBox._tailWorldLeft + 20, 0),
     ];
     const segmentAngles = [0.0, 0.0];
-    double widthAt(int i) {
-      return minimal.widthAtVertex(i).clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
-    }
+    double widthAt(int i) => minimal.widthAtVertex(i);
     paintTailFin(
       canvas,
       minimal,
