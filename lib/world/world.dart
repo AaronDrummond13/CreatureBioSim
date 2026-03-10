@@ -33,21 +33,11 @@ int chunkIndexY(double worldY) => (worldY / kChunkSizeWorld).floor();
 (int, int) chunkIndex(double x, double y) =>
     (chunkIndexX(x), chunkIndexY(y));
 
-/// Biome region index (bx, by) from chunk index (cx, cy). One region = 10×10 chunks.
-(int, int) biomeRegionFromChunk(int cx, int cy) =>
-    (cx ~/ kBiomeRegionChunks, cy ~/ kBiomeRegionChunks);
-
 /// Wrap a biome region index to 0..kBiomeGridSize-1.
 int wrapBiomeRegion(int value) {
   final v = value % kBiomeGridSize;
   return v < 0 ? v + kBiomeGridSize : v;
 }
-
-/// Wrapped biome region (bx, by) from chunk (cx, cy).
-(int, int) wrappedBiomeRegionFromChunk(int cx, int cy) => (
-      wrapBiomeRegion(cx ~/ kBiomeRegionChunks),
-      wrapBiomeRegion(cy ~/ kBiomeRegionChunks),
-    );
 
 /// Stable string key for chunk (cx, cy). Use for sets/maps of generated chunks, etc.
 String chunkKey(int cx, int cy) => '$cx,$cy';

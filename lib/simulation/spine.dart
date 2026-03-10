@@ -134,33 +134,6 @@ class Spine {
     }
   }
 
-  /// Rotates the entire creature around its center of mass (average of node positions) by [angleRad].
-  /// Updates both node positions and segment angles so state stays consistent.
-  /// Use when neck is at bend limit to "make up the difference" with global turn.
-  void rotateAroundBase(double angleRad) {
-    if (nodes.isEmpty) return;
-    var cx = 0.0;
-    var cy = 0.0;
-    for (final n in nodes) {
-      cx += n.position.x;
-      cy += n.position.y;
-    }
-    cx /= nodes.length;
-    cy /= nodes.length;
-    final c = math.cos(angleRad);
-    final s = math.sin(angleRad);
-    for (final n in nodes) {
-      final p = n.position;
-      final dx = p.x - cx;
-      final dy = p.y - cy;
-      p.x = cx + dx * c - dy * s;
-      p.y = cy + dx * s + dy * c;
-    }
-    for (var i = 0; i < _segmentAngles.length; i++) {
-      _segmentAngles[i] = simplifyAngle(_segmentAngles[i] + angleRad);
-    }
-  }
-
   /// Ordered positions for rendering: [base, ..., head].
   List<Vector2> get positions =>
       nodes.map((p) => Vector2(p.position.x, p.position.y)).toList();

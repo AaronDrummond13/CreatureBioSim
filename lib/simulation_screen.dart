@@ -413,7 +413,7 @@ class _SimulationScreenState extends State<SimulationScreen>
     final bgColor = Color.lerp(
       const Color.fromARGB(255, 28, 30, 54),
       _biomeMap.blendedColorAt(_viewState.cameraX, _viewState.cameraY),
-      0.18,
+      .4,
     )!;
     final (left, right, top, bottom) = _viewState.renderRectWithBuffer(0.15);
     final r = _foodStore.radiusWorld;

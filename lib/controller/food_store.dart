@@ -23,9 +23,6 @@ class FoodStore {
   final List<ConsumedRemnant> _consumedRemnants = [];
   List<ConsumedRemnant> get consumedRemnants => _consumedRemnants;
 
-  /// Minimum distance between food centres so they don't overlap (default 2× radius).
-  double get minSpacing => 2.0 * radiusWorld;
-
   /// Remove any food whose centre is within [radius] of (headX, headY). If [timeSeconds] is set, adds a [ConsumedRemnant] for rendering burst + fading nucleus.
   /// When [allowedCellTypes] is non-null, only food with [FoodItem.cellType] in the set is consumed (e.g. herbivore = plant only).
   /// [consumedByPlayer] marks the remnant so only the player's body shows the inner cloud effect.
