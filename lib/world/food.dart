@@ -17,6 +17,7 @@ class FoodItem {
     this.isGiant = false,
     this.radiusWorld,
     this.attachedOffsets,
+    this.rotationSign = 1.0,
   });
 
   final double x;
@@ -28,6 +29,8 @@ class FoodItem {
   final CellType cellType;
   final bool isGiant;
   final double? radiusWorld;
+  /// 1.0 = clockwise, -1.0 = anticlockwise (when multiplied by time for rotation).
+  final double rotationSign;
 
   /// Mutable: remove an element when that corner cell is eaten.
   final List<(double, double)>? attachedOffsets;
