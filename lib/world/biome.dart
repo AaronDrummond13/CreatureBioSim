@@ -8,17 +8,17 @@ extension BiomeColors on Biome {
   Color get color {
     switch (this) {
       case Biome.clear:
-        return const Color.fromARGB(255, 72, 134, 168); // gentle blue
+        return const Color.fromARGB(255, 40, 76, 95); // gentle blue
       case Biome.deep:
-        return const Color.fromARGB(255, 27, 96, 174); // darker blue
+        return const Color.fromARGB(255, 16, 56, 102); // darker blue
       case Biome.algae:
-        return const Color.fromARGB(255, 66, 158, 93); // greenish
+        return const Color.fromARGB(255, 34, 83, 49); // greenish
       case Biome.poisoned:
-        return const Color.fromARGB(255, 139, 116, 190); // purplish
+        return const Color.fromARGB(255, 88, 73, 121); // purplish
       case Biome.dirty:
-        return const Color.fromARGB(255, 162, 149, 108); // brownish
+        return const Color.fromARGB(255, 87, 80, 59); // brownish
       case Biome.wasteland:
-        return const Color.fromARGB(255, 121, 166, 190); // same as clear
+        return const Color.fromARGB(255, 68, 94, 108); // same as clear
     }
   }
 }

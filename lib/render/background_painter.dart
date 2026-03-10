@@ -11,7 +11,7 @@ double _sizeVariance(int i, int j, {double minFrac = 0.65}) {
 }
 
 /// Single background color for the simulation (dots, blur layer fill). Change here only.
-const Color kSimulationBackground = Color(0xFF556688);
+const Color kSimulationBackground = Color(0xFF283054);
 
 /// Fills the canvas with a solid color. Use as the bottom layer so other painters draw on top.
 class SolidBackgroundPainter extends CustomPainter {
@@ -43,7 +43,7 @@ class BackgroundPainter extends CustomPainter {
     this.parallaxBlobs = 0.8,
     this.parallaxBubbles = 0.9,
     this.biomeMap,
-    this.biomeTintFrac = 0.12,
+    this.biomeTintFrac = 0.5,
   });
 
   final CameraView view;
