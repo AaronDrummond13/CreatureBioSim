@@ -463,7 +463,7 @@ class _MouthAddPreviewPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final previewCreature = Creature(
-      vertexWidths: creature.vertexWidths,
+      segmentWidths: creature.segmentWidths,
       color: creature.color,
       dorsalFins: creature.dorsalFins,
       finColor: creature.finColor,
@@ -559,7 +559,7 @@ class _TailAddPreviewPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final previewCreature = Creature(
-      vertexWidths: creature.vertexWidths,
+      segmentWidths: creature.segmentWidths,
       color: creature.color,
       dorsalFins: creature.dorsalFins,
       finColor: creature.finColor,
@@ -997,9 +997,9 @@ class _EditorPreviewState extends State<EditorPreview>
         }
 
         double widthAtSegment(int seg) {
-          final v = widget.creature.vertexWidths;
-          if (seg < 0 || seg >= v.length - 1) return 20.0;
-          return (v[seg] + v[seg + 1]) / 2;
+          final v = widget.creature.segmentWidths;
+          if (seg < 0 || seg >= v.length) return 20.0;
+          return v[seg];
         }
 
         Rect creatureScreenBounds() {
@@ -1165,13 +1165,13 @@ class _EditorPreviewState extends State<EditorPreview>
             positions.length >= 1 &&
             _spine.segmentAngles.isNotEmpty;
         double _effectiveTailRoot() {
-          final v = widget.creature.vertexWidths;
+          final v = widget.creature.segmentWidths;
           final derived = v.isEmpty ? 20.0 : v.reduce((a, b) => a < b ? a : b);
           return widget.creature.tail?.rootWidth ?? derived;
         }
 
         double _effectiveTailMax() {
-          final v = widget.creature.vertexWidths;
+          final v = widget.creature.segmentWidths;
           final derived = v.isEmpty
               ? 10.0
               : v.reduce((a, b) => a > b ? a : b) / 2;

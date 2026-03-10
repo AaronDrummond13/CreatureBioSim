@@ -51,7 +51,7 @@ void paintTailFin(
   final ratio = (avgBend / maxAngle).clamp(0.0, 1.0);
   final innerScale = caudalFinBaseFrac + (1.0 - caudalFinBaseFrac) * ratio;
   final outerScale = caudalFinBaseFrac;
-  final vws = creature.vertexWidths
+  final vws = creature.segmentWidths
       .map((w) => w.clamp(Creature.minVertexWidth, Creature.maxVertexWidth))
       .toList();
   final derivedRoot = vws.isEmpty

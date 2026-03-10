@@ -15,8 +15,8 @@ void runBotConsumption(
   for (final e in creatureStore.entities) {
     if (e.isBaby || e.spine.positions.isEmpty) continue;
     final head = e.spine.positions.last;
-    final headSize = e.creature.vertexWidths.isNotEmpty
-        ? e.creature.vertexWidths.last
+    final headSize = e.creature.segmentWidths.isNotEmpty
+        ? e.creature.segmentWidths.last
         : foodRadius;
     final headCollision = headSize * headMouthSizeFrac;
     final consumeRadius = foodRadius + headCollision;
@@ -44,8 +44,8 @@ void runBotConsumption(
     final pos = e.spine.positions;
     if (pos.isEmpty) continue;
     final head = pos.last;
-    final headSize = e.creature.vertexWidths.isNotEmpty
-        ? e.creature.vertexWidths.last
+    final headSize = e.creature.segmentWidths.isNotEmpty
+        ? e.creature.segmentWidths.last
         : foodRadius;
     final headCollision = headSize * headMouthSizeFrac;
     final consumeRadius = foodRadius + headCollision;
@@ -84,8 +84,8 @@ void runBotConsumption(
     if (e.creature.trophicType != TrophicType.carnivore &&
         e.creature.trophicType != TrophicType.omnivore) continue;
     final head = e.spine.positions.last;
-    final headSize = e.creature.vertexWidths.isNotEmpty
-        ? e.creature.vertexWidths.last
+    final headSize = e.creature.segmentWidths.isNotEmpty
+        ? e.creature.segmentWidths.last
         : foodRadius;
     final consumeRadius = foodRadius + headSize * headMouthSizeFrac;
     for (final other in creatureStore.entities) {

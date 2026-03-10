@@ -231,7 +231,7 @@ class _ColourTabState extends State<_ColourTab> {
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () => widget.onCreatureChanged(Creature(
-                  vertexWidths: creature.vertexWidths,
+                  segmentWidths: creature.segmentWidths,
                   color: creature.color,
                   dorsalFins: creature.dorsalFins,
                   finColor: creature.color,
@@ -257,7 +257,7 @@ class _ColourTabState extends State<_ColourTab> {
               onChanged: (c) {
                 final value = 0xFF000000 | (c.value & 0xFFFFFF);
                 widget.onCreatureChanged(Creature(
-                  vertexWidths: creature.vertexWidths,
+                  segmentWidths: creature.segmentWidths,
                   color: _editingFin ? creature.color : value,
                   dorsalFins: creature.dorsalFins,
                   finColor: _editingFin ? value : creature.finColor,
@@ -496,7 +496,7 @@ class _TailPreviewPainter extends CustomPainter {
       return;
     }
     final minimal = Creature(
-      vertexWidths: [20.0, 25.0],
+      segmentWidths: [20.0, 25.0],
       color: creature.color,
       finColor: creature.finColor,
       tail: TailConfig(tailFin!),
@@ -508,8 +508,7 @@ class _TailPreviewPainter extends CustomPainter {
     ];
     const segmentAngles = [0.0, 0.0];
     double widthAt(int i) {
-      if (i < minimal.vertexWidths.length) return minimal.vertexWidths[i].clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
-      return 20.0;
+      return minimal.widthAtVertex(i).clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
     }
     paintTailFin(
       canvas,

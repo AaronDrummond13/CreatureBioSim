@@ -28,7 +28,7 @@ class SimulationScreen extends StatefulWidget {
 
   /// Default creature when [initialCreature] is null (e.g. first run).
   static Creature defaultCreature() =>
-      Creature(vertexWidths: [20, 20], color: 0xFF987987, finColor: 0xFF987987);
+      Creature(segmentWidths: [20], color: 0xFF987987, finColor: 0xFF987987);
 
   @override
   State<SimulationScreen> createState() => _SimulationScreenState();

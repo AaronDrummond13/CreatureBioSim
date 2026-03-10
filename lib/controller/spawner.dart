@@ -62,8 +62,7 @@ class Spawner {
 
   Creature _randomCreature() {
     final segmentCount = 1 + _rng.nextInt(Creature.maxSegmentCount);
-    final vertexCount = segmentCount + 1;
-    final widths = _smoothVertexWidths(vertexCount);
+    final widths = _smoothSegmentWidths(segmentCount);
     final color = 0xFF000000 | _rng.nextInt(0xFFFFFF);
     final dorsalFins = _randomDorsalFins(segmentCount);
     final tailFin = _randomTailFin();
@@ -85,7 +84,7 @@ class Spawner {
                 ? MouthType.teeth
                 : MouthType.mandible));
     return Creature(
-      vertexWidths: widths,
+      segmentWidths: widths,
       color: color,
       dorsalFins: (dorsalFins == null || dorsalFins.isEmpty)
           ? null
@@ -112,12 +111,12 @@ class Spawner {
     return list.isEmpty ? null : list;
   }
 
-  /// Interpolate between a few random control points so widths vary smoothly.
-  List<double> _smoothVertexWidths(int vertexCount) {
+  /// Interpolate between a few random control points so segment widths vary smoothly.
+  List<double> _smoothSegmentWidths(int segmentCount) {
     const numKeys = 5;
-    if (vertexCount <= numKeys) {
+    if (segmentCount <= numKeys) {
       return List<double>.generate(
-        vertexCount,
+        segmentCount,
         (_) =>
             Creature.minVertexWidth +
             _rng.nextDouble() *
@@ -126,9 +125,9 @@ class Spawner {
     }
     final keyIndices = <int>[0];
     for (var k = 1; k < numKeys - 1; k++) {
-      keyIndices.add((vertexCount * k) ~/ (numKeys - 1));
+      keyIndices.add((segmentCount * k) ~/ (numKeys - 1));
     }
-    keyIndices.add(vertexCount - 1);
+    keyIndices.add(segmentCount - 1);
 
     final keyWidths = keyIndices.map((_) {
       return Creature.minVertexWidth +
@@ -137,7 +136,7 @@ class Spawner {
     }).toList();
 
     final widths = <double>[];
-    for (var i = 0; i < vertexCount; i++) {
+    for (var i = 0; i < segmentCount; i++) {
       var k = 0;
       while (k < keyIndices.length - 1 && keyIndices[k + 1] <= i) k++;
       if (k >= keyIndices.length - 1) {

@@ -53,8 +53,8 @@ void runPlayStep(
   }
   if (positions.isNotEmpty && !output.isDead) {
     final head = positions.last;
-    final headSize = creature.vertexWidths.isNotEmpty
-        ? creature.vertexWidths.last
+    final headSize = creature.segmentWidths.isNotEmpty
+        ? creature.segmentWidths.last
         : foodStore.radiusWorld;
     final headCollision = headSize * headMouthSizeFrac;
     for (final e in creatureStore.entities) {
@@ -64,8 +64,8 @@ void runPlayStep(
       if (ep.isEmpty) continue;
       final ex = ep.last.x;
       final ey = ep.last.y;
-      final epicHeadSize = e.creature.vertexWidths.isNotEmpty
-          ? e.creature.vertexWidths.last * CreaturePainter.kEpicRenderScale
+      final epicHeadSize = e.creature.segmentWidths.isNotEmpty
+          ? e.creature.segmentWidths.last * CreaturePainter.kEpicRenderScale
           : 30.0;
       final epicCollision = epicHeadSize * headMouthSizeFrac;
       final touchRad = headCollision + epicCollision;

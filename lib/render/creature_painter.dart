@@ -101,17 +101,46 @@ class CreaturePainter extends CustomPainter {
   late double _eyeScaleMultiplier;
 
   double _widthAt(int i) {
-    final vw = creature.vertexWidths;
-    double w;
-    if (i < vw.length) {
-      w = vw[i].clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
-    } else {
-      w = _fallbackWidth.clamp(
-        Creature.minVertexWidth,
-        Creature.maxVertexWidth,
+    final w = creature.segmentWidths.isEmpty
+        ? _fallbackWidth.clamp(Creature.minVertexWidth, Creature.maxVertexWidth)
+        : creature.widthAtVertex(i);
+    return w * _bodyScale;
+  }
+
+  /// Smooth outline so both sides stay symmetric (no center split). Uses spine and half-offsets:
+  /// spine at each vertex, smooth the half-offset once, then rebuild right = spine + offset, left = spine - offset.
+  /// Skips the two points at each end so the curve meets the head/tail cap arcs with matching tangent.
+  static void _smoothBodyOutlineSymmetric(
+    List<Offset> rightSide,
+    List<Offset> leftSide,
+    List<Offset> rightOut,
+    List<Offset> leftOut,
+  ) {
+    assert(rightSide.length == leftSide.length && rightSide.length >= 5);
+    final n = rightSide.length - 1;
+    final spine = <Offset>[];
+    final halfOffset = <Offset>[];
+    for (var k = 0; k <= n; k++) {
+      final r = rightSide[k];
+      final l = leftSide[n - k];
+      spine.add(Offset((r.dx + l.dx) / 2, (r.dy + l.dy) / 2));
+      halfOffset.add(Offset((r.dx - l.dx) / 2, (r.dy - l.dy) / 2));
+    }
+    const prevFrac = 0.4;
+    const nextFrac = 0.4;
+    const currFrac = 0.2;
+    for (var i = 2; i < halfOffset.length - 2; i++) {
+      halfOffset[i] = Offset(
+        halfOffset[i - 1].dx * prevFrac + halfOffset[i].dx * currFrac + halfOffset[i + 1].dx * nextFrac,
+        halfOffset[i - 1].dy * prevFrac + halfOffset[i].dy * currFrac + halfOffset[i + 1].dy * nextFrac,
       );
     }
-    return w * _bodyScale;
+    rightOut.clear();
+    leftOut.clear();
+    for (var k = 0; k <= n; k++) {
+      rightOut.add(Offset(spine[k].dx + halfOffset[k].dx, spine[k].dy + halfOffset[k].dy));
+      leftOut.add(Offset(spine[n - k].dx - halfOffset[n - k].dx, spine[n - k].dy - halfOffset[n - k].dy));
+    }
   }
 
   /// For babies: scale spine positions around head so creature is proportionally smaller (length and width).
@@ -147,14 +176,10 @@ class CreaturePainter extends CustomPainter {
     double sx(double wx) => centerX + (wx - view.cameraX) * z;
     double sy(double wy) => centerY + (wy - view.cameraY) * z;
     double widthAt(int i) {
-      final vw = creature.vertexWidths;
-      if (i < vw.length) {
-        return vw[i].clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
+      if (creature.segmentWidths.isEmpty) {
+        return _fallbackWidth.clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
       }
-      return _fallbackWidth.clamp(
-        Creature.minVertexWidth,
-        Creature.maxVertexWidth,
-      );
+      return creature.widthAtVertex(i);
     }
 
     double wAt(int i) => widthAt(i) * z;
@@ -201,7 +226,16 @@ class CreaturePainter extends CustomPainter {
       false,
     );
     final rightSide = <Offset>[for (var i = 0; i <= n; i++) rightAt(i)];
-    appendSmoothCurve(path, rightSide, tension, closed: false);
+    final leftSide = <Offset>[for (var i = n; i >= 0; i--) leftAt(i)];
+    final rightOut = <Offset>[];
+    final leftOut = <Offset>[];
+    if (rightSide.length >= 5) {
+      CreaturePainter._smoothBodyOutlineSymmetric(rightSide, leftSide, rightOut, leftOut);
+    } else {
+      rightOut.addAll(rightSide);
+      leftOut.addAll(leftSide);
+    }
+    appendSmoothCurve(path, rightOut, tension, closed: false);
     final headCenter = Offset(sx(positions[n].x), sy(positions[n].y));
     path.arcTo(
       Rect.fromCircle(center: headCenter, radius: headWWorld * z),
@@ -209,8 +243,7 @@ class CreaturePainter extends CustomPainter {
       -pi,
       false,
     );
-    final leftSide = <Offset>[for (var i = n; i >= 0; i--) leftAt(i)];
-    appendSmoothCurve(path, leftSide, tension, closed: false);
+    appendSmoothCurve(path, leftOut, tension, closed: false);
     path.close();
     return path;
   }
@@ -282,12 +315,9 @@ class CreaturePainter extends CustomPainter {
   void _drawMouth(Canvas canvas) {
     if (creature.mouth == null) return;
     final n = _paintN;
-    final headWidthWorld = n < creature.vertexWidths.length
-        ? creature.vertexWidths[n].clamp(
-            Creature.minVertexWidth,
-            Creature.maxVertexWidth,
-          )
-        : _fallbackWidth;
+    final headWidthWorld = creature.segmentWidths.isEmpty
+        ? _fallbackWidth
+        : creature.widthAtVertex(n);
     paintMouth(
       canvas,
       creature,
@@ -433,7 +463,16 @@ class CreaturePainter extends CustomPainter {
       false,
     );
     final rightSide = <Offset>[for (var i = 0; i <= n; i++) rightAt(i)];
-    appendSmoothCurve(path, rightSide, tension, closed: false);
+    final leftSide = <Offset>[for (var i = n; i >= 0; i--) leftAt(i)];
+    final rightOut = <Offset>[];
+    final leftOut = <Offset>[];
+    if (rightSide.length >= 5) {
+      _smoothBodyOutlineSymmetric(rightSide, leftSide, rightOut, leftOut);
+    } else {
+      rightOut.addAll(rightSide);
+      leftOut.addAll(leftSide);
+    }
+    appendSmoothCurve(path, rightOut, tension, closed: false);
     final headCenter = Offset(sx(positions[n].x), sy(positions[n].y));
     path.arcTo(
       Rect.fromCircle(center: headCenter, radius: headWWorld * _paintZ),
@@ -441,8 +480,7 @@ class CreaturePainter extends CustomPainter {
       -pi,
       false,
     );
-    final leftSide = <Offset>[for (var i = n; i >= 0; i--) leftAt(i)];
-    appendSmoothCurve(path, leftSide, tension, closed: false);
+    appendSmoothCurve(path, leftOut, tension, closed: false);
     path.close();
     final strokePaint = Paint()
       ..color = Colors.white
@@ -506,37 +544,6 @@ class CreaturePainter extends CustomPainter {
   static const double _shadeDarkBlend = 0.4;
   static const double _shadeBrightBlend = 0.01;
 
-  /// Smooth contour side: each point blends toward neighbors. [intensity] 0 = no change;
-  /// positive = smooth (1 = full 0.25/0.5/0.25); negative = sharpen (opposite).
-  List<Offset> _smoothContourSide(
-    List<Offset> points, {
-    bool closed = false,
-    double intensity = 1.0,
-  }) {
-    if (points.length < 3) return points;
-    if (intensity == 0) return points;
-    final blend = intensity.clamp(-1.0, 1.0);
-    final prevFrac = 0.25 * blend;
-    final nextFrac = 0.25 * blend;
-    final currFrac = 1.0 - 0.5 * blend;
-    final out = <Offset>[];
-    for (var i = 0; i < points.length; i++) {
-      final prev = closed && i == 0
-          ? points.last
-          : points[(i - 1).clamp(0, points.length - 1)];
-      final next = closed && i == points.length - 1
-          ? points.first
-          : points[(i + 1).clamp(0, points.length - 1)];
-      out.add(
-        Offset(
-          prev.dx * prevFrac + points[i].dx * currFrac + next.dx * nextFrac,
-          prev.dy * prevFrac + points[i].dy * currFrac + next.dy * nextFrac,
-        ),
-      );
-    }
-    return out;
-  }
-
   Path _buildContourPath(
     double t,
     List<Vector2> positions,
@@ -560,7 +567,7 @@ class CreaturePainter extends CustomPainter {
       tailCenter.dx + tailRadius * cos(tailA + 3 * pi / 2),
       tailCenter.dy + tailRadius * sin(tailA + 3 * pi / 2),
     );
-    var rightSide = <Offset>[
+    final rightSide = <Offset>[
       for (var i = 0; i <= n; i++)
         Offset.lerp(
           rightAt(i),
@@ -568,7 +575,7 @@ class CreaturePainter extends CustomPainter {
           t,
         )!,
     ];
-    var leftSide = <Offset>[
+    final leftSide = <Offset>[
       for (var i = n; i >= 0; i--)
         Offset.lerp(
           leftAt(i),
@@ -576,18 +583,14 @@ class CreaturePainter extends CustomPainter {
           t,
         )!,
     ];
-    // Smooth along the body; intensity increases toward centre (higher t = rounder).
-    final smoothIntensity = t * 3;
-    rightSide = _smoothContourSide(
-      rightSide,
-      closed: false,
-      intensity: smoothIntensity,
-    );
-    leftSide = _smoothContourSide(
-      leftSide,
-      closed: false,
-      intensity: smoothIntensity,
-    );
+    final rightOut = <Offset>[];
+    final leftOut = <Offset>[];
+    if (rightSide.length >= 5) {
+      _smoothBodyOutlineSymmetric(rightSide, leftSide, rightOut, leftOut);
+    } else {
+      rightOut.addAll(rightSide);
+      leftOut.addAll(leftSide);
+    }
     final path = Path();
     if (!reverse) {
       path.moveTo(tailLeft.dx, tailLeft.dy);
@@ -597,19 +600,19 @@ class CreaturePainter extends CustomPainter {
         -pi,
         false,
       );
-      appendSmoothCurve(path, rightSide, tension, closed: false);
+      appendSmoothCurve(path, rightOut, tension, closed: false);
       path.arcTo(
         Rect.fromCircle(center: headCenter, radius: headRadius),
         headA + pi / 2,
         -pi,
         false,
       );
-      appendSmoothCurve(path, leftSide, tension, closed: false);
+      appendSmoothCurve(path, leftOut, tension, closed: false);
     } else {
       path.moveTo(tailLeft.dx, tailLeft.dy);
       appendSmoothCurve(
         path,
-        leftSide.reversed.toList(),
+        leftOut.reversed.toList(),
         tension,
         closed: false,
       );
@@ -621,7 +624,7 @@ class CreaturePainter extends CustomPainter {
       );
       appendSmoothCurve(
         path,
-        rightSide.reversed.toList(),
+        rightOut.reversed.toList(),
         tension,
         closed: false,
       );

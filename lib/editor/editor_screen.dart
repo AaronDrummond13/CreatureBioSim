@@ -177,7 +177,7 @@ class EditorScreenState extends State<EditorScreen> {
     final segs = [for (var i = start; i <= end; i++) i];
     fins[_selectedDorsalFinIndex!] = (segs, fins[_selectedDorsalFinIndex!].$2);
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: fins,
       finColor: _creature.finColor,
@@ -194,7 +194,7 @@ class EditorScreenState extends State<EditorScreen> {
     final f = fins[_selectedDorsalFinIndex!];
     fins[_selectedDorsalFinIndex!] = (f.$1, height);
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: fins,
       finColor: _creature.finColor,
@@ -213,7 +213,7 @@ class EditorScreenState extends State<EditorScreen> {
     final fins = List<(List<int>, double?)>.from(_creature.dorsalFins ?? []);
     fins.add((segs, kDorsalHeightMedium));
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: fins,
       finColor: _creature.finColor,
@@ -229,25 +229,24 @@ class EditorScreenState extends State<EditorScreen> {
     newCount = newCount.clamp(1, Creature.maxSegmentCount);
     final current = _creature.segmentCount;
     if (newCount == current) return;
-    var w = List<double>.from(_creature.vertexWidths);
+    var w = List<double>.from(_creature.segmentWidths);
     if (newCount > current) {
-      final tailW = w.isEmpty ? 20.0 : w.first;
-      final clamped = tailW.clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
+      final tailSegW = w.isEmpty ? 20.0 : w.first;
+      final clamped = tailSegW.clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
       for (var i = current; i < newCount; i++) w.insert(0, clamped);
     } else {
       w = w.sublist(current - newCount);
     }
-    setState(() => _creature = _creatureWith(_creature, vertexWidths: w, newSegmentCount: newCount, filterDorsalLateral: true));
+    setState(() => _creature = _creatureWith(_creature, segmentWidths: w, newSegmentCount: newCount, filterDorsalLateral: true));
   }
 
   void _onSegmentWidthDeltaFromViewport(int seg, double delta) {
-    final w = List<double>.from(_creature.vertexWidths);
-    if (seg < 0 || seg >= w.length - 1) return;
+    final w = List<double>.from(_creature.segmentWidths);
+    if (seg < 0 || seg >= w.length) return;
     final minW = Creature.minVertexWidth;
     final maxW = Creature.maxVertexWidth;
     w[seg] = (w[seg] + delta).clamp(minW, maxW);
-    w[seg + 1] = (w[seg + 1] + delta).clamp(minW, maxW);
-    setState(() => _creature = _creatureWith(_creature, vertexWidths: w));
+    setState(() => _creature = _creatureWith(_creature, segmentWidths: w));
   }
 
   void _onDorsalRemovedFromViewport(int finIndex) {
@@ -256,7 +255,7 @@ class EditorScreenState extends State<EditorScreen> {
     fins.removeAt(finIndex);
     setState(() {
       _creature = Creature(
-        vertexWidths: _creature.vertexWidths,
+        segmentWidths: _creature.segmentWidths,
         color: _creature.color,
         dorsalFins: fins.isEmpty ? null : fins,
         finColor: _creature.finColor,
@@ -272,7 +271,7 @@ class EditorScreenState extends State<EditorScreen> {
   void _onTailRootWidthFromViewport(double value) {
     final v = value.clamp(TailConfig.rootWidthMin, TailConfig.rootWidthMax);
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: _creature.dorsalFins,
       finColor: _creature.finColor,
@@ -286,7 +285,7 @@ class EditorScreenState extends State<EditorScreen> {
   void _onTailMaxWidthFromViewport(double value) {
     final v = value.clamp(TailConfig.maxWidthMin, TailConfig.maxWidthMax);
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: _creature.dorsalFins,
       finColor: _creature.finColor,
@@ -300,7 +299,7 @@ class EditorScreenState extends State<EditorScreen> {
   void _onTailLengthFromViewport(double value) {
     final v = value.clamp(TailConfig.lengthMin, TailConfig.lengthMax);
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: _creature.dorsalFins,
       finColor: _creature.finColor,
@@ -313,7 +312,7 @@ class EditorScreenState extends State<EditorScreen> {
 
   void _onTailAddedFromViewport(CaudalFinType? type) {
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: _creature.dorsalFins,
       finColor: _creature.finColor,
@@ -333,7 +332,7 @@ class EditorScreenState extends State<EditorScreen> {
 
   void _onTailRemovedFromViewport() {
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: _creature.dorsalFins,
       finColor: _creature.finColor,
@@ -349,7 +348,7 @@ class EditorScreenState extends State<EditorScreen> {
     if (list.contains(seg)) list.remove(seg); else list.add(seg);
     list.sort();
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: _creature.dorsalFins,
       finColor: _creature.finColor,
@@ -367,7 +366,7 @@ class EditorScreenState extends State<EditorScreen> {
     list[idx] = toSeg;
     list.sort();
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: _creature.dorsalFins,
       finColor: _creature.finColor,
@@ -384,7 +383,7 @@ class EditorScreenState extends State<EditorScreen> {
     list.add(seg);
     list.sort();
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: _creature.dorsalFins,
       finColor: _creature.finColor,
@@ -399,7 +398,7 @@ class EditorScreenState extends State<EditorScreen> {
     final list = List<int>.from(_creature.lateralFins ?? []);
     list.remove(seg);
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: _creature.dorsalFins,
       finColor: _creature.finColor,
@@ -415,7 +414,7 @@ class EditorScreenState extends State<EditorScreen> {
         ? TrophicType.carnivore
         : (type == MouthType.tentacle ? TrophicType.herbivore : (type == MouthType.mandible ? TrophicType.omnivore : TrophicType.none));
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: _creature.dorsalFins,
       finColor: _creature.finColor,
@@ -428,7 +427,7 @@ class EditorScreenState extends State<EditorScreen> {
 
   void _onMouthRemovedFromViewport() {
     setState(() => _creature = Creature(
-      vertexWidths: _creature.vertexWidths,
+      segmentWidths: _creature.segmentWidths,
       color: _creature.color,
       dorsalFins: _creature.dorsalFins,
       finColor: _creature.finColor,
@@ -441,12 +440,12 @@ class EditorScreenState extends State<EditorScreen> {
 }
 
 Creature _creatureWith(Creature creature, {
-  List<double>? vertexWidths,
+  List<double>? segmentWidths,
   int? color,
   bool filterDorsalLateral = false,
   int? newSegmentCount,
 }) {
-  final seg = newSegmentCount ?? (vertexWidths?.length ?? creature.vertexWidths.length) - 1;
+  final seg = newSegmentCount ?? (segmentWidths?.length ?? creature.segmentWidths.length);
   List<(List<int>, double?)>? dorsal = creature.dorsalFins;
   List<int>? lateral = creature.lateralFins;
   if (filterDorsalLateral && seg >= 1) {
@@ -454,7 +453,7 @@ Creature _creatureWith(Creature creature, {
     lateral = _filterLateralForSegmentCount(creature.lateralFins, seg);
   }
   return Creature(
-    vertexWidths: vertexWidths ?? creature.vertexWidths,
+    segmentWidths: segmentWidths ?? creature.segmentWidths,
     color: color ?? creature.color,
     dorsalFins: dorsal,
     finColor: creature.finColor,
