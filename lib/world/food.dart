@@ -18,6 +18,7 @@ class FoodItem {
     this.radiusWorld,
     this.attachedOffsets,
     this.rotationSign = 1.0,
+    this.rotationPhase = 0.0,
   });
 
   final double x;
@@ -31,6 +32,8 @@ class FoodItem {
   final double? radiusWorld;
   /// 1.0 = clockwise, -1.0 = anticlockwise (when multiplied by time for rotation).
   final double rotationSign;
+  /// Phase offset in radians so items don't all start at the same angle.
+  final double rotationPhase;
 
   /// Mutable: remove an element when that corner cell is eaten.
   final List<(double, double)>? attachedOffsets;

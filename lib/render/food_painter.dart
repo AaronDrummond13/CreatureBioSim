@@ -358,10 +358,14 @@ class FoodPainter extends CustomPainter {
       final cx = sx(food.x);
       final cy = sy(food.y);
       final rInner = rScreen * innerRadiusFrac.clamp(0.01, 0.99);
-      canvas.save();
-      canvas.translate(cx, cy);
-      canvas.rotate(timeSeconds * rotationSpeed * food.rotationSign);
-      canvas.translate(-cx, -cy);
+      if (food.cellType != CellType.bubble) {
+        canvas.save();
+        canvas.translate(cx, cy);
+        canvas.rotate(
+          timeSeconds * rotationSpeed * food.rotationSign + food.rotationPhase,
+        );
+        canvas.translate(-cx, -cy);
+      }
       if (food.cellType == CellType.bubble) {
         drawBubbleShape(
           canvas,
@@ -443,7 +447,9 @@ class FoodPainter extends CustomPainter {
         canvas.drawCircle(Offset(nx, ny), nr, nucleusPaint);
         canvas.drawCircle(Offset(nx, ny), nr, nucleusStrokePaint);
       }
-      canvas.restore();
+      if (food.cellType != CellType.bubble) {
+        canvas.restore();
+      }
     }
   }
 

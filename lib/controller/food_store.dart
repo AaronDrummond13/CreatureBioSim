@@ -218,6 +218,7 @@ class FoodStore {
             nucleusOffsetY: nuy,
             cellType: types[added],
             rotationSign: _random.nextBool() ? 1.0 : -1.0,
+            rotationPhase: _random.nextDouble() * 2 * pi,
           ),
         );
         added++;
@@ -256,6 +257,7 @@ class FoodStore {
               radiusWorld: giantPlantRadiusWorld,
               attachedOffsets: offsets,
               rotationSign: _random.nextBool() ? 1.0 : -1.0,
+              rotationPhase: _random.nextDouble() * 2 * pi,
             ),
           );
           break;
@@ -287,6 +289,7 @@ class FoodStore {
               isGiant: true,
               radiusWorld: giantAnimalRadiusWorld,
               rotationSign: _random.nextBool() ? 1.0 : -1.0,
+              rotationPhase: _random.nextDouble() * 2 * pi,
             ),
           );
           break;
@@ -314,6 +317,7 @@ class FoodStore {
               isGiant: true,
               radiusWorld: giantBubbleRadiusWorld,
               rotationSign: _random.nextBool() ? 1.0 : -1.0,
+              rotationPhase: _random.nextDouble() * 2 * pi,
             ),
           );
           break;
@@ -363,6 +367,7 @@ class FoodStore {
         radiusWorld: item.radiusWorld,
         attachedOffsets: item.attachedOffsets,
         rotationSign: item.rotationSign,
+        rotationPhase: item.rotationPhase,
       );
     }).toList();
     _items
