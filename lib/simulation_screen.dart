@@ -135,6 +135,16 @@ class _SimulationScreenState extends State<SimulationScreen>
       _runSimulationStep();
     }
 
+    const double cameraFollowK = 0.1;
+    final pos = _spine.positions;
+    if (pos.isNotEmpty) {
+      final head = pos.last;
+      _viewState.cameraX =
+          _viewState.cameraX + (head.x - _viewState.cameraX) * cameraFollowK;
+      _viewState.cameraY =
+          _viewState.cameraY + (head.y - _viewState.cameraY) * cameraFollowK;
+    }
+
     if (mounted) _viewState.onTick();
   }
 
@@ -231,10 +241,9 @@ class _SimulationScreenState extends State<SimulationScreen>
         }
 
         final headAfter = _spine.positions.last;
-        _viewState.cameraX = headAfter.x;
-        _viewState.cameraY = headAfter.y;
         final consumeRadius = _foodStore.radiusWorld + headCollision;
-        final allowedFood = _creature.mouth == null || _creature.trophicType == TrophicType.none
+        final allowedFood =
+            _creature.mouth == null || _creature.trophicType == TrophicType.none
             ? {CellType.bubble}
             : (_creature.trophicType == TrophicType.herbivore
                   ? {CellType.plant, CellType.bubble}
@@ -250,7 +259,8 @@ class _SimulationScreenState extends State<SimulationScreen>
           true, // consumedByPlayer
         );
         if (consumed > 0) _lastAteTimeSeconds = _viewState.timeSeconds;
-        if (_creature.trophicType != TrophicType.herbivore && _creature.trophicType != TrophicType.none) {
+        if (_creature.trophicType != TrophicType.herbivore &&
+            _creature.trophicType != TrophicType.none) {
           for (final e in _creatureStore.entities) {
             if (!e.isBaby) continue;
             final pos = e.spine.positions;
@@ -301,7 +311,8 @@ class _SimulationScreenState extends State<SimulationScreen>
           : _foodStore.radiusWorld;
       final headCollision = headSize * _kHeadMouthSizeFrac;
       final consumeRadius = _foodStore.radiusWorld + headCollision;
-      final allowedFood = e.creature.mouth == null || e.creature.trophicType == TrophicType.none
+      final allowedFood =
+          e.creature.mouth == null || e.creature.trophicType == TrophicType.none
           ? {CellType.bubble}
           : (e.creature.trophicType == TrophicType.herbivore
                 ? {CellType.plant, CellType.bubble}
@@ -318,7 +329,10 @@ class _SimulationScreenState extends State<SimulationScreen>
     }
     final babiesToRemove = <StoredCreature>[];
     for (final e in _creatureStore.entities) {
-      if (e.isBaby || e.creature.trophicType == TrophicType.herbivore || e.creature.trophicType == TrophicType.none) continue;
+      if (e.isBaby ||
+          e.creature.trophicType == TrophicType.herbivore ||
+          e.creature.trophicType == TrophicType.none)
+        continue;
       final pos = e.spine.positions;
       if (pos.isEmpty) continue;
       final head = pos.last;
@@ -360,12 +374,15 @@ class _SimulationScreenState extends State<SimulationScreen>
     final nonEpicsToRemove = <StoredCreature>{};
     for (final e in _creatureStore.entities) {
       if (!e.isEpic || e.isBaby || e.spine.positions.isEmpty) continue;
-      if (e.creature.trophicType != TrophicType.carnivore && e.creature.trophicType != TrophicType.omnivore) continue;
+      if (e.creature.trophicType != TrophicType.carnivore &&
+          e.creature.trophicType != TrophicType.omnivore)
+        continue;
       final head = e.spine.positions.last;
       final headSize = e.creature.vertexWidths.isNotEmpty
           ? e.creature.vertexWidths.last
           : _foodStore.radiusWorld;
-      final consumeRadius = _foodStore.radiusWorld + headSize * _kHeadMouthSizeFrac;
+      final consumeRadius =
+          _foodStore.radiusWorld + headSize * _kHeadMouthSizeFrac;
       for (final other in _creatureStore.entities) {
         if (other.isEpic || identical(e, other)) continue;
         final opos = other.spine.positions;
@@ -418,15 +435,26 @@ class _SimulationScreenState extends State<SimulationScreen>
     final (left, right, top, bottom) = _viewState.renderRectWithBuffer(0.15);
     final r = _foodStore.radiusWorld;
     final visibleItems = _foodStore.items
-        .where((i) =>
-            !i.isGiant &&
-            circleOverlapsRect(i.x, i.y, r, left, right, top, bottom))
+        .where(
+          (i) =>
+              !i.isGiant &&
+              circleOverlapsRect(i.x, i.y, r, left, right, top, bottom),
+        )
         .toList();
     final visibleGiantItems = _foodStore.items
-        .where((i) =>
-            i.isGiant &&
-            circleOverlapsRect(
-                i.x, i.y, i.radiusWorld ?? r, left, right, top, bottom))
+        .where(
+          (i) =>
+              i.isGiant &&
+              circleOverlapsRect(
+                i.x,
+                i.y,
+                i.radiusWorld ?? r,
+                left,
+                right,
+                top,
+                bottom,
+              ),
+        )
         .toList();
     const remnantRadius = 220.0;
     final visibleRemnants = _foodStore.consumedRemnants
