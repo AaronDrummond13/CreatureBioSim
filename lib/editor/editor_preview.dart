@@ -705,10 +705,7 @@ class _SegmentWidthNodesOverlayPainter extends CustomPainter {
 
 /// Four nodes for selected lateral fin (mirrored left/right): 0,2 = length; 1,3 = width. activeNode 0 = length, 1 = width.
 class _LateralNodesOverlayPainter extends CustomPainter {
-  _LateralNodesOverlayPainter({
-    required this.positions,
-    this.activeNode,
-  });
+  _LateralNodesOverlayPainter({required this.positions, this.activeNode});
 
   final List<Offset> positions;
   final int? activeNode;
@@ -718,7 +715,9 @@ class _LateralNodesOverlayPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (var i = 0; i < positions.length; i++) {
-      final active = (i == 0 || i == 2) && activeNode == 0 || (i == 1 || i == 3) && activeNode == 1;
+      final active =
+          (i == 0 || i == 2) && activeNode == 0 ||
+          (i == 1 || i == 3) && activeNode == 1;
       final stroke = Paint()
         ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
         ..style = PaintingStyle.stroke
@@ -803,7 +802,7 @@ class _EditorPreviewState extends State<EditorPreview>
   late Spine _spine;
   double _dragTargetX = 0;
   double _dragTargetY = 0;
-  double _zoom = 1.5;
+  double _zoom = 2;
   late Ticker _ticker;
   int? _dorsalDragStartSeg;
   bool _dorsalDragFromFin = false;
@@ -839,6 +838,7 @@ class _EditorPreviewState extends State<EditorPreview>
   bool _editorPanning = false;
   bool _editorPotentialPan = false;
   static const double _panDragSlop = 10.0;
+
   /// Test mode (panel closed): store touch so we refresh target from camera each tick (same as play mode).
   Offset? _editorTouchLocal;
   Size? _editorTouchScreenSize;
@@ -1170,7 +1170,15 @@ class _EditorPreviewState extends State<EditorPreview>
         }
 
         /// Point-in-ellipse: (px,py) in screen space, ellipse center (cx,cy), angle, semi-axes a,b in screen space.
-        bool _pointInEllipseScreen(double px, double py, double cx, double cy, double angle, double a, double b) {
+        bool _pointInEllipseScreen(
+          double px,
+          double py,
+          double cx,
+          double cy,
+          double angle,
+          double a,
+          double b,
+        ) {
           final dx = px - cx;
           final dy = py - cy;
           final cosA = cos(angle);
@@ -1178,7 +1186,8 @@ class _EditorPreviewState extends State<EditorPreview>
           final localX = dx * cosA + dy * sinA;
           final localY = -dx * sinA + dy * cosA;
           if (a <= 0 || b <= 0) return false;
-          return (localX / a) * (localX / a) + (localY / b) * (localY / b) <= 1.0;
+          return (localX / a) * (localX / a) + (localY / b) * (localY / b) <=
+              1.0;
         }
 
         int? _lateralIndexNearScreen(double px, double py) {
@@ -1215,9 +1224,25 @@ class _EditorPreviewState extends State<EditorPreview>
             final leftSy = sy(leftCy);
             final rightSx = sx(rightCx);
             final rightSy = sy(rightCy);
-            if (_pointInEllipseScreen(px, py, leftSx, leftSy, leftAngle, aScreen, bScreen))
+            if (_pointInEllipseScreen(
+              px,
+              py,
+              leftSx,
+              leftSy,
+              leftAngle,
+              aScreen,
+              bScreen,
+            ))
               return i;
-            if (_pointInEllipseScreen(px, py, rightSx, rightSy, rightAngle, aScreen, bScreen))
+            if (_pointInEllipseScreen(
+              px,
+              py,
+              rightSx,
+              rightSy,
+              rightAngle,
+              aScreen,
+              bScreen,
+            ))
               return i;
           }
           return null;
@@ -1279,6 +1304,7 @@ class _EditorPreviewState extends State<EditorPreview>
         }
 
         const double _lateralNodeRadius = 14.0;
+
         /// Returns 4 positions: [lengthLeft, widthLeft, lengthRight, widthRight]. Index 0,2 = length; 1,3 = width.
         List<Offset>? _lateralNodePositions() {
           final laterals = widget.creature.lateralFins ?? [];
@@ -1339,7 +1365,8 @@ class _EditorPreviewState extends State<EditorPreview>
         int? _hitSegmentWidthNode(double px, double py) {
           if (positions.length < 2 || widget.onSegmentWidthDelta == null)
             return null;
-          final r2 = _SegmentWidthNodesOverlayPainter.nodeRadius *
+          final r2 =
+              _SegmentWidthNodesOverlayPainter.nodeRadius *
               _SegmentWidthNodesOverlayPainter.nodeRadius;
           final n = positions.length - 1;
           for (var seg = 0; seg < n; seg++) {
@@ -1347,11 +1374,11 @@ class _EditorPreviewState extends State<EditorPreview>
             final cy = (positions[seg].y + positions[seg + 1].y) / 2;
             final sx = centerX + (cx - cameraX) * _zoom;
             final sy = centerY + (cy - cameraY) * _zoom;
-            if ((px - sx) * (px - sx) + (py - sy) * (py - sy) <= r2)
-              return seg;
+            if ((px - sx) * (px - sx) + (py - sy) * (py - sy) <= r2) return seg;
           }
           return null;
         }
+
         int? _hitBodyNode(double px, double py) {
           if (positions.length < 2) return null;
           const out = _BodyNodesOverlayPainter._outsideOffset;
@@ -1521,115 +1548,44 @@ class _EditorPreviewState extends State<EditorPreview>
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onScaleStart: (d) {
-                  final lx = d.localFocalPoint.dx;
-                  final ly = d.localFocalPoint.dy;
-                  if (d.pointerCount >= 2) {
-                    _pinchStartZoom = _zoom;
-                    if (widget.panelClosed) {
-                      final pos = _spine.positions;
-                      if (pos.isNotEmpty) {
-                        final head = pos.last;
-                        _dragTargetX = head.x;
-                        _dragTargetY = head.y;
-                      }
-                      _editorTouchFrozen = true;
-                      _editorTouchLocal = null;
-                      _editorTouchScreenSize = null;
-                      setState(() {});
-                    }
-                  } else {
-                    _panStartX = lx;
-                    _panStartY = ly;
-                    _lastPanX = lx;
-                    _lastPanY = ly;
-                    if (widget.panelClosed) {
-                      _editorTouchLocal = Offset(lx, ly);
-                      _editorTouchScreenSize = Size(w, h);
-                      _editorTouchFrozen = false;
-                    }
-                    if (isBodyEdit) {
-                      final node = _hitBodyNode(lx, ly);
-                      final segNode = _hitSegmentWidthNode(lx, ly);
-                      if (node != null &&
-                          widget.onSegmentCountChanged != null) {
-                        _bodyDraggingNode = node;
-                      } else if (segNode != null &&
-                          widget.onSegmentWidthDelta != null) {
-                        _bodyWidthDragSeg = segNode;
-                        _bodyWidthDragLastPanY = ly;
-                      } else {
-                        if (widget.panelClosed) {
-                          final worldX = (lx - centerX) / _zoom + cameraX;
-                          final worldY = (ly - centerY) / _zoom + cameraY;
-                          setState(() {
-                            _dragTargetX = worldX;
-                            _dragTargetY = worldY;
-                          });
-                        } else {
-                          setState(() => _editorPotentialPan = true);
+                    final lx = d.localFocalPoint.dx;
+                    final ly = d.localFocalPoint.dy;
+                    if (d.pointerCount >= 2) {
+                      _pinchStartZoom = _zoom;
+                      if (widget.panelClosed) {
+                        final pos = _spine.positions;
+                        if (pos.isNotEmpty) {
+                          final head = pos.last;
+                          _dragTargetX = head.x;
+                          _dragTargetY = head.y;
                         }
+                        _editorTouchFrozen = true;
+                        _editorTouchLocal = null;
+                        _editorTouchScreenSize = null;
+                        setState(() {});
                       }
-                    } else if (editTab == 2 && !widget.panelClosed) {
-                      // Parts tab: dorsal (body then node) -> lateral -> tail -> target (same one-drag-to-remove as tail)
-                      final dorsalIdx = _dorsalFinIndexAtScreen(lx, ly);
-                      final dorsalNode = _hitDorsalNode(lx, ly);
-                      if (dorsalIdx != null && dorsalNode == null) {
-                        setState(() {
-                          _tailSelected = false;
-                          _dorsalDragFromFin = true;
-                        });
-                        widget.onDorsalFinSelected?.call(dorsalIdx);
-                      } else if (widget.selectedDorsalFinIndex != null &&
-                          dorsalNode != null) {
-                        _dorsalDraggingNode = dorsalNode;
-                      } else {
-                        // Prioritise lateral nodes (when a lateral is selected) then lateral fin body over pan.
-                        final lateralNodeHit = widget.selectedLateralFinIndex != null
-                            ? _hitLateralNode(lx, ly)
-                            : null;
-                        final lateralNode = lateralNodeHit != null
-                            ? (lateralNodeHit == 0 || lateralNodeHit == 2 ? 0 : 1)
-                            : null;
-                        if (lateralNode != null &&
-                            widget.onLateralLengthChanged != null &&
-                            widget.onLateralWidthChanged != null) {
-                          _lateralDraggingNode = lateralNode;
+                    } else {
+                      _panStartX = lx;
+                      _panStartY = ly;
+                      _lastPanX = lx;
+                      _lastPanY = ly;
+                      if (widget.panelClosed) {
+                        _editorTouchLocal = Offset(lx, ly);
+                        _editorTouchScreenSize = Size(w, h);
+                        _editorTouchFrozen = false;
+                      }
+                      if (isBodyEdit) {
+                        final node = _hitBodyNode(lx, ly);
+                        final segNode = _hitSegmentWidthNode(lx, ly);
+                        if (node != null &&
+                            widget.onSegmentCountChanged != null) {
+                          _bodyDraggingNode = node;
+                        } else if (segNode != null &&
+                            widget.onSegmentWidthDelta != null) {
+                          _bodyWidthDragSeg = segNode;
+                          _bodyWidthDragLastPanY = ly;
                         } else {
-                          final lateralIdx = _lateralIndexNearScreen(lx, ly);
-                          if (lateralIdx != null) {
-                            _lateralPanStartIndex = lateralIdx;
-                          } else if (_isPointOnMouth(lx, ly) &&
-                            widget.creature.mouth != null &&
-                            widget.onMouthRemoved != null) {
-                          widget.onDorsalFinSelected?.call(null);
-                          setState(() {
-                            _tailSelected = false;
-                            _mouthDragFromCreature = true;
-                          });
-                        } else {
-                          final tailNode = _hitTailNode(lx, ly);
-                          if (tailNode != null &&
-                              _tailSelected &&
-                              (widget.onTailRootWidthChanged != null ||
-                                  widget.onTailMaxWidthChanged != null ||
-                                  widget.onTailLengthChanged != null)) {
-                            _tailDraggingNode = tailNode;
-                            _tailDragStartValue = tailNode == 0
-                                ? _effectiveTailRoot()
-                                : (tailNode == 1
-                                      ? _effectiveTailMax()
-                                      : _effectiveTailLen());
-                          } else if (tailNode == null &&
-                              _isPointOnTail(lx, ly) &&
-                              widget.creature.tail != null &&
-                              widget.onTailRemoved != null) {
-                            widget.onDorsalFinSelected?.call(null);
-                            widget.onLateralFinSelected?.call(null);
-                            setState(() {
-                              _tailSelected = true;
-                              _tailDragFromCreature = true;
-                            });
-                          } else if (widget.panelClosed) {
+                          if (widget.panelClosed) {
                             final worldX = (lx - centerX) / _zoom + cameraX;
                             final worldY = (ly - centerY) / _zoom + cameraY;
                             setState(() {
@@ -1640,408 +1596,487 @@ class _EditorPreviewState extends State<EditorPreview>
                             setState(() => _editorPotentialPan = true);
                           }
                         }
+                      } else if (editTab == 2 && !widget.panelClosed) {
+                        // Parts tab: dorsal (body then node) -> lateral -> tail -> target (same one-drag-to-remove as tail)
+                        final dorsalIdx = _dorsalFinIndexAtScreen(lx, ly);
+                        final dorsalNode = _hitDorsalNode(lx, ly);
+                        if (dorsalIdx != null && dorsalNode == null) {
+                          setState(() {
+                            _tailSelected = false;
+                            _dorsalDragFromFin = true;
+                          });
+                          widget.onDorsalFinSelected?.call(dorsalIdx);
+                        } else if (widget.selectedDorsalFinIndex != null &&
+                            dorsalNode != null) {
+                          _dorsalDraggingNode = dorsalNode;
+                        } else {
+                          // Prioritise lateral nodes (when a lateral is selected) then lateral fin body over pan.
+                          final lateralNodeHit =
+                              widget.selectedLateralFinIndex != null
+                              ? _hitLateralNode(lx, ly)
+                              : null;
+                          final lateralNode = lateralNodeHit != null
+                              ? (lateralNodeHit == 0 || lateralNodeHit == 2
+                                    ? 0
+                                    : 1)
+                              : null;
+                          if (lateralNode != null &&
+                              widget.onLateralLengthChanged != null &&
+                              widget.onLateralWidthChanged != null) {
+                            _lateralDraggingNode = lateralNode;
+                          } else {
+                            final lateralIdx = _lateralIndexNearScreen(lx, ly);
+                            if (lateralIdx != null) {
+                              _lateralPanStartIndex = lateralIdx;
+                            } else if (_isPointOnMouth(lx, ly) &&
+                                widget.creature.mouth != null &&
+                                widget.onMouthRemoved != null) {
+                              widget.onDorsalFinSelected?.call(null);
+                              setState(() {
+                                _tailSelected = false;
+                                _mouthDragFromCreature = true;
+                              });
+                            } else {
+                              final tailNode = _hitTailNode(lx, ly);
+                              if (tailNode != null &&
+                                  _tailSelected &&
+                                  (widget.onTailRootWidthChanged != null ||
+                                      widget.onTailMaxWidthChanged != null ||
+                                      widget.onTailLengthChanged != null)) {
+                                _tailDraggingNode = tailNode;
+                                _tailDragStartValue = tailNode == 0
+                                    ? _effectiveTailRoot()
+                                    : (tailNode == 1
+                                          ? _effectiveTailMax()
+                                          : _effectiveTailLen());
+                              } else if (tailNode == null &&
+                                  _isPointOnTail(lx, ly) &&
+                                  widget.creature.tail != null &&
+                                  widget.onTailRemoved != null) {
+                                widget.onDorsalFinSelected?.call(null);
+                                widget.onLateralFinSelected?.call(null);
+                                setState(() {
+                                  _tailSelected = true;
+                                  _tailDragFromCreature = true;
+                                });
+                              } else if (widget.panelClosed) {
+                                final worldX = (lx - centerX) / _zoom + cameraX;
+                                final worldY = (ly - centerY) / _zoom + cameraY;
+                                setState(() {
+                                  _dragTargetX = worldX;
+                                  _dragTargetY = worldY;
+                                });
+                              } else {
+                                setState(() => _editorPotentialPan = true);
+                              }
+                            }
+                          }
                         }
+                      } else if (widget.panelClosed) {
+                        final worldX = (lx - centerX) / _zoom + cameraX;
+                        final worldY = (ly - centerY) / _zoom + cameraY;
+                        setState(() {
+                          _dragTargetX = worldX;
+                          _dragTargetY = worldY;
+                        });
+                      } else {
+                        setState(() => _editorPotentialPan = true);
                       }
-                    } else if (widget.panelClosed) {
-                      final worldX = (lx - centerX) / _zoom + cameraX;
-                      final worldY = (ly - centerY) / _zoom + cameraY;
-                      setState(() {
-                        _dragTargetX = worldX;
-                        _dragTargetY = worldY;
-                      });
-                    } else {
-                      setState(() => _editorPotentialPan = true);
                     }
-                  }
-                },
-                onScaleUpdate: (d) {
-                  final lx = d.localFocalPoint.dx;
-                  final ly = d.localFocalPoint.dy;
-                  if (_pinchStartZoom != null && d.pointerCount >= 2) {
-                    setState(() {
-                      _zoom = (_pinchStartZoom! * d.scale).clamp(
-                        _minZoom,
-                        _maxZoom,
-                      );
-                    });
-                    return;
-                  }
-                  if (widget.panelClosed &&
-                      d.pointerCount == 1 &&
-                      !_editorTouchFrozen) {
-                    _editorTouchLocal = Offset(lx, ly);
-                  }
-                  if (_editorPotentialPan) {
-                    final dx = lx - _panStartX;
-                    final dy = ly - _panStartY;
-                    if (dx * dx + dy * dy > _panDragSlop * _panDragSlop) {
+                  },
+                  onScaleUpdate: (d) {
+                    final lx = d.localFocalPoint.dx;
+                    final ly = d.localFocalPoint.dy;
+                    if (_pinchStartZoom != null && d.pointerCount >= 2) {
                       setState(() {
-                        _editorPotentialPan = false;
-                        _editorPanning = true;
+                        _zoom = (_pinchStartZoom! * d.scale).clamp(
+                          _minZoom,
+                          _maxZoom,
+                        );
+                      });
+                      return;
+                    }
+                    if (widget.panelClosed &&
+                        d.pointerCount == 1 &&
+                        !_editorTouchFrozen) {
+                      _editorTouchLocal = Offset(lx, ly);
+                    }
+                    if (_editorPotentialPan) {
+                      final dx = lx - _panStartX;
+                      final dy = ly - _panStartY;
+                      if (dx * dx + dy * dy > _panDragSlop * _panDragSlop) {
+                        setState(() {
+                          _editorPotentialPan = false;
+                          _editorPanning = true;
+                          _lastPanX = lx;
+                          _lastPanY = ly;
+                        });
+                        return;
+                      }
+                      return;
+                    }
+                    if (_editorPanning) {
+                      setState(() {
+                        _editorPanOffsetX += (_lastPanX - lx) / _zoom;
+                        _editorPanOffsetY += (_lastPanY - ly) / _zoom;
                         _lastPanX = lx;
                         _lastPanY = ly;
                       });
                       return;
                     }
-                    return;
-                  }
-                  if (_editorPanning) {
-                    setState(() {
-                      _editorPanOffsetX += (_lastPanX - lx) / _zoom;
-                      _editorPanOffsetY += (_lastPanY - ly) / _zoom;
+                    if (_lateralPanStartIndex != null &&
+                        _lateralDragFromIndex == null) {
+                      final dx = lx - _panStartX;
+                      final dy = ly - _panStartY;
+                      if (dx * dx + dy * dy >
+                          _EditorPreviewState._panDragSlop *
+                              _EditorPreviewState._panDragSlop) {
+                        setState(
+                          () => _lateralDragFromIndex = _lateralPanStartIndex,
+                        );
+                      }
+                    }
+                    if (_lateralDraggingNode != null &&
+                        widget.selectedLateralFinIndex != null) {
+                      const scale = 0.2;
+                      final idx = widget.selectedLateralFinIndex!;
+                      final delta = (ly - _lastPanY) * scale;
+                      final laterals = widget.creature.lateralFins!;
+                      if (idx < laterals.length) {
+                        if (_lateralDraggingNode == 0 &&
+                            widget.onLateralLengthChanged != null) {
+                          final v = (laterals[idx].length + delta).clamp(
+                            LateralFinConfig.lengthMin,
+                            LateralFinConfig.lengthMax,
+                          );
+                          widget.onLateralLengthChanged!(idx, v);
+                        } else if (_lateralDraggingNode == 1 &&
+                            widget.onLateralWidthChanged != null) {
+                          final v = (laterals[idx].width + delta).clamp(
+                            LateralFinConfig.widthMin,
+                            LateralFinConfig.widthMax,
+                          );
+                          widget.onLateralWidthChanged!(idx, v);
+                        }
+                      }
                       _lastPanX = lx;
                       _lastPanY = ly;
-                    });
-                    return;
-                  }
-                  if (_lateralPanStartIndex != null &&
-                      _lateralDragFromIndex == null) {
-                    final dx = lx - _panStartX;
-                    final dy = ly - _panStartY;
-                    if (dx * dx + dy * dy >
-                        _EditorPreviewState._panDragSlop *
-                            _EditorPreviewState._panDragSlop) {
-                      setState(() => _lateralDragFromIndex = _lateralPanStartIndex);
-                    }
-                  }
-                  if (_lateralDraggingNode != null &&
-                      widget.selectedLateralFinIndex != null) {
-                    const scale = 0.2;
-                    final idx = widget.selectedLateralFinIndex!;
-                    final delta = (ly - _lastPanY) * scale;
-                    final laterals = widget.creature.lateralFins!;
-                    if (idx < laterals.length) {
-                      if (_lateralDraggingNode == 0 &&
-                          widget.onLateralLengthChanged != null) {
-                        final v = (laterals[idx].length + delta).clamp(
-                          LateralFinConfig.lengthMin,
-                          LateralFinConfig.lengthMax,
-                        );
-                        widget.onLateralLengthChanged!(idx, v);
-                      } else if (_lateralDraggingNode == 1 &&
-                          widget.onLateralWidthChanged != null) {
-                        final v = (laterals[idx].width + delta).clamp(
-                          LateralFinConfig.widthMin,
-                          LateralFinConfig.widthMax,
-                        );
-                        widget.onLateralWidthChanged!(idx, v);
-                      }
+                      setState(() {});
+                      return;
                     }
                     _lastPanX = lx;
                     _lastPanY = ly;
-                    setState(() {});
-                    return;
-                  }
-                  _lastPanX = lx;
-                  _lastPanY = ly;
-                  if (_tailDragFromCreature || _mouthDragFromCreature) {
-                    setState(() {});
-                    return;
-                  }
-                  if (_bodyDraggingNode != null &&
-                      widget.onSegmentCountChanged != null) {
-                    widget.onSegmentCountChanged!(
-                      _segmentCountFromTailDrag(
-                        centerX,
-                        centerY,
-                        cameraX,
-                        cameraY,
-                        positions,
-                      ),
-                    );
-                    setState(() {});
-                    return;
-                  }
-                  if (_tailDraggingNode != null &&
-                      positions.isNotEmpty &&
-                      _spine.segmentAngles.isNotEmpty) {
-                    final tailA = _spine.segmentAngles[0];
-                    final back = tailA + pi;
-                    final leftDirX = sin(tailA);
-                    final leftDirY = -cos(tailA);
-                    final backDirX = cos(back);
-                    final backDirY = sin(back);
-                    final dx = (_lastPanX - _panStartX) / _zoom;
-                    final dy = (_lastPanY - _panStartY) / _zoom;
-                    if (_tailDraggingNode == 0 &&
-                        widget.onTailRootWidthChanged != null) {
-                      final delta = dx * leftDirX + dy * leftDirY;
-                      final v = (_tailDragStartValue + delta).clamp(
-                        TailConfig.rootWidthMin,
-                        TailConfig.rootWidthMax,
-                      );
-                      widget.onTailRootWidthChanged!(v);
-                    } else if (_tailDraggingNode == 1 &&
-                        widget.onTailMaxWidthChanged != null) {
-                      final delta = dx * leftDirX + dy * leftDirY;
-                      final v = (_tailDragStartValue + delta).clamp(
-                        TailConfig.maxWidthMin,
-                        TailConfig.maxWidthMax,
-                      );
-                      widget.onTailMaxWidthChanged!(v);
-                    } else if (_tailDraggingNode == 2 &&
-                        widget.onTailLengthChanged != null) {
-                      final delta = dx * backDirX + dy * backDirY;
-                      final v = (_tailDragStartValue + delta).clamp(
-                        TailConfig.lengthMin,
-                        TailConfig.lengthMax,
-                      );
-                      widget.onTailLengthChanged!(v);
+                    if (_tailDragFromCreature || _mouthDragFromCreature) {
+                      setState(() {});
+                      return;
                     }
-                    setState(() {});
-                    return;
-                  }
-                  if (_dorsalDraggingNode != null) {
-                    final fins = widget.creature.dorsalFins ?? [];
-                    final idx = widget.selectedDorsalFinIndex;
-                    if (idx != null &&
-                        idx < fins.length &&
+                    if (_bodyDraggingNode != null &&
+                        widget.onSegmentCountChanged != null) {
+                      widget.onSegmentCountChanged!(
+                        _segmentCountFromTailDrag(
+                          centerX,
+                          centerY,
+                          cameraX,
+                          cameraY,
+                          positions,
+                        ),
+                      );
+                      setState(() {});
+                      return;
+                    }
+                    if (_tailDraggingNode != null &&
+                        positions.isNotEmpty &&
+                        _spine.segmentAngles.isNotEmpty) {
+                      final tailA = _spine.segmentAngles[0];
+                      final back = tailA + pi;
+                      final leftDirX = sin(tailA);
+                      final leftDirY = -cos(tailA);
+                      final backDirX = cos(back);
+                      final backDirY = sin(back);
+                      final dx = (_lastPanX - _panStartX) / _zoom;
+                      final dy = (_lastPanY - _panStartY) / _zoom;
+                      if (_tailDraggingNode == 0 &&
+                          widget.onTailRootWidthChanged != null) {
+                        final delta = dx * leftDirX + dy * leftDirY;
+                        final v = (_tailDragStartValue + delta).clamp(
+                          TailConfig.rootWidthMin,
+                          TailConfig.rootWidthMax,
+                        );
+                        widget.onTailRootWidthChanged!(v);
+                      } else if (_tailDraggingNode == 1 &&
+                          widget.onTailMaxWidthChanged != null) {
+                        final delta = dx * leftDirX + dy * leftDirY;
+                        final v = (_tailDragStartValue + delta).clamp(
+                          TailConfig.maxWidthMin,
+                          TailConfig.maxWidthMax,
+                        );
+                        widget.onTailMaxWidthChanged!(v);
+                      } else if (_tailDraggingNode == 2 &&
+                          widget.onTailLengthChanged != null) {
+                        final delta = dx * backDirX + dy * backDirY;
+                        final v = (_tailDragStartValue + delta).clamp(
+                          TailConfig.lengthMin,
+                          TailConfig.lengthMax,
+                        );
+                        widget.onTailLengthChanged!(v);
+                      }
+                      setState(() {});
+                      return;
+                    }
+                    if (_dorsalDraggingNode != null) {
+                      final fins = widget.creature.dorsalFins ?? [];
+                      final idx = widget.selectedDorsalFinIndex;
+                      if (idx != null &&
+                          idx < fins.length &&
+                          widget.onDorsalRangeChanged != null) {
+                        final range = fins[idx].$1;
+                        if (range.isNotEmpty) {
+                          final seg = segmentAtScreen(
+                            _lastPanX,
+                            _lastPanY,
+                          ).clamp(0, _spine.segmentCount - 1);
+                          if (_dorsalDraggingNode == 0) {
+                            widget.onDorsalRangeChanged!(
+                              seg.clamp(0, range.last),
+                              range.last,
+                            );
+                          } else if (_dorsalDraggingNode == 1) {
+                            widget.onDorsalRangeChanged!(
+                              range.first,
+                              seg.clamp(range.first, _spine.segmentCount - 1),
+                            );
+                          }
+                        }
+                      }
+                      if (_dorsalDraggingNode == 2 &&
+                          widget.onDorsalHeightChanged != null) {
+                        final frac = (1.0 - _lastPanY / h).clamp(0.0, 1.0);
+                        final height = frac < 0.33
+                            ? kDorsalHeightSmall
+                            : (frac < 0.66
+                                  ? kDorsalHeightMedium
+                                  : kDorsalHeightLarge);
+                        widget.onDorsalHeightChanged!(height);
+                      }
+                      setState(() {});
+                      return;
+                    }
+                    if (_bodyWidthDragSeg != null &&
+                        widget.onSegmentWidthDelta != null) {
+                      const scale = 0.2;
+                      final seg = _bodyWidthDragSeg!;
+                      final delta = (_bodyWidthDragLastPanY - ly) * scale;
+                      widget.onSegmentWidthDelta!(seg, delta);
+                      _bodyWidthDragLastPanY = ly;
+                      setState(() {});
+                      return;
+                    }
+                    if (_bodyDraggingNode != null ||
+                        _dorsalDragFromFin ||
+                        _dorsalDragStartSeg != null ||
+                        _lateralDragFromIndex != null ||
+                        _lateralDraggingNode != null ||
+                        _lateralPanStartIndex != null ||
+                        _mouthDragFromCreature)
+                      return;
+                    if (isSpineLocked) return;
+                    if (widget.panelClosed) return;
+                    final worldX = (lx - centerX) / _zoom + cameraX;
+                    final worldY = (ly - centerY) / _zoom + cameraY;
+                    setState(() {
+                      _dragTargetX = worldX;
+                      _dragTargetY = worldY;
+                    });
+                  },
+                  onScaleEnd: (_) {
+                    if (_editorPanning) {
+                      setState(() => _editorPanning = false);
+                      return;
+                    }
+                    if (_editorPotentialPan) {
+                      setState(() {
+                        _editorPotentialPan = false;
+                        _tailSelected = false;
+                      });
+                      widget.onDorsalFinSelected?.call(null);
+                      widget.onLateralFinSelected?.call(null);
+                      return;
+                    }
+                    _pinchStartZoom = null;
+                    if (widget.panelClosed) {
+                      _editorTouchLocal = null;
+                      _editorTouchScreenSize = null;
+                      _editorTouchFrozen = false;
+                    }
+                    if (_tailDragFromCreature) {
+                      if (!_finRemoveBounds().contains(
+                            Offset(_lastPanX, _lastPanY),
+                          ) &&
+                          widget.onTailRemoved != null) {
+                        widget.onTailRemoved!();
+                      }
+                      setState(() => _tailDragFromCreature = false);
+                      return;
+                    }
+                    if (_mouthDragFromCreature) {
+                      if (!_finRemoveBounds().contains(
+                            Offset(_lastPanX, _lastPanY),
+                          ) &&
+                          widget.onMouthRemoved != null) {
+                        widget.onMouthRemoved!();
+                      }
+                      setState(() => _mouthDragFromCreature = false);
+                      return;
+                    }
+                    if (_tailDraggingNode != null) {
+                      setState(() => _tailDraggingNode = null);
+                      return;
+                    }
+                    if (_bodyWidthDragSeg != null) {
+                      setState(() => _bodyWidthDragSeg = null);
+                      return;
+                    }
+                    if (_bodyDraggingNode != null &&
+                        widget.onSegmentCountChanged != null) {
+                      widget.onSegmentCountChanged!(
+                        _segmentCountFromTailDrag(
+                          centerX,
+                          centerY,
+                          cameraX,
+                          cameraY,
+                          positions,
+                        ),
+                      );
+                      setState(() => _bodyDraggingNode = null);
+                      return;
+                    }
+                    if (_dorsalDraggingNode != null) {
+                      setState(() => _dorsalDraggingNode = null);
+                      return;
+                    }
+                    if (_dorsalDragFromFin &&
+                        widget.onDorsalRemoved != null &&
+                        widget.selectedDorsalFinIndex != null) {
+                      if (!_finRemoveBounds().contains(
+                        Offset(_lastPanX, _lastPanY),
+                      )) {
+                        widget.onDorsalRemoved!(widget.selectedDorsalFinIndex!);
+                      }
+                      setState(() => _dorsalDragFromFin = false);
+                      return;
+                    }
+                    if (_dorsalDragStartSeg != null &&
                         widget.onDorsalRangeChanged != null) {
-                      final range = fins[idx].$1;
-                      if (range.isNotEmpty) {
-                        final seg = segmentAtScreen(
+                      final seg = segmentAtScreen(_lastPanX, _lastPanY);
+                      final a = _dorsalDragStartSeg!;
+                      widget.onDorsalRangeChanged!(
+                        a < seg ? a : seg,
+                        a < seg ? seg : a,
+                      );
+                      setState(() => _dorsalDragStartSeg = null);
+                      return;
+                    }
+                    if (_lateralDragFromIndex != null) {
+                      final releaseInBounds = _finRemoveBounds().contains(
+                        Offset(_lastPanX, _lastPanY),
+                      );
+                      if (!releaseInBounds && widget.onLateralRemoved != null) {
+                        widget.onLateralRemoved!(_lateralDragFromIndex!);
+                      } else if (releaseInBounds &&
+                          widget.onLateralMoved != null) {
+                        final seg = segmentAtScreen(_lastPanX, _lastPanY);
+                        widget.onLateralMoved!(_lateralDragFromIndex!, seg);
+                      }
+                      setState(() {
+                        _lateralDragFromIndex = null;
+                        _lateralPanStartIndex = null;
+                      });
+                      return;
+                    }
+                    if (_lateralDraggingNode != null) {
+                      final laterals = widget.creature.lateralFins ?? [];
+                      final releaseInBounds = _finRemoveBounds().contains(
+                        Offset(_lastPanX, _lastPanY),
+                      );
+                      if (laterals.length == 1 &&
+                          !releaseInBounds &&
+                          widget.onLateralRemoved != null) {
+                        widget.onLateralRemoved!(0);
+                        widget.onLateralFinSelected?.call(null);
+                      }
+                      setState(() => _lateralDraggingNode = null);
+                      return;
+                    }
+                    if (_lateralPanStartIndex != null) {
+                      final dist2 =
+                          (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
+                          (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
+                      if (dist2 < 100) {
+                        widget.onLateralFinSelected?.call(
+                          _lateralPanStartIndex,
+                        );
+                        setState(() {
+                          _tailSelected = false;
+                          _lateralPanStartIndex = null;
+                        });
+                      } else {
+                        setState(() => _lateralPanStartIndex = null);
+                      }
+                      return;
+                    }
+                    if (editTab == 2 && widget.onDorsalFinSelected != null) {
+                      final dist2 =
+                          (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
+                          (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
+                      if (dist2 < 100) {
+                        final dorsalFound = _dorsalFinIndexAtScreen(
                           _lastPanX,
                           _lastPanY,
-                        ).clamp(0, _spine.segmentCount - 1);
-                        if (_dorsalDraggingNode == 0) {
-                          widget.onDorsalRangeChanged!(
-                            seg.clamp(0, range.last),
-                            range.last,
-                          );
-                        } else if (_dorsalDraggingNode == 1) {
-                          widget.onDorsalRangeChanged!(
-                            range.first,
-                            seg.clamp(range.first, _spine.segmentCount - 1),
-                          );
+                        );
+                        if (dorsalFound != null) {
+                          setState(() => _tailSelected = false);
+                          widget.onDorsalFinSelected!(dorsalFound);
+                          setState(() {});
+                          return;
+                        }
+                        // Tap elsewhere: deselect dorsal so user can interact with tail, laterals or empty space.
+                        if (widget.selectedDorsalFinIndex != null &&
+                            _hitDorsalNode(_lastPanX, _lastPanY) == null) {
+                          widget.onDorsalFinSelected!(null);
+                          setState(() {});
                         }
                       }
                     }
-                    if (_dorsalDraggingNode == 2 &&
-                        widget.onDorsalHeightChanged != null) {
-                      final frac = (1.0 - _lastPanY / h).clamp(0.0, 1.0);
-                      final height = frac < 0.33
-                          ? kDorsalHeightSmall
-                          : (frac < 0.66
-                                ? kDorsalHeightMedium
-                                : kDorsalHeightLarge);
-                      widget.onDorsalHeightChanged!(height);
-                    }
-                    setState(() {});
-                    return;
-                  }
-                  if (_bodyWidthDragSeg != null &&
-                      widget.onSegmentWidthDelta != null) {
-                    const scale = 0.2;
-                    final seg = _bodyWidthDragSeg!;
-                    final delta = (_bodyWidthDragLastPanY - ly) * scale;
-                    widget.onSegmentWidthDelta!(seg, delta);
-                    _bodyWidthDragLastPanY = ly;
-                    setState(() {});
-                    return;
-                  }
-                  if (_bodyDraggingNode != null ||
-                      _dorsalDragFromFin ||
-                      _dorsalDragStartSeg != null ||
-                      _lateralDragFromIndex != null ||
-                      _lateralDraggingNode != null ||
-                      _lateralPanStartIndex != null ||
-                      _mouthDragFromCreature)
-                    return;
-                  if (isSpineLocked) return;
-                  if (widget.panelClosed) return;
-                  final worldX = (lx - centerX) / _zoom + cameraX;
-                  final worldY = (ly - centerY) / _zoom + cameraY;
-                  setState(() {
-                    _dragTargetX = worldX;
-                    _dragTargetY = worldY;
-                  });
-                },
-                onScaleEnd: (_) {
-                  if (_editorPanning) {
-                    setState(() => _editorPanning = false);
-                    return;
-                  }
-                  if (_editorPotentialPan) {
-                    setState(() {
-                      _editorPotentialPan = false;
-                      _tailSelected = false;
-                    });
-                    widget.onDorsalFinSelected?.call(null);
-                    widget.onLateralFinSelected?.call(null);
-                    return;
-                  }
-                  _pinchStartZoom = null;
-                  if (widget.panelClosed) {
-                    _editorTouchLocal = null;
-                    _editorTouchScreenSize = null;
-                    _editorTouchFrozen = false;
-                  }
-                  if (_tailDragFromCreature) {
-                    if (!_finRemoveBounds().contains(
-                          Offset(_lastPanX, _lastPanY),
-                        ) &&
-                        widget.onTailRemoved != null) {
-                      widget.onTailRemoved!();
-                    }
-                    setState(() => _tailDragFromCreature = false);
-                    return;
-                  }
-                  if (_mouthDragFromCreature) {
-                    if (!_finRemoveBounds().contains(
-                          Offset(_lastPanX, _lastPanY),
-                        ) &&
-                        widget.onMouthRemoved != null) {
-                      widget.onMouthRemoved!();
-                    }
-                    setState(() => _mouthDragFromCreature = false);
-                    return;
-                  }
-                  if (_tailDraggingNode != null) {
-                    setState(() => _tailDraggingNode = null);
-                    return;
-                  }
-                  if (_bodyWidthDragSeg != null) {
-                    setState(() => _bodyWidthDragSeg = null);
-                    return;
-                  }
-                  if (_bodyDraggingNode != null &&
-                      widget.onSegmentCountChanged != null) {
-                    widget.onSegmentCountChanged!(
-                      _segmentCountFromTailDrag(
-                        centerX,
-                        centerY,
-                        cameraX,
-                        cameraY,
-                        positions,
-                      ),
-                    );
-                    setState(() => _bodyDraggingNode = null);
-                    return;
-                  }
-                  if (_dorsalDraggingNode != null) {
-                    setState(() => _dorsalDraggingNode = null);
-                    return;
-                  }
-                  if (_dorsalDragFromFin &&
-                      widget.onDorsalRemoved != null &&
-                      widget.selectedDorsalFinIndex != null) {
-                    if (!_finRemoveBounds().contains(
-                      Offset(_lastPanX, _lastPanY),
-                    )) {
-                      widget.onDorsalRemoved!(widget.selectedDorsalFinIndex!);
-                    }
-                    setState(() => _dorsalDragFromFin = false);
-                    return;
-                  }
-                  if (_dorsalDragStartSeg != null &&
-                      widget.onDorsalRangeChanged != null) {
-                    final seg = segmentAtScreen(_lastPanX, _lastPanY);
-                    final a = _dorsalDragStartSeg!;
-                    widget.onDorsalRangeChanged!(
-                      a < seg ? a : seg,
-                      a < seg ? seg : a,
-                    );
-                    setState(() => _dorsalDragStartSeg = null);
-                    return;
-                  }
-                  if (_lateralDragFromIndex != null) {
-                    final releaseInBounds = _finRemoveBounds().contains(
-                      Offset(_lastPanX, _lastPanY),
-                    );
-                    if (!releaseInBounds && widget.onLateralRemoved != null) {
-                      widget.onLateralRemoved!(_lateralDragFromIndex!);
-                    } else if (releaseInBounds &&
-                        widget.onLateralMoved != null) {
-                      final seg = segmentAtScreen(_lastPanX, _lastPanY);
-                      widget.onLateralMoved!(_lateralDragFromIndex!, seg);
-                    }
-                    setState(() {
-                      _lateralDragFromIndex = null;
-                      _lateralPanStartIndex = null;
-                    });
-                    return;
-                  }
-                  if (_lateralDraggingNode != null) {
-                    final laterals = widget.creature.lateralFins ?? [];
-                    final releaseInBounds = _finRemoveBounds().contains(
-                      Offset(_lastPanX, _lastPanY),
-                    );
-                    if (laterals.length == 1 &&
-                        !releaseInBounds &&
-                        widget.onLateralRemoved != null) {
-                      widget.onLateralRemoved!(0);
-                      widget.onLateralFinSelected?.call(null);
-                    }
-                    setState(() => _lateralDraggingNode = null);
-                    return;
-                  }
-                  if (_lateralPanStartIndex != null) {
-                    final dist2 =
+                    final tapDist2 =
                         (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
                         (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
-                    if (dist2 < 100) {
-                      widget.onLateralFinSelected?.call(_lateralPanStartIndex);
-                      setState(() {
-                        _tailSelected = false;
-                        _lateralPanStartIndex = null;
-                      });
-                    } else {
-                      setState(() => _lateralPanStartIndex = null);
+                    if (tapDist2 < 100 &&
+                        !_isPointOnTail(_lastPanX, _lastPanY)) {
+                      setState(() => _tailSelected = false);
                     }
-                    return;
-                  }
-                  if (editTab == 2 && widget.onDorsalFinSelected != null) {
-                    final dist2 =
-                        (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
-                        (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
-                    if (dist2 < 100) {
-                      final dorsalFound = _dorsalFinIndexAtScreen(
-                        _lastPanX,
-                        _lastPanY,
-                      );
-                      if (dorsalFound != null) {
-                        setState(() => _tailSelected = false);
-                        widget.onDorsalFinSelected!(dorsalFound);
-                        setState(() {});
-                        return;
-                      }
-                      // Tap elsewhere: deselect dorsal so user can interact with tail, laterals or empty space.
-                      if (widget.selectedDorsalFinIndex != null &&
-                          _hitDorsalNode(_lastPanX, _lastPanY) == null) {
-                        widget.onDorsalFinSelected!(null);
-                        setState(() {});
+                    if (!widget.panelClosed) {
+                      final pos = _spine.positions;
+                      if (pos.isNotEmpty) {
+                        final head = pos.last;
+                        setState(() {
+                          _dragTargetX = head.x;
+                          _dragTargetY = head.y;
+                        });
                       }
                     }
-                  }
-                  final tapDist2 =
-                      (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
-                      (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
-                  if (tapDist2 < 100 && !_isPointOnTail(_lastPanX, _lastPanY)) {
-                    setState(() => _tailSelected = false);
-                  }
-                  if (!widget.panelClosed) {
-                    final pos = _spine.positions;
-                    if (pos.isNotEmpty) {
-                      final head = pos.last;
-                      setState(() {
-                        _dragTargetX = head.x;
-                        _dragTargetY = head.y;
-                      });
-                    }
-                  }
-                },
-                child: CustomPaint(
-                  size: Size(w, h),
-                  painter: CreaturePainter(
-                    creature: widget.creature,
-                    spine: _spine,
-                    view: view,
-                    showContourLines: true,
-                    blurBodyLayers: false,
+                  },
+                  child: CustomPaint(
+                    size: Size(w, h),
+                    painter: CreaturePainter(
+                      creature: widget.creature,
+                      spine: _spine,
+                      view: view,
+                      showContourLines: true,
+                      blurBodyLayers: false,
+                    ),
                   ),
                 ),
               ),
-            ),
             ),
             if (isBodyEdit && widget.onSegmentCountChanged != null)
               Positioned.fill(
@@ -2340,7 +2375,8 @@ class _EditorPreviewState extends State<EditorPreview>
             ],
             if (_lateralDragFromIndex != null &&
                 widget.creature.lateralFins != null &&
-                _lateralDragFromIndex! < widget.creature.lateralFins!.length) ...[
+                _lateralDragFromIndex! <
+                    widget.creature.lateralFins!.length) ...[
               if (_finRemoveBounds().contains(Offset(_lastPanX, _lastPanY)))
                 Positioned.fill(
                   child: IgnorePointer(
@@ -2350,11 +2386,21 @@ class _EditorPreviewState extends State<EditorPreview>
                           _lastPanX,
                           _lastPanY,
                         ).clamp(0, positions.length - 2),
-                        length: _lateralDragFromIndex! < (widget.creature.lateralFins?.length ?? 0)
-                            ? widget.creature.lateralFins![_lateralDragFromIndex!].length
+                        length:
+                            _lateralDragFromIndex! <
+                                (widget.creature.lateralFins?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .lateralFins![_lateralDragFromIndex!]
+                                  .length
                             : LateralFinConfig.lengthDefault,
-                        width: _lateralDragFromIndex! < (widget.creature.lateralFins?.length ?? 0)
-                            ? widget.creature.lateralFins![_lateralDragFromIndex!].width
+                        width:
+                            _lateralDragFromIndex! <
+                                (widget.creature.lateralFins?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .lateralFins![_lateralDragFromIndex!]
+                                  .width
                             : LateralFinConfig.widthDefault,
                         positions: positions,
                         segmentAngles: _spine.segmentAngles,
@@ -2387,14 +2433,29 @@ class _EditorPreviewState extends State<EditorPreview>
                   child: IgnorePointer(
                     child: CustomPaint(
                       painter: _LateralFinAtSegmentPainter(
-                        segment: _lateralDragFromIndex! < (widget.creature.lateralFins?.length ?? 0)
-                            ? widget.creature.lateralFins![_lateralDragFromIndex!].segment
+                        segment:
+                            _lateralDragFromIndex! <
+                                (widget.creature.lateralFins?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .lateralFins![_lateralDragFromIndex!]
+                                  .segment
                             : 0,
-                        length: _lateralDragFromIndex! < (widget.creature.lateralFins?.length ?? 0)
-                            ? widget.creature.lateralFins![_lateralDragFromIndex!].length
+                        length:
+                            _lateralDragFromIndex! <
+                                (widget.creature.lateralFins?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .lateralFins![_lateralDragFromIndex!]
+                                  .length
                             : LateralFinConfig.lengthDefault,
-                        width: _lateralDragFromIndex! < (widget.creature.lateralFins?.length ?? 0)
-                            ? widget.creature.lateralFins![_lateralDragFromIndex!].width
+                        width:
+                            _lateralDragFromIndex! <
+                                (widget.creature.lateralFins?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .lateralFins![_lateralDragFromIndex!]
+                                  .width
                             : LateralFinConfig.widthDefault,
                         positions: positions,
                         segmentAngles: _spine.segmentAngles,
@@ -2404,8 +2465,12 @@ class _EditorPreviewState extends State<EditorPreview>
                         cameraY: cameraY,
                         zoom: _zoom,
                         segWidth: widthAtVertex(
-                          _lateralDragFromIndex! < (widget.creature.lateralFins?.length ?? 0)
-                              ? widget.creature.lateralFins![_lateralDragFromIndex!].segment
+                          _lateralDragFromIndex! <
+                                  (widget.creature.lateralFins?.length ?? 0)
+                              ? widget
+                                    .creature
+                                    .lateralFins![_lateralDragFromIndex!]
+                                    .segment
                               : 0,
                         ),
                         finColor: widget.creature.finColor != null
