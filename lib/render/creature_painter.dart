@@ -86,7 +86,7 @@ class CreaturePainter extends CustomPainter {
     this.isEpic = false,
     this.bodyContourStyle = BodyContourStyle.tubular,
     this.showContourLines = false,
-    this.blurBodyLayers = true,
+    this.blurBodyLayers = false,
   });
 
   // Set during paint() for use by _drawTailFin, _drawBody, _drawDorsalFins, _drawEyes.
@@ -503,8 +503,39 @@ class CreaturePainter extends CustomPainter {
 
   static const double _contourStrokeWidthFrac = 0.5;
   static const double _contourOpacity = 0.45;
-  static const double _shadeDarkBlend = 0.28;
-  static const double _shadeBrightBlend = 0.22;
+  static const double _shadeDarkBlend = 0.4;
+  static const double _shadeBrightBlend = 0.01;
+
+  /// Smooth contour side: each point blends toward neighbors. [intensity] 0 = no change;
+  /// positive = smooth (1 = full 0.25/0.5/0.25); negative = sharpen (opposite).
+  List<Offset> _smoothContourSide(
+    List<Offset> points, {
+    bool closed = false,
+    double intensity = 1.0,
+  }) {
+    if (points.length < 3) return points;
+    if (intensity == 0) return points;
+    final blend = intensity.clamp(-1.0, 1.0);
+    final prevFrac = 0.25 * blend;
+    final nextFrac = 0.25 * blend;
+    final currFrac = 1.0 - 0.5 * blend;
+    final out = <Offset>[];
+    for (var i = 0; i < points.length; i++) {
+      final prev = closed && i == 0
+          ? points.last
+          : points[(i - 1).clamp(0, points.length - 1)];
+      final next = closed && i == points.length - 1
+          ? points.first
+          : points[(i + 1).clamp(0, points.length - 1)];
+      out.add(
+        Offset(
+          prev.dx * prevFrac + points[i].dx * currFrac + next.dx * nextFrac,
+          prev.dy * prevFrac + points[i].dy * currFrac + next.dy * nextFrac,
+        ),
+      );
+    }
+    return out;
+  }
 
   Path _buildContourPath(
     double t,
@@ -529,7 +560,7 @@ class CreaturePainter extends CustomPainter {
       tailCenter.dx + tailRadius * cos(tailA + 3 * pi / 2),
       tailCenter.dy + tailRadius * sin(tailA + 3 * pi / 2),
     );
-    final rightSide = <Offset>[
+    var rightSide = <Offset>[
       for (var i = 0; i <= n; i++)
         Offset.lerp(
           rightAt(i),
@@ -537,7 +568,7 @@ class CreaturePainter extends CustomPainter {
           t,
         )!,
     ];
-    final leftSide = <Offset>[
+    var leftSide = <Offset>[
       for (var i = n; i >= 0; i--)
         Offset.lerp(
           leftAt(i),
@@ -545,6 +576,18 @@ class CreaturePainter extends CustomPainter {
           t,
         )!,
     ];
+    // Smooth along the body; intensity increases toward centre (higher t = rounder).
+    final smoothIntensity = t * 3;
+    rightSide = _smoothContourSide(
+      rightSide,
+      closed: false,
+      intensity: smoothIntensity,
+    );
+    leftSide = _smoothContourSide(
+      leftSide,
+      closed: false,
+      intensity: smoothIntensity,
+    );
     final path = Path();
     if (!reverse) {
       path.moveTo(tailLeft.dx, tailLeft.dy);
@@ -599,9 +642,11 @@ class CreaturePainter extends CustomPainter {
       case BodyContourStyle.schematic:
         return [0.0, 0.25, 0.5, 0.75, 1.0];
       case BodyContourStyle.tubular:
-        return [0.0, 0.08, 0.22, 0.45, 1.0];
+        return [0.0, 0.1, 0.25, 1.0];
     }
   }
+
+  int _contourTCount() => _contourTValues().length - 1;
 
   void _drawBodyShadedBands(
     Canvas canvas, {
@@ -633,7 +678,7 @@ class CreaturePainter extends CustomPainter {
       bright,
     ];
 
-    for (var b = 0; b < 4; b++) {
+    for (var b = 0; b < _contourTCount(); b++) {
       final outerPath = b == 0
           ? outlinePath
           : _buildContourPath(
@@ -722,11 +767,8 @@ class CreaturePainter extends CustomPainter {
           break;
         case BodyContourStyle.tubular:
           // Linear: thin at outline (low t), thick toward spine (high t). No V — center is largest.
-          final tubularFrac = (0.3 + 0.7 * t).clamp(0.0, 1.0);
-          contourPaint.strokeWidth = (baseContourWidth * tubularFrac).clamp(
-            0.4,
-            baseContourWidth * 1.15,
-          );
+          final tubularFrac = (1 + 0.3 * -t);
+          contourPaint.strokeWidth = (baseContourWidth * tubularFrac);
           break;
       }
       canvas.drawPath(contourPath, contourPaint);
