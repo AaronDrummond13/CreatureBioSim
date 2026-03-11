@@ -500,6 +500,7 @@ class _TailRemoveHighlightPainter extends CustomPainter {
 }
 
 /// Draws the mouth only as preview when dragging a mouth type onto the creature.
+/// Uses same face curve as actual render so preview matches in-game mouth placement.
 class _MouthAddPreviewPainter extends CustomPainter {
   _MouthAddPreviewPainter({
     required this.creature,
@@ -513,6 +514,7 @@ class _MouthAddPreviewPainter extends CustomPainter {
     required this.zoom,
     required this.headWidthWorld,
     required this.bodyColor,
+    this.faceCurveWorld,
   });
 
   final Creature creature;
@@ -526,6 +528,7 @@ class _MouthAddPreviewPainter extends CustomPainter {
   final double zoom;
   final double headWidthWorld;
   final Color bodyColor;
+  final List<Offset>? faceCurveWorld;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -553,6 +556,7 @@ class _MouthAddPreviewPainter extends CustomPainter {
       bodyColor,
       headWidthWorld,
       0.0,
+      faceCurveWorld: faceCurveWorld,
     );
   }
 
@@ -560,9 +564,11 @@ class _MouthAddPreviewPainter extends CustomPainter {
   bool shouldRepaint(covariant _MouthAddPreviewPainter old) =>
       old.previewMouthType != previewMouthType ||
       old.positions != positions ||
+      old.segmentAngles != segmentAngles ||
       old.centerX != centerX ||
       old.centerY != centerY ||
-      old.zoom != zoom;
+      old.zoom != zoom ||
+      old.faceCurveWorld != faceCurveWorld;
 }
 
 /// Red circle at head when dragging mouth off to remove.
@@ -2646,6 +2652,16 @@ class _EditorPreviewState extends State<EditorPreview>
                         (positions.length - 2).clamp(0, positions.length - 1),
                       ),
                       bodyColor: Color(widget.creature.color),
+                      faceCurveWorld: CreaturePainter.computeHeadCapFaceCurveWorld(
+                        positions: positions,
+                        segmentAngles: _spine.segmentAngles,
+                        widthAtWorld: (i) => widget.creature.widthAtVertex(i),
+                        centerX: centerX,
+                        centerY: centerY,
+                        zoom: _zoom,
+                        cameraX: cameraX,
+                        cameraY: cameraY,
+                      ),
                     ),
                     size: Size(w, h),
                   ),

@@ -24,6 +24,7 @@ void paintMouth(
   double headWidthWorld,
   double timeSeconds, {
   double? lastAteAt,
+  List<Offset>? faceCurveWorld,
 }) {
   if (creature.mouth == null) return;
   if (positions.length < 2 || segmentAngles.isEmpty) return;
@@ -52,15 +53,13 @@ void paintMouth(
   final halfW = headWidthWorld * bodyScale;
   final sizeScale = halfW / headSizeRef;
 
-  // Arc along head front: middle forward, sides at head edge so side teeth aren't too far forward.
-  const sideForward = 0.0;
-  const bulgeForward = 0.6;
-  final rightX = headX - perpX * halfW + forwardX * halfW * sideForward;
-  final rightY = headY - perpY * halfW + forwardY * halfW * sideForward;
-  final leftX = headX + perpX * halfW + forwardX * halfW * sideForward;
-  final leftY = headY + perpY * halfW + forwardY * halfW * sideForward;
-  final bulgeX = headX + forwardX * halfW * (1.0 + bulgeForward);
-  final bulgeY = headY + forwardY * halfW * (1.0 + bulgeForward);
+  // Fallback arc when no face curve (e.g. mandible or curve not computed).
+  final rightX = headX - perpX * halfW;
+  final rightY = headY - perpY * halfW;
+  final leftX = headX + perpX * halfW;
+  final leftY = headY + perpY * halfW;
+  final tipX = headX + forwardX * halfW;
+  final tipY = headY + forwardY * halfW;
 
   final fillColor = creature.finColor != null
       ? Color(creature.finColor!)
@@ -76,29 +75,20 @@ void paintMouth(
   if (creature.mouth == MouthType.tentacle) {
     _paintTentacleMouth(
       canvas,
-      creature,
-      centerX,
-      centerY,
-      zoom,
-      cameraX,
-      cameraY,
-      bodyScale,
-      headWidthWorld,
       mouthTime,
-      headX,
-      headY,
       forwardX,
       forwardY,
       perpX,
       perpY,
       halfW,
       sizeScale,
+      faceCurveWorld,
       rightX,
       rightY,
+      tipX,
+      tipY,
       leftX,
       leftY,
-      bulgeX,
-      bulgeY,
       fillPaint,
       strokePaint,
       sx,
@@ -109,29 +99,20 @@ void paintMouth(
   if (creature.mouth == MouthType.teeth) {
     _paintTeethMouth(
       canvas,
-      creature,
-      centerX,
-      centerY,
-      zoom,
-      cameraX,
-      cameraY,
-      bodyScale,
-      headWidthWorld,
       mouthTime,
-      headX,
-      headY,
       forwardX,
       forwardY,
       perpX,
       perpY,
       halfW,
       sizeScale,
+      faceCurveWorld,
       rightX,
       rightY,
+      tipX,
+      tipY,
       leftX,
       leftY,
-      bulgeX,
-      bulgeY,
       fillPaint,
       strokePaint,
       sx,
@@ -171,31 +152,66 @@ void paintMouth(
   }
 }
 
+/// Base position on fallback quadratic arc at t (0 = right, 0.5 = tip, 1 = left).
+void _fallbackArcAt(
+  double t,
+  double rightX,
+  double rightY,
+  double tipX,
+  double tipY,
+  double leftX,
+  double leftY,
+  List<double> out,
+) {
+  final oneMinusT = 1.0 - t;
+  out[0] =
+      oneMinusT * oneMinusT * rightX + 2 * oneMinusT * t * tipX + t * t * leftX;
+  out[1] =
+      oneMinusT * oneMinusT * rightY + 2 * oneMinusT * t * tipY + t * t * leftY;
+}
+
+/// Base position on face curve: use [faceCurveWorld] if valid, else fallback arc.
+void _baseOnFaceCurve(
+  double t,
+  List<Offset>? faceCurveWorld,
+  double rightX,
+  double rightY,
+  double tipX,
+  double tipY,
+  double leftX,
+  double leftY,
+  List<double> out,
+) {
+  if (faceCurveWorld != null && faceCurveWorld.length >= 2) {
+    final idx = t * (faceCurveWorld.length - 1);
+    final i0 = idx.floor().clamp(0, faceCurveWorld.length - 1);
+    final i1 = (i0 + 1).clamp(0, faceCurveWorld.length - 1);
+    final frac = idx - i0;
+    final a = faceCurveWorld[i0];
+    final b = faceCurveWorld[i1];
+    out[0] = a.dx + (b.dx - a.dx) * frac;
+    out[1] = a.dy + (b.dy - a.dy) * frac;
+  } else {
+    _fallbackArcAt(t, rightX, rightY, tipX, tipY, leftX, leftY, out);
+  }
+}
+
 void _paintTentacleMouth(
   Canvas canvas,
-  Creature creature,
-  double centerX,
-  double centerY,
-  double zoom,
-  double cameraX,
-  double cameraY,
-  double bodyScale,
-  double headWidthWorld,
   double timeSeconds,
-  double headX,
-  double headY,
   double forwardX,
   double forwardY,
   double perpX,
   double perpY,
   double halfW,
   double sizeScale,
+  List<Offset>? faceCurveWorld,
   double rightX,
   double rightY,
+  double tipX,
+  double tipY,
   double leftX,
   double leftY,
-  double bulgeX,
-  double bulgeY,
   Paint fillPaint,
   Paint strokePaint,
   double Function(double) sx,
@@ -204,27 +220,32 @@ void _paintTentacleMouth(
   const tentacleCount = 5;
   const jointCount = 4;
   const length = 25.0;
-  const tentacleArcWidth = 0.8;
   const wobbleSpeed = 2.0;
   const wobbleAmplitude = 4.5;
   const wobblePhase = 0.85;
   const tentaclePhaseOffset = 2.4;
   const baseWidths = [3.6, 2.6, 1.5, 0.65, 0.18];
+  const tMin = 0.2;
+  const tMax = 0.8;
 
-  final arcCenterX = (rightX + leftX) * 0.5;
-  final arcCenterY = (rightY + leftY) * 0.5;
-  final rX = arcCenterX + (rightX - arcCenterX) * tentacleArcWidth;
-  final rY = arcCenterY + (rightY - arcCenterY) * tentacleArcWidth;
-  final lX = arcCenterX + (leftX - arcCenterX) * tentacleArcWidth;
-  final lY = arcCenterY + (leftY - arcCenterY) * tentacleArcWidth;
-
+  final baseXY = <double>[0.0, 0.0];
   for (var ti = 0; ti < tentacleCount; ti++) {
-    final t = tentacleCount > 1 ? ti / (tentacleCount - 1) : 0.5;
-    final oneMinusT = 1.0 - t;
-    final baseX =
-        oneMinusT * oneMinusT * rX + 2 * oneMinusT * t * bulgeX + t * t * lX;
-    final baseY =
-        oneMinusT * oneMinusT * rY + 2 * oneMinusT * t * bulgeY + t * t * lY;
+    final t = tentacleCount > 1
+        ? tMin + (ti / (tentacleCount - 1)) * (tMax - tMin)
+        : (tMin + tMax) / 2;
+    _baseOnFaceCurve(
+      t,
+      faceCurveWorld,
+      rightX,
+      rightY,
+      tipX,
+      tipY,
+      leftX,
+      leftY,
+      baseXY,
+    );
+    final baseX = baseXY[0];
+    final baseY = baseXY[1];
 
     final centerDist = tentacleCount > 1
         ? (ti - (tentacleCount - 1) / 2).abs() / ((tentacleCount - 1) / 2)
@@ -300,29 +321,20 @@ void _paintTentacleMouth(
 
 void _paintTeethMouth(
   Canvas canvas,
-  Creature creature,
-  double centerX,
-  double centerY,
-  double zoom,
-  double cameraX,
-  double cameraY,
-  double bodyScale,
-  double headWidthWorld,
   double timeSeconds,
-  double headX,
-  double headY,
   double forwardX,
   double forwardY,
   double perpX,
   double perpY,
   double halfW,
   double sizeScale,
+  List<Offset>? faceCurveWorld,
   double rightX,
   double rightY,
+  double tipX,
+  double tipY,
   double leftX,
   double leftY,
-  double bulgeX,
-  double bulgeY,
   Paint fillPaint,
   Paint strokePaint,
   double Function(double) sx,
@@ -331,39 +343,43 @@ void _paintTeethMouth(
   const toothCount = 5;
   const jointCount = 4;
   const length = 25.0;
+  const teethCurve = -1;
+  const baseWidths = [2, 1.5, 1.2, .5, .2];
+  const tMin = 0.3;
+  const tMax = 0.7;
+  const retractFrac = 0.14; // small retract only (fraction of tooth length)
 
-  /// Joint-angle curve: 0 = straight. >0 = tips bend away from centre, <0 = toward centre. Furthest joint bends most.
-  const teethCurve = 0.0;
-  const teethArcWidth = 0.8;
-  const baseWidths = [3, 3, 2, 1, .5];
-
-  final arcCenterX = (rightX + leftX) * 0.5;
-  final arcCenterY = (rightY + leftY) * 0.5;
-  final rX = arcCenterX + (rightX - arcCenterX) * teethArcWidth;
-  final rY = arcCenterY + (rightY - arcCenterY) * teethArcWidth;
-  final lX = arcCenterX + (leftX - arcCenterX) * teethArcWidth;
-  final lY = arcCenterY + (leftY - arcCenterY) * teethArcWidth;
-
-  final protrude = 0.25 + 0.125 * (1 + sin(timeSeconds * 2.5));
+  final baseXY = <double>[0.0, 0.0];
+  final toothLen = length * sizeScale;
+  // Retract only: base stays on face, animates slightly inward (no protrusion).
+  final retractAmount =
+      toothLen * retractFrac * (0.5 + 0.5 * sin(timeSeconds * 2.5));
 
   for (var ti = 0; ti < toothCount; ti++) {
-    final t = toothCount > 1 ? ti / (toothCount - 1) : 0.5;
-    final oneMinusT = 1.0 - t;
-    var baseX =
-        oneMinusT * oneMinusT * rX + 2 * oneMinusT * t * bulgeX + t * t * lX;
-    var baseY =
-        oneMinusT * oneMinusT * rY + 2 * oneMinusT * t * bulgeY + t * t * lY;
+    final t = toothCount > 1
+        ? tMin + (ti / (toothCount - 1)) * (tMax - tMin)
+        : (tMin + tMax) / 2;
+    _baseOnFaceCurve(
+      t,
+      faceCurveWorld,
+      rightX,
+      rightY,
+      tipX,
+      tipY,
+      leftX,
+      leftY,
+      baseXY,
+    );
+    var baseX = baseXY[0];
+    var baseY = baseXY[1];
+    baseX -= forwardX * retractAmount;
+    baseY -= forwardY * retractAmount;
 
     final sideSign = toothCount > 1
         ? (ti - (toothCount - 1) / 2) / ((toothCount - 1) / 2)
         : 0.0;
 
-    final toothLen = length * sizeScale;
     final segmentLen = toothLen / jointCount;
-
-    final protrudeOffset = (protrude - 0.5) * toothLen;
-    baseX += forwardX * protrudeOffset;
-    baseY += forwardY * protrudeOffset;
 
     var dirX = forwardX;
     var dirY = forwardY;

@@ -113,6 +113,19 @@ class CreaturePainter extends CustomPainter {
     return w * _bodyScale;
   }
 
+  /// Evaluate cubic Bézier at t: (1-t)³P0 + 3(1-t)²t C0 + 3(1-t)t² C1 + t³ P1.
+  static Offset _cubicAt(double t, Offset p0, Offset c0, Offset c1, Offset p1) {
+    final u = 1.0 - t;
+    final u2 = u * u;
+    final u3 = u2 * u;
+    final t2 = t * t;
+    final t3 = t2 * t;
+    return Offset(
+      u3 * p0.dx + 3 * u2 * t * c0.dx + 3 * u * t2 * c1.dx + t3 * p1.dx,
+      u3 * p0.dy + 3 * u2 * t * c0.dy + 3 * u * t2 * c1.dy + t3 * p1.dy,
+    );
+  }
+
   /// Appends a cubic Bézier cap from [p0] to [p1] with tangent continuity. [exitDir] at p0 and
   /// [entryDir] at p1 (unnormalized); [radius] scales the control point distance (e.g. cap radius).
   /// Uses k=0.72 so caps bulge smoothly (round ball) without pinching at the tip.
@@ -466,12 +479,113 @@ class CreaturePainter extends CustomPainter {
     }
   }
 
+  /// Shared head cap curve in world space (right edge → tip → left edge). Uses same body outline
+  /// logic as [_drawBody]. [widthAtWorld] = world-space width at vertex index (e.g. creature.widthAtVertex(i) * bodyScale).
+  /// Used by both CreaturePainter and editor preview so mouth placement matches actual render.
+  static List<Offset>? computeHeadCapFaceCurveWorld({
+    required List<Vector2> positions,
+    required List<double> segmentAngles,
+    required double Function(int) widthAtWorld,
+    required double centerX,
+    required double centerY,
+    required double zoom,
+    required double cameraX,
+    required double cameraY,
+  }) {
+    final n = positions.length - 1;
+    if (n < 0 || positions.length < 2 || segmentAngles.isEmpty) return null;
+    double sx(double wx) => centerX + (wx - cameraX) * zoom;
+    double sy(double wy) => centerY + (wy - cameraY) * zoom;
+    double wAt(int i) => widthAtWorld(i) * zoom;
+    Offset rightAt(int i) {
+      final a = segmentAngles[i < segmentAngles.length ? i : segmentAngles.length - 1];
+      final w = wAt(i);
+      return Offset(
+        sx(positions[i].x) - sin(a) * w,
+        sy(positions[i].y) + cos(a) * w,
+      );
+    }
+    Offset leftAt(int i) {
+      final a = segmentAngles[i < segmentAngles.length ? i : segmentAngles.length - 1];
+      final w = wAt(i);
+      return Offset(
+        sx(positions[i].x) + sin(a) * w,
+        sy(positions[i].y) - cos(a) * w,
+      );
+    }
+    final rightSide = <Offset>[for (var i = 0; i <= n; i++) rightAt(i)];
+    final leftSide = <Offset>[for (var i = n; i >= 0; i--) leftAt(i)];
+    final rightOut = <Offset>[];
+    final leftOut = <Offset>[];
+    if (rightSide.length >= 5) {
+      _smoothBodyOutlineSymmetric(rightSide, leftSide, rightOut, leftOut);
+    } else {
+      rightOut.addAll(rightSide);
+      leftOut.addAll(leftSide);
+    }
+    if (rightOut.isEmpty || leftOut.isEmpty) return null;
+    final headA = segmentAngles[segmentAngles.length - 1];
+    final headRadius = widthAtWorld(n) * zoom;
+    final headCenter = Offset(sx(positions[n].x), sy(positions[n].y));
+    final headTip = Offset(
+      headCenter.dx + headRadius * cos(headA),
+      headCenter.dy + headRadius * sin(headA),
+    );
+    final headRightTangent = Offset(
+      rightOut.last.dx - rightOut[rightOut.length - 2].dx,
+      rightOut.last.dy - rightOut[rightOut.length - 2].dy,
+    );
+    final headLeftTangent = Offset(
+      leftOut[1].dx - leftOut[0].dx,
+      leftOut[1].dy - leftOut[0].dy,
+    );
+    final headTipTangent = Offset(sin(headA), -cos(headA));
+    const k = 0.72;
+    Offset norm(Offset o) {
+      final len = sqrt(o.dx * o.dx + o.dy * o.dy);
+      if (len >= 1e-6) return Offset(o.dx / len, o.dy / len);
+      return Offset.zero;
+    }
+    final rLast = rightOut.last;
+    final lFirst = leftOut.first;
+    final c0Right = Offset(rLast.dx + k * headRadius * norm(headRightTangent).dx, rLast.dy + k * headRadius * norm(headRightTangent).dy);
+    final c1Right = Offset(headTip.dx - k * headRadius * norm(headTipTangent).dx, headTip.dy - k * headRadius * norm(headTipTangent).dy);
+    final c0Tip = Offset(headTip.dx + k * headRadius * norm(headTipTangent).dx, headTip.dy + k * headRadius * norm(headTipTangent).dy);
+    final c1Left = Offset(lFirst.dx - k * headRadius * norm(headLeftTangent).dx, lFirst.dy - k * headRadius * norm(headLeftTangent).dy);
+    final curve = <Offset>[];
+    const steps = 11;
+    for (var i = 0; i < steps; i++) {
+      final t = i / (steps - 1);
+      curve.add(_cubicAt(t, rLast, c0Right, c1Right, headTip));
+    }
+    for (var i = 1; i < steps; i++) {
+      final t = i / (steps - 1);
+      curve.add(_cubicAt(t, headTip, c0Tip, c1Left, lFirst));
+    }
+    return curve.map((s) => Offset(cameraX + (s.dx - centerX) / zoom, cameraY + (s.dy - centerY) / zoom)).toList();
+  }
+
+  List<Offset>? _computeHeadCapFaceCurveWorld() {
+    if (creature.mouth == null) return null;
+    return computeHeadCapFaceCurveWorld(
+      positions: _paintPositions,
+      segmentAngles: _paintSegmentAngles,
+      widthAtWorld: _widthAt,
+      centerX: _paintCenterX,
+      centerY: _paintCenterY,
+      zoom: _paintZ,
+      cameraX: view.cameraX,
+      cameraY: view.cameraY,
+    );
+  }
+
   void _drawMouth(Canvas canvas) {
     if (creature.mouth == null) return;
     final n = _paintN;
     final headWidthWorld = creature.segmentWidths.isEmpty
         ? _fallbackWidth
         : creature.widthAtVertex(n);
+    final faceCurveWorld = _computeHeadCapFaceCurveWorld();
     paintMouth(
       canvas,
       creature,
@@ -487,6 +601,7 @@ class CreaturePainter extends CustomPainter {
       headWidthWorld,
       timeSeconds,
       lastAteAt: lastAteAt,
+      faceCurveWorld: faceCurveWorld,
     );
   }
 
