@@ -80,6 +80,7 @@ class EditorScreenState extends State<EditorScreen> {
       onLateralFinSelected: _onLateralFinSelectedFromViewport,
       onLateralLengthChanged: _onLateralLengthChangedFromViewport,
       onLateralWidthChanged: _onLateralWidthChangedFromViewport,
+      onLateralAngleChanged: _onLateralAngleChangedFromViewport,
       onDorsalRangeChanged: _onDorsalRangeFromViewport,
       onDorsalHeightChanged: _onDorsalHeightFromViewport,
       onDorsalAdded: _onDorsalAddedFromViewport,
@@ -471,6 +472,13 @@ class EditorScreenState extends State<EditorScreen> {
     final list = List<LateralFinConfig>.from(_creature.lateralFins ?? []);
     if (index < 0 || index >= list.length) return;
     list[index] = list[index].copyWith(width: value);
+    setState(() => _creature = _creatureWith(_creature, lateralFins: list));
+  }
+
+  void _onLateralAngleChangedFromViewport(int index, double angleDegrees) {
+    final list = List<LateralFinConfig>.from(_creature.lateralFins ?? []);
+    if (index < 0 || index >= list.length) return;
+    list[index] = list[index].copyWith(angleDegrees: angleDegrees);
     setState(() => _creature = _creatureWith(_creature, lateralFins: list));
   }
 

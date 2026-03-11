@@ -48,7 +48,7 @@ class EyeConfig {
       );
 }
 
-/// Pectoral/lateral fin: segment index and size. Length = along fin axis, width = perpendicular.
+/// Pectoral/lateral fin: segment index, size, and flare angle (degrees from spine).
 class LateralFinConfig {
   static const double lengthMin = 12.0;
   static const double lengthMax = 60.0;
@@ -56,20 +56,27 @@ class LateralFinConfig {
   static const double widthMin = 6.0;
   static const double widthMax = 20.0;
   static const double widthDefault = 10.0;
+  static const double angleDegreesMin = 10.0;
+  static const double angleDegreesMax = 80.0;
+  static const double angleDegreesDefault = 45.0;
 
-  LateralFinConfig(this.segment, {double? length, double? width})
+  LateralFinConfig(this.segment, {double? length, double? width, double? angleDegrees})
     : length = (length ?? lengthDefault).clamp(lengthMin, lengthMax),
-      width = (width ?? widthDefault).clamp(widthMin, widthMax);
+      width = (width ?? widthDefault).clamp(widthMin, widthMax),
+      angleDegrees = (angleDegrees ?? angleDegreesDefault).clamp(angleDegreesMin, angleDegreesMax);
 
   final int segment;
   final double length;
   final double width;
+  /// Flare angle in degrees (10–80). Left fin: spineAngle + this; right: spineAngle - this.
+  final double angleDegrees;
 
-  LateralFinConfig copyWith({int? segment, double? length, double? width}) =>
+  LateralFinConfig copyWith({int? segment, double? length, double? width, double? angleDegrees}) =>
       LateralFinConfig(
         segment ?? this.segment,
         length: length ?? this.length,
         width: width ?? this.width,
+        angleDegrees: angleDegrees ?? this.angleDegrees,
       );
 }
 

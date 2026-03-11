@@ -1,4 +1,4 @@
-import 'dart:math' show cos, pi, sin, sqrt;
+import 'dart:math' show atan2, cos, pi, sin, sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 import 'package:creature_bio_sim/creature.dart';
@@ -20,6 +20,7 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
     required this.segment,
     required this.length,
     required this.width,
+    this.angleDegrees = 45.0,
     required this.positions,
     required this.segmentAngles,
     required this.centerX,
@@ -36,6 +37,7 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
   final int segment;
   final double length;
   final double width;
+  final double angleDegrees;
   final List<Vector2> positions;
   final List<double> segmentAngles;
   final double centerX;
@@ -55,7 +57,7 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
     if (segment >= segmentAngles.length) return;
     double sx(double wx) => centerX + (wx - cameraX) * zoom;
     double sy(double wy) => centerY + (wy - cameraY) * zoom;
-    const flareRad = 45.0 * pi / 180.0;
+    final flareRad = angleDegrees * pi / 180.0;
     final len = length;
     final wid = width;
     final lenScreen = len * zoom;
@@ -110,6 +112,7 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
       old.segment != segment ||
       old.length != length ||
       old.width != width ||
+      old.angleDegrees != angleDegrees ||
       old.highlight != highlight ||
       old.highlightForRemove != highlightForRemove;
 }
@@ -864,6 +867,7 @@ class EditorPreview extends StatefulWidget {
     this.onLateralFinSelected,
     this.onLateralLengthChanged,
     this.onLateralWidthChanged,
+    this.onLateralAngleChanged,
     this.onMouthAdded,
     this.onMouthRemoved,
     this.selectedEyeIndex,
@@ -898,6 +902,7 @@ class EditorPreview extends StatefulWidget {
   final void Function(int? index)? onLateralFinSelected;
   final void Function(int index, double value)? onLateralLengthChanged;
   final void Function(int index, double value)? onLateralWidthChanged;
+  final void Function(int index, double angleDegrees)? onLateralAngleChanged;
   final void Function(MouthType? type)? onMouthAdded;
   final void Function()? onMouthRemoved;
   final int? selectedEyeIndex;
@@ -1338,7 +1343,6 @@ class _EditorPreviewState extends State<EditorPreview>
           if (laterals.isEmpty || positions.length < 2) return null;
           final segAngles = _spine.segmentAngles;
           if (segAngles.isEmpty) return null;
-          const flareRad = 45.0 * pi / 180.0;
           double sx(double wx) => centerX + (wx - cameraX) * _zoom;
           double sy(double wy) => centerY + (wy - cameraY) * _zoom;
           for (var i = 0; i < laterals.length; i++) {
@@ -1348,6 +1352,7 @@ class _EditorPreviewState extends State<EditorPreview>
                 seg >= positions.length - 1 ||
                 seg >= segAngles.length)
               continue;
+            final flareRad = config.angleDegrees * pi / 180.0;
             final halfW = widthAtVertex(seg);
             final aAttach = segAngles[seg];
             final segHead = seg + 1 < segAngles.length ? seg + 1 : seg;
@@ -1540,7 +1545,7 @@ class _EditorPreviewState extends State<EditorPreview>
             return null;
           double sx(double wx) => centerX + (wx - cameraX) * _zoom;
           double sy(double wy) => centerY + (wy - cameraY) * _zoom;
-          const flareRad = 45.0 * pi / 180.0;
+          final flareRad = config.angleDegrees * pi / 180.0;
           final halfW = widthAtVertex(seg);
           final aAttach = segAngles[seg];
           final segHead = seg + 1 < segAngles.length ? seg + 1 : seg;
@@ -1561,11 +1566,19 @@ class _EditorPreviewState extends State<EditorPreview>
           final lengthRightY = rightCy - (config.length / 2) * sin(rightAngle);
           final widthRightX = rightCx - (config.width / 2) * sin(rightAngle);
           final widthRightY = rightCy + (config.width / 2) * cos(rightAngle);
+          // Angle node: same direction as length node, further out (next to length node).
+          final angleDist = config.length;
+          final angleLeftX = leftCx - angleDist * cos(leftAngle);
+          final angleLeftY = leftCy - angleDist * sin(leftAngle);
+          final angleRightX = rightCx - angleDist * cos(rightAngle);
+          final angleRightY = rightCy - angleDist * sin(rightAngle);
           return [
             Offset(sx(lengthLeftX), sy(lengthLeftY)),
             Offset(sx(widthLeftX), sy(widthLeftY)),
             Offset(sx(lengthRightX), sy(lengthRightY)),
             Offset(sx(widthRightX), sy(widthRightY)),
+            Offset(sx(angleLeftX), sy(angleLeftY)),
+            Offset(sx(angleRightX), sy(angleRightY)),
           ];
         }
 
@@ -1852,8 +1865,11 @@ class _EditorPreviewState extends State<EditorPreview>
                               ? _hitLateralNode(lx, ly)
                               : null;
                           if (lateralNodeHit != null &&
-                              widget.onLateralLengthChanged != null &&
-                              widget.onLateralWidthChanged != null) {
+                              ((lateralNodeHit <= 3 &&
+                                    widget.onLateralLengthChanged != null &&
+                                    widget.onLateralWidthChanged != null) ||
+                                  (lateralNodeHit >= 4 &&
+                                    widget.onLateralAngleChanged != null))) {
                             _lateralDraggingNode = lateralNodeHit;
                           } else {
                             final lateralIdx = _lateralIndexNearScreen(lx, ly);
@@ -1991,6 +2007,37 @@ class _EditorPreviewState extends State<EditorPreview>
                             LateralFinConfig.widthMax,
                           );
                           widget.onLateralWidthChanged!(idx, v);
+                        } else if ((_lateralDraggingNode == 4 || _lateralDraggingNode == 5) &&
+                            widget.onLateralAngleChanged != null) {
+                          final config = laterals[idx];
+                          final seg = config.segment.clamp(0, positions.length - 1);
+                          if (seg < _spine.segmentAngles.length) {
+                            final aAttach = _spine.segmentAngles[seg];
+                            final segHead = seg + 1 < _spine.segmentAngles.length ? seg + 1 : seg;
+                            final aLock = _spine.segmentAngles[segHead];
+                            final halfW = widthAtVertex(seg);
+                            final pxW = positions[seg].x;
+                            final pyW = positions[seg].y;
+                            final leftCx = pxW + sin(aAttach) * halfW;
+                            final leftCy = pyW - cos(aAttach) * halfW;
+                            final rightCx = pxW - sin(aAttach) * halfW;
+                            final rightCy = pyW + cos(aAttach) * halfW;
+                            final wx = (lx - centerX) / _zoom + cameraX;
+                            final wy = (ly - centerY) / _zoom + cameraY;
+                            final cx = _lateralDraggingNode == 4 ? leftCx : rightCx;
+                            final cy = _lateralDraggingNode == 4 ? leftCy : rightCy;
+                            final ptrAngle = atan2(wy - cy, wx - cx);
+                            // Mirror across spine + 180° so drag sensor is in same quadrant as fin (was 180° off).
+                            final effectivePtr = 2.0 * aLock - ptrAngle + pi;
+                            var flareRad = _lateralDraggingNode == 4
+                                ? -effectivePtr - aLock   // left: aLock + flare = -ptr
+                                : effectivePtr + aLock;   // right: aLock - flare = -ptr
+                            while (flareRad > pi) flareRad -= 2 * pi;
+                            while (flareRad < -pi) flareRad += 2 * pi;
+                            final flareDeg = (flareRad * 180.0 / pi)
+                                .clamp(LateralFinConfig.angleDegreesMin, LateralFinConfig.angleDegreesMax);
+                            widget.onLateralAngleChanged!(idx, flareDeg);
+                          }
                         }
                       }
                       _lastPanX = lx;
@@ -2781,6 +2828,13 @@ class _EditorPreviewState extends State<EditorPreview>
                                   .lateralFins![_lateralDragFromIndex!]
                                   .width
                             : LateralFinConfig.widthDefault,
+                        angleDegrees:
+                            _lateralDragFromIndex! <
+                                    (widget.creature.lateralFins?.length ?? 0)
+                                ? widget.creature
+                                    .lateralFins![_lateralDragFromIndex!]
+                                    .angleDegrees
+                                : LateralFinConfig.angleDegreesDefault,
                         positions: positions,
                         segmentAngles: _spine.segmentAngles,
                         centerX: centerX,
@@ -2836,6 +2890,13 @@ class _EditorPreviewState extends State<EditorPreview>
                                   .lateralFins![_lateralDragFromIndex!]
                                   .width
                             : LateralFinConfig.widthDefault,
+                        angleDegrees:
+                            _lateralDragFromIndex! <
+                                    (widget.creature.lateralFins?.length ?? 0)
+                                ? widget.creature
+                                    .lateralFins![_lateralDragFromIndex!]
+                                    .angleDegrees
+                                : LateralFinConfig.angleDegreesDefault,
                         positions: positions,
                         segmentAngles: _spine.segmentAngles,
                         centerX: centerX,
