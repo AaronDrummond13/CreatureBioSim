@@ -239,6 +239,7 @@ class _ColourTabState extends State<_ColourTab> {
                   lateralFins: creature.lateralFins,
                   trophicType: creature.trophicType,
                   mouth: creature.mouth,
+                  eyes: creature.eyes,
                 )),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -265,6 +266,7 @@ class _ColourTabState extends State<_ColourTab> {
                   lateralFins: creature.lateralFins,
                   trophicType: creature.trophicType,
                   mouth: creature.mouth,
+                  eyes: creature.eyes,
                 ));
               },
             ),
@@ -893,6 +895,41 @@ class _FinsTab extends StatelessWidget {
         Text('Parts', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
         Text('Drag to add; tap in view to select or edit.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
         const SizedBox(height: 14),
+        Text('Eyes', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
+        Text('Drag onto creature to add. Tap in view to select; drag node to resize; drag off to remove.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Draggable<EyeDragPayload>(
+              data: EyeDragPayload(),
+              dragAnchorStrategy: pointerDragAnchorStrategy,
+              feedbackOffset: const Offset(-16, -16),
+              feedback: Material(
+                elevation: 0,
+                color: Colors.transparent,
+                child: SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: Center(
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        border: Border.all(color: EditorStyle.stroke, width: 1),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              childWhenDragging: Opacity(opacity: 0.5, child: _eyeBox()),
+              child: _eyeBox(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
         Text('Head', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
         Text('Drag onto creature to add or replace. Drag off in view to remove.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
         const SizedBox(height: 6),
@@ -1060,6 +1097,29 @@ class _FinsTab extends StatelessWidget {
             finColor: creature.finColor != null ? Color(creature.finColor!) : null,
           ),
           size: const Size(_boxW, _boxH),
+        ),
+      ),
+    );
+  }
+
+  Widget _eyeBox() {
+    return Container(
+      width: _boxW,
+      height: _boxH,
+      decoration: BoxDecoration(
+        color: EditorStyle.fill,
+        borderRadius: BorderRadius.circular(EditorStyle.radius),
+        border: Border.all(color: EditorStyle.stroke, width: EditorStyle.strokeWidth),
+      ),
+      child: Center(
+        child: Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            border: Border.all(color: EditorStyle.stroke, width: 1),
+          ),
         ),
       ),
     );

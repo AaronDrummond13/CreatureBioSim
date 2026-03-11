@@ -97,7 +97,7 @@ class CreaturePainter extends CustomPainter {
     this.blurBodyLayers = false,
   });
 
-  // Set during paint() for use by _drawTailFin, _drawBody, _drawDorsalFins, _drawEyes.
+  // Set during paint() for use by _drawTailFin, _drawBody, _drawDorsalFins, _drawConfigEyes.
   late double _paintCenterX;
   late double _paintCenterY;
   late double _paintZ;
@@ -106,8 +106,6 @@ class CreaturePainter extends CustomPainter {
   late List<double> _paintSegmentAngles;
   late int _paintN;
   late double _bodyScale;
-  late double _eyeScaleMultiplier;
-
   double _widthAt(int i) {
     final w = creature.segmentWidths.isEmpty
         ? _fallbackWidth.clamp(Creature.minVertexWidth, Creature.maxVertexWidth)
@@ -392,17 +390,23 @@ class CreaturePainter extends CustomPainter {
         : positions;
     _paintSegmentAngles = segmentAngles;
     _paintN = _paintPositions.length - 1;
-    _eyeScaleMultiplier = 1.0;
 
     if (eyesOnly) {
-      if (!isBaby)
-        _drawEyes(canvas); // babies have no eyes; epic has normal eyes
+      if (!isBaby) {
+        final configEyes = creature.eyes;
+        if (configEyes != null && configEyes.isNotEmpty)
+          _drawConfigEyes(canvas);
+      }
       if (useBlurLayer) canvas.restore();
       return;
     }
     if (dorsalAndEyesOnly) {
       _drawDorsalFins(canvas);
-      if (!isBaby) _drawEyes(canvas);
+      if (!isBaby) {
+        final configEyes = creature.eyes;
+        if (configEyes != null && configEyes.isNotEmpty)
+          _drawConfigEyes(canvas);
+      }
       if (useBlurLayer) canvas.restore();
       return;
     }
@@ -419,7 +423,46 @@ class CreaturePainter extends CustomPainter {
     _drawBody(canvas);
     if (!skipDorsalAndEyes) {
       _drawDorsalFins(canvas);
-      if (drawEyes && !isBaby) _drawEyes(canvas);
+      if (drawEyes && !isBaby) {
+        final configEyes = creature.eyes;
+        if (configEyes != null && configEyes.isNotEmpty)
+          _drawConfigEyes(canvas);
+        // No fallback head eyes: only config eyes are drawn, so editor selection/remove works.
+      }
+    }
+  }
+
+  /// Draw eyes from [creature.eyes]: white circles at segment + offset; single eye when offset < threshold.
+  void _drawConfigEyes(Canvas canvas) {
+    final eyes = creature.eyes!;
+    final positions = _paintPositions;
+    final segmentAngles = spine.segmentAngles;
+    if (positions.length < 2 || segmentAngles.isEmpty) return;
+    double sx(double wx) => _paintCenterX + (wx - view.cameraX) * _paintZ;
+    double sy(double wy) => _paintCenterY + (wy - view.cameraY) * _paintZ;
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    for (final eye in eyes) {
+      final seg = eye.segment;
+      if (seg < 0 || seg >= segmentAngles.length || seg + 1 >= positions.length)
+        continue;
+      final halfW = _widthAt(seg);
+      final cx = (positions[seg].x + positions[seg + 1].x) / 2;
+      final cy = (positions[seg].y + positions[seg + 1].y) / 2;
+      final a = segmentAngles[seg];
+      final rWorld = eye.radius * _bodyScale;
+      final rScreen = rWorld * _paintZ;
+      final isSingle = eye.offsetFromCenter < EyeConfig.singleEyeThreshold;
+      if (isSingle) {
+        canvas.drawCircle(Offset(sx(cx), sy(cy)), rScreen, paint);
+      } else {
+        final off = eye.offsetFromCenter * halfW;
+        final dx = -sin(a) * off;
+        final dy = cos(a) * off;
+        canvas.drawCircle(Offset(sx(cx + dx), sy(cy + dy)), rScreen, paint);
+        canvas.drawCircle(Offset(sx(cx - dx), sy(cy - dy)), rScreen, paint);
+      }
     }
   }
 
@@ -1102,34 +1145,6 @@ class CreaturePainter extends CustomPainter {
       canvas.drawPath(path, finFill);
       canvas.drawPath(path, finStroke);
     }
-  }
-
-  void _drawEyes(Canvas canvas) {
-    final positions = _paintPositions;
-    final segmentAngles = _paintSegmentAngles;
-    final n = _paintN;
-    double sx(double wx) => _paintCenterX + (wx - view.cameraX) * _paintZ;
-    double sy(double wy) => _paintCenterY + (wy - view.cameraY) * _paintZ;
-    double wAt(int i) => _widthAt(i) * _paintZ;
-    final headA = segmentAngles[segmentAngles.length - 1];
-    const eyeInset = 0.55;
-    final headW = wAt(n);
-    final headCx = sx(positions[n].x);
-    final headCy = sy(positions[n].y);
-    final rightEye = Offset(
-      headCx - sin(headA) * headW * eyeInset,
-      headCy + cos(headA) * headW * eyeInset,
-    );
-    final leftEye = Offset(
-      headCx + sin(headA) * headW * eyeInset,
-      headCy - cos(headA) * headW * eyeInset,
-    );
-    final eyeRadius = headW * 0.24 * _eyeScaleMultiplier;
-    final eyePaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(rightEye, eyeRadius, eyePaint);
-    canvas.drawCircle(leftEye, eyeRadius, eyePaint);
   }
 
   @override

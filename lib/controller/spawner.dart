@@ -1,6 +1,7 @@
 import 'dart:math' show Random;
 
 import 'package:creature_bio_sim/creature.dart';
+import 'package:creature_bio_sim/dorsal_fin_rules.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
 
 /// Factory for random creatures and spines. Use with [CreatureStore] for chunk-based spawning.
@@ -86,6 +87,7 @@ class Spawner {
     final mouth = trophicType == TrophicType.herbivore
         ? MouthType.tentacle
         : (trophicType == TrophicType.carnivore ? MouthType.teeth : MouthType.mandible);
+    final eyes = _randomEyes(segmentCount);
     return Creature(
       segmentWidths: widths,
       color: color,
@@ -98,7 +100,24 @@ class Spawner {
           : lateralFins,
       trophicType: trophicType,
       mouth: mouth,
+      eyes: (eyes == null || eyes.isEmpty) ? null : eyes,
     );
+  }
+
+  /// Random eye count (0–3), segment, offset and radius per eye. Babies still get no eyes at render time.
+  List<EyeConfig>? _randomEyes(int segmentCount) {
+    if (segmentCount < 1) return null;
+    final n = _rng.nextInt(4); // 0 to 3 eyes
+    if (n == 0) return null;
+    final list = <EyeConfig>[];
+    for (var i = 0; i < n; i++) {
+      final seg = _rng.nextInt(segmentCount);
+      final offset = _rng.nextDouble(); // 0 = single centre, (0,1] = pair
+      final radius = _inRange(EyeConfig.radiusMin, EyeConfig.radiusMax);
+      list.add(EyeConfig(seg, offsetFromCenter: offset, radius: radius));
+    }
+    list.sort((a, b) => a.segment.compareTo(b.segment));
+    return list;
   }
 
   double _inRange(double min, double max) => min + _rng.nextDouble() * (max - min);
@@ -158,20 +177,17 @@ class Spawner {
     return widths;
   }
 
-  /// Up to 2 fins, each at least 3 segments, non-overlapping and not connected (gap of ≥1 segment).
+  /// Uses [dorsal_fin_rules]: up to [dorsalFinMaxFinsForSpawner] fins, each at least [dorsalFinMinSegments] segments, no duplicate segments.
   List<(List<int>, double?)>? _randomDorsalFins(int segmentCount) {
-    if (segmentCount < 3) return null;
-    const minFinSegments = 3;
-    const maxFins = 2;
-    final numFins = _rng.nextInt(maxFins + 1);
+    if (segmentCount < dorsalFinMinSegments) return null;
+    final numFins = _rng.nextInt(dorsalFinMaxFinsForSpawner + 1);
     if (numFins == 0) return null;
 
     final fins = <(List<int>, double?)>[];
     final used = <int>{};
 
     for (var f = 0; f < numFins; f++) {
-      final len = minFinSegments + _rng.nextInt(4);
-      if (len > segmentCount) break;
+      final len = dorsalFinMinSegments + _rng.nextInt((segmentCount - dorsalFinMinSegments).clamp(1, 5));
       final candidates = <int>[];
       for (var start = 0; start <= segmentCount - len; start++) {
         var overlap = false;
@@ -186,8 +202,6 @@ class Spawner {
       if (candidates.isEmpty) break;
       final start = candidates[_rng.nextInt(candidates.length)];
       for (var j = start; j < start + len; j++) used.add(j);
-      if (start > 0) used.add(start - 1);
-      if (start + len < segmentCount) used.add(start + len);
       final segments = List<int>.generate(len, (i) => start + i);
       final height = _rng.nextBool() ? 12.0 + _rng.nextDouble() * 14.0 : null;
       fins.add((segments, height));

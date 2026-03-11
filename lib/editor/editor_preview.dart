@@ -2,6 +2,7 @@ import 'dart:math' show cos, pi, sin, sqrt;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 import 'package:creature_bio_sim/creature.dart';
+import 'package:creature_bio_sim/dorsal_fin_rules.dart';
 import 'package:creature_bio_sim/render/background_painter.dart';
 import 'package:creature_bio_sim/render/creature_painter.dart';
 import 'package:creature_bio_sim/render/mouth_painter.dart' show paintMouth;
@@ -113,7 +114,7 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
       old.highlightForRemove != highlightForRemove;
 }
 
-/// Highlights a 3-segment dorsal fin on the creature when dragging + dorsal over the viewport.
+/// Highlights a [dorsalFinMinSegments]-segment dorsal fin on the creature when dragging + dorsal over the viewport.
 class _DorsalDropHighlightPainter extends CustomPainter {
   _DorsalDropHighlightPainter({
     required this.startSeg,
@@ -138,7 +139,7 @@ class _DorsalDropHighlightPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (positions.length < 2 || startSeg < 0) return;
-    final endSeg = (startSeg + 2).clamp(startSeg, positions.length - 2);
+    final endSeg = (startSeg + dorsalFinMinSegments - 1).clamp(startSeg, positions.length - 2);
     double sx(double wx) => centerX + (wx - cameraX) * zoom;
     double sy(double wy) => centerY + (wy - cameraY) * zoom;
     const fullH = 14.0;
@@ -534,6 +535,110 @@ class _MouthRemoveHighlightPainter extends CustomPainter {
       old.headSx != headSx || old.headSy != headSy || old.radius != radius;
 }
 
+/// Preview when dragging + eye onto creature: one or two white circles at segment + offset.
+class _EyeAddPreviewPainter extends CustomPainter {
+  _EyeAddPreviewPainter({
+    required this.segment,
+    required this.offsetFromCenter,
+    required this.positions,
+    required this.segmentAngles,
+    required this.centerX,
+    required this.centerY,
+    required this.cameraX,
+    required this.cameraY,
+    required this.zoom,
+    required this.widthAtVertex,
+    this.radiusWorld,
+  });
+
+  final int segment;
+  final double offsetFromCenter;
+  final List<Vector2> positions;
+  final List<double> segmentAngles;
+  final double centerX;
+  final double centerY;
+  final double cameraX;
+  final double cameraY;
+  final double zoom;
+  final double Function(int i) widthAtVertex;
+  /// When null, uses default 6.0 (add preview); when set, uses for move preview.
+  final double? radiusWorld;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (positions.length < 2 || segmentAngles.isEmpty) return;
+    double sx(double wx) => centerX + (wx - cameraX) * zoom;
+    double sy(double wy) => centerY + (wy - cameraY) * zoom;
+    final seg = segment.clamp(0, positions.length - 2);
+    final cx = (positions[seg].x + positions[seg + 1].x) / 2;
+    final cy = (positions[seg].y + positions[seg + 1].y) / 2;
+    final a = segmentAngles[seg];
+    final halfW = widthAtVertex(seg);
+    final r = radiusWorld ?? 6.0;
+    final rScreen = r * zoom;
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.8)
+      ..style = PaintingStyle.fill;
+    final isSingle = offsetFromCenter < EyeConfig.singleEyeThreshold;
+    if (isSingle) {
+      canvas.drawCircle(Offset(sx(cx), sy(cy)), rScreen, paint);
+    } else {
+      final off = offsetFromCenter * halfW;
+      final dx = -sin(a) * off;
+      final dy = cos(a) * off;
+      canvas.drawCircle(Offset(sx(cx + dx), sy(cy + dy)), rScreen, paint);
+      canvas.drawCircle(Offset(sx(cx - dx), sy(cy - dy)), rScreen, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _EyeAddPreviewPainter old) =>
+      old.segment != segment ||
+      old.offsetFromCenter != offsetFromCenter ||
+      old.radiusWorld != radiusWorld ||
+      old.positions != positions;
+}
+
+/// Mirrored node overlay for eye radius handles (one or two nodes, like lateral fin).
+class _EyeNodeOverlayPainter extends CustomPainter {
+  _EyeNodeOverlayPainter({
+    required this.nodePositions,
+    this.activeNodeIndex,
+  });
+
+  final List<Offset> nodePositions;
+  final int? activeNodeIndex;
+
+  static const double radius = 14.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var i = 0; i < nodePositions.length; i++) {
+      final active = activeNodeIndex == i;
+      final pos = nodePositions[i];
+      final fill = Paint()
+        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.2)
+        ..style = PaintingStyle.fill;
+      final stroke = Paint()
+        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2;
+      canvas.drawCircle(pos, radius, fill);
+      canvas.drawCircle(pos, radius, stroke);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _EyeNodeOverlayPainter old) {
+    if (old.nodePositions.length != nodePositions.length ||
+        old.activeNodeIndex != activeNodeIndex) return true;
+    for (var i = 0; i < nodePositions.length; i++) {
+      if (nodePositions[i] != old.nodePositions[i]) return true;
+    }
+    return false;
+  }
+}
+
 /// Draws the tail fin as preview when dragging a new tail type onto the creature.
 class _TailAddPreviewPainter extends CustomPainter {
   _TailAddPreviewPainter({
@@ -702,7 +807,7 @@ class _SegmentWidthNodesOverlayPainter extends CustomPainter {
       old.positions.length != positions.length;
 }
 
-/// Four nodes for selected lateral fin (mirrored left/right): 0,2 = length; 1,3 = width. activeNode 0 = length, 1 = width.
+/// Four nodes for selected lateral fin (mirrored left/right): 0,2 = length; 1,3 = width. activeNode = raw index 0..3.
 class _LateralNodesOverlayPainter extends CustomPainter {
   _LateralNodesOverlayPainter({required this.positions, this.activeNode});
 
@@ -714,9 +819,7 @@ class _LateralNodesOverlayPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (var i = 0; i < positions.length; i++) {
-      final active =
-          (i == 0 || i == 2) && activeNode == 0 ||
-          (i == 1 || i == 3) && activeNode == 1;
+      final active = activeNode == i;
       final stroke = Paint()
         ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
         ..style = PaintingStyle.stroke
@@ -763,6 +866,12 @@ class EditorPreview extends StatefulWidget {
     this.onLateralWidthChanged,
     this.onMouthAdded,
     this.onMouthRemoved,
+    this.selectedEyeIndex,
+    this.onEyeSelected,
+    this.onEyeAdded,
+    this.onEyeRemoved,
+    this.onEyeMoved,
+    this.onEyeRadiusChanged,
   });
 
   final Creature creature;
@@ -791,6 +900,12 @@ class EditorPreview extends StatefulWidget {
   final void Function(int index, double value)? onLateralWidthChanged;
   final void Function(MouthType? type)? onMouthAdded;
   final void Function()? onMouthRemoved;
+  final int? selectedEyeIndex;
+  final void Function(int? index)? onEyeSelected;
+  final void Function(int segment, double offsetFromCenter)? onEyeAdded;
+  final void Function(int index)? onEyeRemoved;
+  final void Function(int index, int segment, double offsetFromCenter)? onEyeMoved;
+  final void Function(int index, double value)? onEyeRadiusChanged;
 
   @override
   State<EditorPreview> createState() => _EditorPreviewState();
@@ -818,9 +933,12 @@ class _EditorPreviewState extends State<EditorPreview>
   Offset? _mouthAddDragLocal;
   MouthDragPayload? _mouthAddDragPayload;
   bool _mouthDragFromCreature = false;
+  Offset? _eyeAddDragLocal;
+  bool _eyeDragFromCreature = false;
+  int? _eyeDraggingNode; // 0 = radius node
   int? _lateralDragFromIndex;
   int? _lateralPanStartIndex;
-  int? _lateralDraggingNode; // 0=length, 1=width
+  int? _lateralDraggingNode; // 0=lengthLeft, 1=widthLeft, 2=lengthRight, 3=widthRight
   double _lastPanX = 0;
   double _lastPanY = 0;
   double _panStartX = 0;
@@ -902,6 +1020,38 @@ class _EditorPreviewState extends State<EditorPreview>
       }
     }
     return best.clamp(0, _spine.segmentCount - 1);
+  }
+
+  /// Returns (segment, offsetFromCenter 0..1). offsetFromCenter 0 = on spine (single eye), (0,1] = symmetric pair.
+  (int, double) _segmentAndOffsetAtLocal(double sx, double sy) {
+    if (_lastPreviewSize.width <= 0 || _lastPreviewSize.height <= 0) return (0, 0.0);
+    final centerX = _lastPreviewSize.width / 2;
+    final centerY = _lastPreviewSize.height / 2;
+    final positions = _spine.positions;
+    final wx = (sx - centerX) / _zoom + _lastCameraX;
+    final wy = (sy - centerY) / _zoom + _lastCameraY;
+    if (positions.length < 2 || _spine.segmentAngles.isEmpty) return (0, 0.0);
+    var bestSeg = 0;
+    var bestD2 = 1e20;
+    for (var i = 0; i < positions.length - 1; i++) {
+      final cx = (positions[i].x + positions[i + 1].x) / 2;
+      final cy = (positions[i].y + positions[i + 1].y) / 2;
+      final d2 = (wx - cx) * (wx - cx) + (wy - cy) * (wy - cy);
+      if (d2 < bestD2) {
+        bestD2 = d2;
+        bestSeg = i;
+      }
+    }
+    final seg = bestSeg.clamp(0, _spine.segmentCount - 1);
+    final cx = (positions[seg].x + positions[seg + 1].x) / 2;
+    final cy = (positions[seg].y + positions[seg + 1].y) / 2;
+    final a = _spine.segmentAngles[seg];
+    final perpDist = -(wx - cx) * sin(a) + (wy - cy) * cos(a);
+    final halfW = widget.creature.widthAtVertex(seg);
+    if (halfW <= 0) return (seg, 0.0);
+    var offset = (perpDist.abs() / halfW).clamp(0.0, 1.0);
+    if (offset < EyeConfig.singleEyeThreshold) offset = 0.0;
+    return (seg, offset);
   }
 
   static double get _minZoom => SimulationViewState.minZoom;
@@ -1252,6 +1402,84 @@ class _EditorPreviewState extends State<EditorPreview>
           return (px - sx) * (px - sx) + (py - sy) * (py - sy) <= headW * headW;
         }
 
+        const double _eyeGrabRadius = 18.0;
+        const double _eyeNodeRadius = 14.0;
+        /// Screen positions for one eye config (1 or 2 circles).
+        List<Offset> _eyeScreenPositions(EyeConfig eye) {
+          if (positions.length < 2 || _spine.segmentAngles.isEmpty) return [];
+          double sx(double wx) => centerX + (wx - cameraX) * _zoom;
+          double sy(double wy) => centerY + (wy - cameraY) * _zoom;
+          final seg = eye.segment.clamp(0, positions.length - 2);
+          final cx = (positions[seg].x + positions[seg + 1].x) / 2;
+          final cy = (positions[seg].y + positions[seg + 1].y) / 2;
+          final a = _spine.segmentAngles[seg];
+          final halfW = widthAtVertex(seg);
+          final isSingle = eye.offsetFromCenter < EyeConfig.singleEyeThreshold;
+          if (isSingle) return [Offset(sx(cx), sy(cy))];
+          final off = eye.offsetFromCenter * halfW;
+          final dx = -sin(a) * off;
+          final dy = cos(a) * off;
+          return [
+            Offset(sx(cx + dx), sy(cy + dy)),
+            Offset(sx(cx - dx), sy(cy - dy)),
+          ];
+        }
+        int? _eyeIndexAtScreen(double px, double py) {
+          final eyes = widget.creature.eyes ?? [];
+          final r2 = _eyeGrabRadius * _eyeGrabRadius;
+          for (var i = 0; i < eyes.length; i++) {
+            for (final pos in _eyeScreenPositions(eyes[i])) {
+              if ((px - pos.dx) * (px - pos.dx) + (py - pos.dy) * (py - pos.dy) <= r2)
+                return i;
+            }
+          }
+          return null;
+        }
+        /// Radius handles on the edge of each eye (like lateral fin nodes). One node for single eye, two mirrored for pair.
+        List<Offset>? _eyeNodePositions() {
+          final eyes = widget.creature.eyes ?? [];
+          final idx = widget.selectedEyeIndex;
+          if (idx == null || idx >= eyes.length || positions.length < 2 || _spine.segmentAngles.isEmpty) return null;
+          final eye = eyes[idx];
+          final seg = eye.segment.clamp(0, positions.length - 2);
+          final cx = (positions[seg].x + positions[seg + 1].x) / 2;
+          final cy = (positions[seg].y + positions[seg + 1].y) / 2;
+          final a = _spine.segmentAngles[seg];
+          final halfW = widthAtVertex(seg);
+          double sx(double wx) => centerX + (wx - cameraX) * _zoom;
+          double sy(double wy) => centerY + (wy - cameraY) * _zoom;
+          final isSingle = eye.offsetFromCenter < EyeConfig.singleEyeThreshold;
+          if (isSingle) {
+            final handleWorldX = cx + (-sin(a)) * eye.radius;
+            final handleWorldY = cy + cos(a) * eye.radius;
+            return [Offset(sx(handleWorldX), sy(handleWorldY))];
+          }
+          final off = eye.offsetFromCenter * halfW;
+          final dx = -sin(a) * off;
+          final dy = cos(a) * off;
+          final leftCx = cx + dx;
+          final leftCy = cy + dy;
+          final rightCx = cx - dx;
+          final rightCy = cy - dy;
+          final leftHandleX = leftCx + (-sin(a)) * eye.radius;
+          final leftHandleY = leftCy + cos(a) * eye.radius;
+          final rightHandleX = rightCx + sin(a) * eye.radius;
+          final rightHandleY = rightCy + (-cos(a)) * eye.radius;
+          return [
+            Offset(sx(leftHandleX), sy(leftHandleY)),
+            Offset(sx(rightHandleX), sy(rightHandleY)),
+          ];
+        }
+        int? _hitEyeNode(double px, double py) {
+          final positions = _eyeNodePositions();
+          if (positions == null) return null;
+          final r2 = _eyeNodeRadius * _eyeNodeRadius;
+          for (var i = 0; i < positions.length; i++) {
+            final o = positions[i];
+            if ((px - o.dx) * (px - o.dx) + (py - o.dy) * (py - o.dy) <= r2) return i;
+          }
+          return null;
+        }
         const double _dorsalNodeRadius = 14.0;
         List<Offset>? _dorsalNodePositions() {
           final fins = widget.creature.dorsalFins ?? [];
@@ -1603,20 +1831,30 @@ class _EditorPreviewState extends State<EditorPreview>
                             dorsalNode != null) {
                           _dorsalDraggingNode = dorsalNode;
                         } else {
+                          final eyeNodeHit = _hitEyeNode(lx, ly);
+                          final eyeIdx = _eyeIndexAtScreen(lx, ly);
+                          if (eyeNodeHit != null &&
+                              widget.selectedEyeIndex != null &&
+                              widget.onEyeRadiusChanged != null) {
+                            _eyeDraggingNode = eyeNodeHit;
+                          } else if (eyeIdx != null) {
+                            widget.onDorsalFinSelected?.call(null);
+                            widget.onLateralFinSelected?.call(null);
+                            widget.onEyeSelected?.call(eyeIdx);
+                            setState(() {
+                              _tailSelected = false;
+                              _eyeDragFromCreature = true;
+                            });
+                          } else {
                           // Prioritise lateral nodes (when a lateral is selected) then lateral fin body over pan.
                           final lateralNodeHit =
                               widget.selectedLateralFinIndex != null
                               ? _hitLateralNode(lx, ly)
                               : null;
-                          final lateralNode = lateralNodeHit != null
-                              ? (lateralNodeHit == 0 || lateralNodeHit == 2
-                                    ? 0
-                                    : 1)
-                              : null;
-                          if (lateralNode != null &&
+                          if (lateralNodeHit != null &&
                               widget.onLateralLengthChanged != null &&
                               widget.onLateralWidthChanged != null) {
-                            _lateralDraggingNode = lateralNode;
+                            _lateralDraggingNode = lateralNodeHit;
                           } else {
                             final lateralIdx = _lateralIndexNearScreen(lx, ly);
                             if (lateralIdx != null) {
@@ -1663,6 +1901,7 @@ class _EditorPreviewState extends State<EditorPreview>
                                 setState(() => _editorPotentialPan = true);
                               }
                             }
+                          }
                           }
                         }
                       } else if (widget.panelClosed) {
@@ -1733,17 +1972,19 @@ class _EditorPreviewState extends State<EditorPreview>
                         widget.selectedLateralFinIndex != null) {
                       const scale = 0.2;
                       final idx = widget.selectedLateralFinIndex!;
-                      final delta = (ly - _lastPanY) * scale;
+                      final rawDelta = (ly - _lastPanY) * scale;
+                      // Only left length node (0) has inverted drag; negate delta for that node only.
+                      final delta = _lateralDraggingNode! == 0 ? -rawDelta : rawDelta;
                       final laterals = widget.creature.lateralFins!;
                       if (idx < laterals.length) {
-                        if (_lateralDraggingNode == 0 &&
+                        if ((_lateralDraggingNode == 0 || _lateralDraggingNode == 2) &&
                             widget.onLateralLengthChanged != null) {
                           final v = (laterals[idx].length + delta).clamp(
                             LateralFinConfig.lengthMin,
                             LateralFinConfig.lengthMax,
                           );
                           widget.onLateralLengthChanged!(idx, v);
-                        } else if (_lateralDraggingNode == 1 &&
+                        } else if ((_lateralDraggingNode == 1 || _lateralDraggingNode == 3) &&
                             widget.onLateralWidthChanged != null) {
                           final v = (laterals[idx].width + delta).clamp(
                             LateralFinConfig.widthMin,
@@ -1759,7 +2000,9 @@ class _EditorPreviewState extends State<EditorPreview>
                     }
                     _lastPanX = lx;
                     _lastPanY = ly;
-                    if (_tailDragFromCreature || _mouthDragFromCreature) {
+                    if (_tailDragFromCreature ||
+                        _mouthDragFromCreature ||
+                        _eyeDragFromCreature) {
                       setState(() {});
                       return;
                     }
@@ -1870,8 +2113,49 @@ class _EditorPreviewState extends State<EditorPreview>
                         _lateralDragFromIndex != null ||
                         _lateralDraggingNode != null ||
                         _lateralPanStartIndex != null ||
-                        _mouthDragFromCreature)
+                        _mouthDragFromCreature ||
+                        _eyeDragFromCreature)
                       return;
+                    if (_eyeDraggingNode != null &&
+                        widget.selectedEyeIndex != null &&
+                        widget.onEyeRadiusChanged != null) {
+                      final eyes = widget.creature.eyes ?? [];
+                      final idx = widget.selectedEyeIndex!;
+                      final nodeSide = _eyeDraggingNode!;
+                      if (idx < eyes.length && positions.length >= 2 && _spine.segmentAngles.isNotEmpty) {
+                        final eye = eyes[idx];
+                        final seg = eye.segment.clamp(0, positions.length - 2);
+                        final cx = (positions[seg].x + positions[seg + 1].x) / 2;
+                        final cy = (positions[seg].y + positions[seg + 1].y) / 2;
+                        final a = _spine.segmentAngles[seg];
+                        final halfW = widthAtVertex(seg);
+                        final isSingle = eye.offsetFromCenter < EyeConfig.singleEyeThreshold;
+                        final off = isSingle ? 0.0 : eye.offsetFromCenter * halfW;
+                        final dx = -sin(a) * off;
+                        final dy = cos(a) * off;
+                        final eyeCenterWx = isSingle ? cx : (nodeSide == 0 ? cx + dx : cx - dx);
+                        final eyeCenterWy = isSingle ? cy : (nodeSide == 0 ? cy + dy : cy - dy);
+                        final wx = (lx - centerX) / _zoom + cameraX;
+                        final wy = (ly - centerY) / _zoom + cameraY;
+                        final dist = sqrt(
+                          (wx - eyeCenterWx) * (wx - eyeCenterWx) +
+                          (wy - eyeCenterWy) * (wy - eyeCenterWy),
+                        );
+                        final r = dist.clamp(EyeConfig.radiusMin, EyeConfig.radiusMax);
+                        // At min: only allow growing again if drag is on the correct side (outward from node).
+                        final atMin = eye.radius <= EyeConfig.radiusMin;
+                        final wouldGrow = r > EyeConfig.radiusMin;
+                        final outX = nodeSide == 0 ? -sin(a) : sin(a);
+                        final outY = nodeSide == 0 ? cos(a) : -cos(a);
+                        final correctSide = (wx - eyeCenterWx) * outX + (wy - eyeCenterWy) * outY > 0;
+                        final rToApply = (atMin && wouldGrow && !correctSide)
+                            ? EyeConfig.radiusMin
+                            : r;
+                        widget.onEyeRadiusChanged!(idx, rToApply);
+                      }
+                      setState(() {});
+                      return;
+                    }
                     if (isSpineLocked) return;
                     if (widget.panelClosed) return;
                     final worldX = (lx - centerX) / _zoom + cameraX;
@@ -1893,6 +2177,7 @@ class _EditorPreviewState extends State<EditorPreview>
                       });
                       widget.onDorsalFinSelected?.call(null);
                       widget.onLateralFinSelected?.call(null);
+                      widget.onEyeSelected?.call(null);
                       return;
                     }
                     _pinchStartZoom = null;
@@ -1901,7 +2186,21 @@ class _EditorPreviewState extends State<EditorPreview>
                       _editorTouchScreenSize = null;
                       _editorTouchFrozen = false;
                     }
-                    if (_tailDragFromCreature) {
+                    if (_eyeDragFromCreature &&
+                        widget.selectedEyeIndex != null) {
+                      final inside = _finRemoveBounds().contains(Offset(_lastPanX, _lastPanY));
+                      if (inside && widget.onEyeMoved != null) {
+                        final (seg, offset) = _segmentAndOffsetAtLocal(_lastPanX, _lastPanY);
+                        widget.onEyeMoved!(widget.selectedEyeIndex!, seg, offset);
+                      } else if (!inside && widget.onEyeRemoved != null) {
+                        widget.onEyeRemoved!(widget.selectedEyeIndex!);
+                      }
+                      setState(() {
+                        _eyeDragFromCreature = false;
+                        _eyeDraggingNode = null;
+                      });
+                      return;
+                    } else if (_tailDragFromCreature) {
                       if (!_finRemoveBounds().contains(
                             Offset(_lastPanX, _lastPanY),
                           ) &&
@@ -1919,6 +2218,13 @@ class _EditorPreviewState extends State<EditorPreview>
                         widget.onMouthRemoved!();
                       }
                       setState(() => _mouthDragFromCreature = false);
+                      return;
+                    }
+                    if (_eyeDragFromCreature || _eyeDraggingNode != null) {
+                      setState(() {
+                        _eyeDragFromCreature = false;
+                        _eyeDraggingNode = null;
+                      });
                       return;
                     }
                     if (_tailDraggingNode != null) {
@@ -2118,6 +2424,18 @@ class _EditorPreviewState extends State<EditorPreview>
                   ),
                 ),
               ),
+            if (widget.selectedEyeIndex != null && _eyeNodePositions() != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _EyeNodeOverlayPainter(
+                      nodePositions: _eyeNodePositions()!,
+                      activeNodeIndex: _eyeDraggingNode,
+                    ),
+                    size: Size(w, h),
+                  ),
+                ),
+              ),
             if (_showTailNodes())
               Positioned.fill(
                 child: IgnorePointer(
@@ -2235,6 +2553,74 @@ class _EditorPreviewState extends State<EditorPreview>
                       bodyColor: Color(widget.creature.color),
                     ),
                     size: Size(w, h),
+                  ),
+                ),
+              ),
+            if (_eyeAddDragLocal != null &&
+                creatureScreenBounds().inflate(40).contains(_eyeAddDragLocal!) &&
+                positions.length >= 2 &&
+                _spine.segmentAngles.isNotEmpty)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Builder(
+                    builder: (_) {
+                      final (seg, offset) = _segmentAndOffsetAtLocal(
+                        _eyeAddDragLocal!.dx,
+                        _eyeAddDragLocal!.dy,
+                      );
+                      return CustomPaint(
+                        painter: _EyeAddPreviewPainter(
+                          segment: seg,
+                          offsetFromCenter: offset,
+                          positions: positions,
+                          segmentAngles: _spine.segmentAngles,
+                          centerX: centerX,
+                          centerY: centerY,
+                          cameraX: cameraX,
+                          cameraY: cameraY,
+                          zoom: _zoom,
+                          widthAtVertex: (i) => widthAtVertex(i),
+                        ),
+                        size: Size(w, h),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            if (_eyeDragFromCreature &&
+                widget.selectedEyeIndex != null &&
+                positions.length >= 2 &&
+                _spine.segmentAngles.isNotEmpty)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Builder(
+                    builder: (_) {
+                      final (seg, offset) = _segmentAndOffsetAtLocal(
+                        _lastPanX,
+                        _lastPanY,
+                      );
+                      final eyes = widget.creature.eyes ?? [];
+                      final idx = widget.selectedEyeIndex!;
+                      final radiusWorld = idx < eyes.length
+                          ? eyes[idx].radius
+                          : null;
+                      return CustomPaint(
+                        painter: _EyeAddPreviewPainter(
+                          segment: seg,
+                          offsetFromCenter: offset,
+                          positions: positions,
+                          segmentAngles: _spine.segmentAngles,
+                          centerX: centerX,
+                          centerY: centerY,
+                          cameraX: cameraX,
+                          cameraY: cameraY,
+                          zoom: _zoom,
+                          widthAtVertex: (i) => widthAtVertex(i),
+                          radiusWorld: radiusWorld,
+                        ),
+                        size: Size(w, h),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -2558,6 +2944,35 @@ class _EditorPreviewState extends State<EditorPreview>
               _tailAddDragLocal = null;
               _tailAddDragPayload = null;
             }),
+            builder: (context, candidateData, rejectedData) => child,
+          );
+        }
+        if (editTab == 2 && widget.onEyeAdded != null) {
+          final child = inner;
+          inner = DragTarget<EyeDragPayload>(
+            onWillAcceptWithDetails: (_) => true,
+            onAcceptWithDetails: (d) {
+              final box =
+                  _previewContentKey.currentContext?.findRenderObject()
+                      as RenderBox?;
+              if (box != null && box.hasSize) {
+                final local = box.globalToLocal(d.offset);
+                if (creatureScreenBounds().inflate(40).contains(local)) {
+                  final (seg, offset) = _segmentAndOffsetAtLocal(local.dx, local.dy);
+                  widget.onEyeAdded!(seg, offset);
+                }
+              }
+              setState(() => _eyeAddDragLocal = null);
+            },
+            onMove: (d) {
+              final box =
+                  _previewContentKey.currentContext?.findRenderObject()
+                      as RenderBox?;
+              if (box != null && box.hasSize) {
+                setState(() => _eyeAddDragLocal = box.globalToLocal(d.offset));
+              }
+            },
+            onLeave: (_) => setState(() => _eyeAddDragLocal = null),
             builder: (context, candidateData, rejectedData) => child,
           );
         }

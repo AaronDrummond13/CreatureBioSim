@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:creature_bio_sim/creature.dart';
+import 'package:creature_bio_sim/dorsal_fin_rules.dart';
 import 'package:creature_bio_sim/editor/editor_panel.dart';
 import 'package:creature_bio_sim/editor/editor_preview.dart';
 import 'package:creature_bio_sim/editor/editor_style.dart';
@@ -96,6 +97,16 @@ class EditorScreenState extends State<EditorScreen> {
       onLateralRemoved: _onLateralRemovedFromViewport,
       onMouthAdded: _onMouthAddedFromViewport,
       onMouthRemoved: _onMouthRemovedFromViewport,
+      selectedEyeIndex: _selectedEyeIndex,
+      onEyeSelected: (i) => setState(() {
+        _selectedEyeIndex = i;
+        if (i != null) _selectedDorsalFinIndex = null;
+        if (i != null) _selectedLateralFinIndex = null;
+      }),
+      onEyeAdded: _onEyeAddedFromViewport,
+      onEyeRemoved: _onEyeRemovedFromViewport,
+      onEyeMoved: _onEyeMovedFromViewport,
+      onEyeRadiusChanged: _onEyeRadiusChangedFromViewport,
     );
 
     Widget content;
@@ -178,10 +189,13 @@ class EditorScreenState extends State<EditorScreen> {
   int _editorTabIndex = 0;
   int? _selectedDorsalFinIndex;
   int? _selectedLateralFinIndex;
+  int? _selectedEyeIndex;
 
   void _onDorsalRangeFromViewport(int start, int end) {
     final fins = List<(List<int>, double?)>.from(_creature.dorsalFins ?? []);
     if (_selectedDorsalFinIndex == null || _selectedDorsalFinIndex! >= fins.length) return;
+    final segCount = _creature.segmentCount;
+    if (!dorsalFinCanSetRange(fins, _selectedDorsalFinIndex!, start, end, segCount)) return;
     final segs = [for (var i = start; i <= end; i++) i];
     fins[_selectedDorsalFinIndex!] = (segs, fins[_selectedDorsalFinIndex!].$2);
     setState(() => _creature = Creature(
@@ -193,6 +207,7 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      eyes: _creature.eyes,
     ));
   }
 
@@ -210,16 +225,26 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      eyes: _creature.eyes,
     ));
   }
 
   void _onDorsalAddedFromViewport(int seg) {
     final segCount = _creature.segmentCount;
-    if (segCount < 3) return;
-    final start = (seg + 2 <= segCount - 1) ? seg : (segCount - 3).clamp(0, segCount - 1);
-    final segs = [start, start + 1, start + 2];
+    if (segCount < dorsalFinMinSegments) return;
     final fins = List<(List<int>, double?)>.from(_creature.dorsalFins ?? []);
-    fins.add((segs, kDorsalHeightMedium));
+    final len = dorsalFinMinSegments;
+    var added = false;
+    for (var offset = 0; offset <= len && !added; offset++) {
+      final start = (seg - offset).clamp(0, segCount - len);
+      final end = start + len - 1;
+      if (end < seg || start > seg) continue;
+      if (!dorsalFinCanAdd(fins, start, end, segCount)) continue;
+      final segs = [for (var i = start; i <= end; i++) i];
+      fins.add((segs, kDorsalHeightMedium));
+      added = true;
+    }
+    if (!added) return;
     setState(() => _creature = Creature(
       segmentWidths: _creature.segmentWidths,
       color: _creature.color,
@@ -229,6 +254,7 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      eyes: _creature.eyes,
     ));
     _selectedDorsalFinIndex = fins.length - 1;
   }
@@ -238,14 +264,40 @@ class EditorScreenState extends State<EditorScreen> {
     final current = _creature.segmentCount;
     if (newCount == current) return;
     var w = List<double>.from(_creature.segmentWidths);
-    if (newCount > current) {
+    final delta = newCount - current;
+    if (delta > 0) {
+      // Add segments at tail so head/eyes/fins stay put; new segments get tail width.
       final tailSegW = w.isEmpty ? 20.0 : w.first;
       final clamped = tailSegW.clamp(Creature.minVertexWidth, Creature.maxVertexWidth);
       for (var i = current; i < newCount; i++) w.insert(0, clamped);
     } else {
-      w = w.sublist(current - newCount);
+      w = w.sublist(-delta);
     }
-    setState(() => _creature = _creatureWith(_creature, segmentWidths: w, newSegmentCount: newCount, filterDorsalLateral: true));
+    // Offset all segment indices so attachments stay at same spine position.
+    List<(List<int>, double?)>? dorsal = _creature.dorsalFins != null
+        ? _creature.dorsalFins!
+            .map((f) => (f.$1.map((s) => s + delta).toList(), f.$2))
+            .toList()
+        : null;
+    List<LateralFinConfig>? lateral = _creature.lateralFins != null
+        ? _creature.lateralFins!
+            .map((c) => c.copyWith(segment: c.segment + delta))
+            .toList()
+        : null;
+    List<EyeConfig>? eyes = _creature.eyes != null
+        ? _creature.eyes!
+            .map((e) => e.copyWith(segment: e.segment + delta))
+            .toList()
+        : null;
+    setState(() => _creature = _creatureWith(
+      _creature,
+      segmentWidths: w,
+      newSegmentCount: newCount,
+      dorsalFins: dorsal,
+      lateralFins: lateral,
+      eyes: eyes,
+      filterDorsalLateral: true,
+    ));
   }
 
   void _onSegmentWidthDeltaFromViewport(int seg, double delta) {
@@ -271,6 +323,7 @@ class EditorScreenState extends State<EditorScreen> {
         lateralFins: _creature.lateralFins,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
+        eyes: _creature.eyes,
       );
       _selectedDorsalFinIndex = null;
     });
@@ -287,6 +340,7 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      eyes: _creature.eyes,
     ));
   }
 
@@ -301,6 +355,7 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      eyes: _creature.eyes,
     ));
   }
 
@@ -315,6 +370,7 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      eyes: _creature.eyes,
     ));
   }
 
@@ -335,6 +391,7 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      eyes: _creature.eyes,
     ));
   }
 
@@ -348,6 +405,7 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      eyes: _creature.eyes,
     ));
   }
 
@@ -429,6 +487,7 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: trophicType,
       mouth: type,
+      eyes: _creature.eyes,
     ));
   }
 
@@ -442,7 +501,68 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: TrophicType.none,
       mouth: null,
+      eyes: _creature.eyes,
     ));
+  }
+
+  void _onEyeAddedFromViewport(int segment, double offsetFromCenter) {
+    final list = List<EyeConfig>.from(_creature.eyes ?? []);
+    list.add(EyeConfig(segment, offsetFromCenter: offsetFromCenter));
+    list.sort((a, b) => a.segment.compareTo(b.segment));
+    setState(() {
+      _creature = Creature(
+        segmentWidths: _creature.segmentWidths,
+        color: _creature.color,
+        dorsalFins: _creature.dorsalFins,
+        finColor: _creature.finColor,
+        tail: _creature.tail,
+        lateralFins: _creature.lateralFins,
+        trophicType: _creature.trophicType,
+        mouth: _creature.mouth,
+        eyes: list,
+      );
+      _selectedEyeIndex = list.length - 1;
+    });
+  }
+
+  void _onEyeRemovedFromViewport(int index) {
+    final list = List<EyeConfig>.from(_creature.eyes ?? []);
+    if (index < 0 || index >= list.length) return;
+    list.removeAt(index);
+    setState(() {
+      _creature = Creature(
+        segmentWidths: _creature.segmentWidths,
+        color: _creature.color,
+        dorsalFins: _creature.dorsalFins,
+        finColor: _creature.finColor,
+        tail: _creature.tail,
+        lateralFins: _creature.lateralFins,
+        trophicType: _creature.trophicType,
+        mouth: _creature.mouth,
+        eyes: list.isEmpty ? null : list,
+      );
+      if (_selectedEyeIndex == index) _selectedEyeIndex = null;
+      else if (_selectedEyeIndex != null && _selectedEyeIndex! > index)
+        _selectedEyeIndex = _selectedEyeIndex! - 1;
+    });
+  }
+
+  void _onEyeMovedFromViewport(int index, int segment, double offsetFromCenter) {
+    final list = List<EyeConfig>.from(_creature.eyes ?? []);
+    if (index < 0 || index >= list.length) return;
+    list[index] = list[index].copyWith(
+      segment: segment,
+      offsetFromCenter: offsetFromCenter.clamp(EyeConfig.offsetMin, EyeConfig.offsetMax),
+    );
+    list.sort((a, b) => a.segment.compareTo(b.segment));
+    setState(() => _creature = _creatureWith(_creature, eyes: list));
+  }
+
+  void _onEyeRadiusChangedFromViewport(int index, double value) {
+    final list = List<EyeConfig>.from(_creature.eyes ?? []);
+    if (index < 0 || index >= list.length) return;
+    list[index] = list[index].copyWith(radius: value);
+    setState(() => _creature = _creatureWith(_creature, eyes: list));
   }
 }
 
@@ -451,15 +571,18 @@ Creature _creatureWith(Creature creature, {
   int? color,
   List<(List<int>, double?)>? dorsalFins,
   List<LateralFinConfig>? lateralFins,
+  List<EyeConfig>? eyes,
   bool filterDorsalLateral = false,
   int? newSegmentCount,
 }) {
   final seg = newSegmentCount ?? (segmentWidths?.length ?? creature.segmentWidths.length);
   List<(List<int>, double?)>? dorsal = dorsalFins ?? creature.dorsalFins;
   List<LateralFinConfig>? lateral = lateralFins ?? creature.lateralFins;
+  List<EyeConfig>? eyeList = eyes ?? creature.eyes;
   if (filterDorsalLateral && seg >= 1) {
     dorsal = _filterDorsalForSegmentCount(dorsal, seg);
     lateral = _filterLateralForSegmentCount(lateral, seg);
+    eyeList = _filterEyesForSegmentCount(eyeList, seg);
   }
   return Creature(
     segmentWidths: segmentWidths ?? creature.segmentWidths,
@@ -470,6 +593,7 @@ Creature _creatureWith(Creature creature, {
     lateralFins: lateral,
     trophicType: creature.trophicType,
     mouth: creature.mouth,
+    eyes: eyeList,
   );
 }
 
@@ -484,6 +608,12 @@ List<(List<int>, double?)>? _filterDorsalForSegmentCount(List<(List<int>, double
 }
 
 List<LateralFinConfig>? _filterLateralForSegmentCount(List<LateralFinConfig>? configs, int segCount) {
+  if (configs == null) return null;
+  final out = configs.where((c) => c.segment >= 0 && c.segment < segCount).toList();
+  return out.isEmpty ? null : out;
+}
+
+List<EyeConfig>? _filterEyesForSegmentCount(List<EyeConfig>? configs, int segCount) {
   if (configs == null) return null;
   final out = configs.where((c) => c.segment >= 0 && c.segment < segCount).toList();
   return out.isEmpty ? null : out;

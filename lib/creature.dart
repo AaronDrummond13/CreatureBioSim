@@ -22,6 +22,32 @@ enum CaudalFinType {
   rhomboid,
 }
 
+/// Eye placement: segment index, offset from spine (0 = single centre eye, (0,1] = symmetric pair at that fraction of half-width), radius in world units.
+class EyeConfig {
+  static const double offsetMin = 0.0;
+  static const double offsetMax = 1.0;
+  static const double radiusMin = 2.0;
+  static const double radiusMax = 18.0;
+  static const double radiusDefault = 6.0;
+  /// When offsetFromCenter < this, draw a single eye on the spine; otherwise symmetric pair.
+  static const double singleEyeThreshold = 0.08;
+
+  EyeConfig(this.segment, {double? offsetFromCenter, double? radius})
+    : offsetFromCenter = (offsetFromCenter ?? 0.0).clamp(offsetMin, offsetMax),
+      radius = (radius ?? radiusDefault).clamp(radiusMin, radiusMax);
+
+  final int segment;
+  final double offsetFromCenter;
+  final double radius;
+
+  EyeConfig copyWith({int? segment, double? offsetFromCenter, double? radius}) =>
+      EyeConfig(
+        segment ?? this.segment,
+        offsetFromCenter: offsetFromCenter ?? this.offsetFromCenter,
+        radius: radius ?? this.radius,
+      );
+}
+
 /// Pectoral/lateral fin: segment index and size. Length = along fin axis, width = perpendicular.
 class LateralFinConfig {
   static const double lengthMin = 12.0;
@@ -116,6 +142,9 @@ class Creature {
   /// Mouth style. Null = no mouth drawn. Default tentacle (shrimp/herbivore feelers).
   final MouthType? mouth;
 
+  /// Optional eye placements (segment, offset, radius). When null or empty, renderer may use default head eyes for non-babies.
+  final List<EyeConfig>? eyes;
+
   /// Number of spine segments (segmentWidths.length), capped at [maxSegmentCount].
   int get segmentCount => segmentWidths.length;
 
@@ -143,6 +172,7 @@ class Creature {
     this.lateralFins,
     this.trophicType = TrophicType.herbivore,
     this.mouth,
+    this.eyes,
     this.color = 0xFF2E7D32,
   }) : segmentWidths = segmentWidths
            .take(maxSegmentCount)

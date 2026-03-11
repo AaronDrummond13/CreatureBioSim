@@ -83,6 +83,9 @@ class LateralDragPayload {}
 /// Marker for dorsal fin drag from panel to viewport.
 class DorsalDragPayload {}
 
+/// Marker for eye drag from panel to viewport (add eye at drop position).
+class EyeDragPayload {}
+
 /// Payload for tail (caudal) fin drag from panel to viewport. [tailFin] = type to add, or null to remove.
 class TailDragPayload {
   const TailDragPayload(this.tailFin);
