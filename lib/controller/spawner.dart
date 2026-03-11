@@ -92,6 +92,15 @@ class Spawner {
         : (mouth == MouthType.tentacle
             ? tentacleCountOptions[_rng.nextInt(tentacleCountOptions.length)]
             : null);
+    final mouthLength = (mouth == MouthType.teeth || mouth == MouthType.tentacle)
+        ? _inRange(MouthParams.lengthMin, MouthParams.lengthMax)
+        : null;
+    final mouthCurve = mouth == MouthType.teeth
+        ? _inRange(MouthParams.curveMin, MouthParams.curveMax)
+        : null;
+    final mouthWobbleAmplitude = mouth == MouthType.tentacle
+        ? _inRange(MouthParams.wobbleMin, MouthParams.wobbleMax)
+        : null;
     final eyes = _randomEyes(segmentCount);
     return Creature(
       segmentWidths: widths,
@@ -106,9 +115,9 @@ class Spawner {
       trophicType: trophicType,
       mouth: mouth,
       mouthCount: mouthCount,
-      mouthLength: (mouth == MouthType.teeth || mouth == MouthType.tentacle) ? MouthParams.lengthDefault : null,
-      mouthCurve: mouth == MouthType.teeth ? MouthParams.curveDefault : null,
-      mouthWobbleAmplitude: mouth == MouthType.tentacle ? MouthParams.wobbleDefault : null,
+      mouthLength: mouthLength,
+      mouthCurve: mouthCurve,
+      mouthWobbleAmplitude: mouthWobbleAmplitude,
       eyes: (eyes == null || eyes.isEmpty) ? null : eyes,
     );
   }
@@ -131,16 +140,18 @@ class Spawner {
 
   double _inRange(double min, double max) => min + _rng.nextDouble() * (max - min);
 
-  /// ~1/6 chance per segment (excluding head) to get a lateral fin with default or random size in range.
+  /// ~1/6 chance per segment (excluding head) to get a lateral fin with random size and wing type.
   List<LateralFinConfig>? _randomLateralFins(int segmentCount) {
     final n = segmentCount;
     if (n < 1) return null;
+    final types = LateralWingType.values;
     final list = <LateralFinConfig>[];
     for (var seg = 0; seg < n; seg++) {
       if (_rng.nextDouble() < 1 / 6) {
         final length = _inRange(LateralFinConfig.lengthMin, LateralFinConfig.lengthMax);
         final width = _inRange(LateralFinConfig.widthMin, LateralFinConfig.widthMax);
-        list.add(LateralFinConfig(seg, length: length, width: width));
+        final wingType = types[_rng.nextInt(types.length)];
+        list.add(LateralFinConfig(seg, length: length, width: width, wingType: wingType));
       }
     }
     return list.isEmpty ? null : list;
