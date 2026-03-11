@@ -217,11 +217,11 @@ void _paintTentacleMouth(
   double Function(double) sx,
   double Function(double) sy,
 ) {
-  const tentacleCount = 5;
-  const jointCount = 4;
+  const tentacleCount = 7;
+  const jointCount = 5;
   const length = 25.0;
   const wobbleSpeed = 2.0;
-  const wobbleAmplitude = 4.5;
+  const wobbleAmplitude = 5;
   const wobblePhase = 0.85;
   const tentaclePhaseOffset = 2.4;
   const baseWidths = [3.6, 2.6, 1.5, 0.65, 0.18];
@@ -340,7 +340,7 @@ void _paintTeethMouth(
   double Function(double) sx,
   double Function(double) sy,
 ) {
-  const toothCount = 5;
+  const toothCount = 4;
   const jointCount = 4;
   const length = 25.0;
   const teethCurve = -1;
