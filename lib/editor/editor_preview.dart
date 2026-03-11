@@ -21,6 +21,7 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
     required this.length,
     required this.width,
     this.angleDegrees = 45.0,
+    this.wingType = LateralWingType.ellipse,
     required this.positions,
     required this.segmentAngles,
     required this.centerX,
@@ -38,6 +39,7 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
   final double length;
   final double width;
   final double angleDegrees;
+  final LateralWingType wingType;
   final List<Vector2> positions;
   final List<double> segmentAngles;
   final double centerX;
@@ -62,11 +64,6 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
     final wid = width;
     final lenScreen = len * zoom;
     final widScreen = wid * zoom;
-    final rect = Rect.fromCenter(
-      center: Offset.zero,
-      width: lenScreen,
-      height: widScreen,
-    );
     final aAttach = segmentAngles[segment];
     final segHead = segment + 1 < segmentAngles.length ? segment + 1 : segment;
     final aLock = segmentAngles[segHead];
@@ -93,17 +90,76 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
       ..color = strokeColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = (2.0 * zoom).clamp(1.0, 2.0);
+    void drawWing(Canvas c, double lS, double wS, {bool isLeft = true}) {
+      if (wingType == LateralWingType.sharkWing) {
+        final hLen = lS / 2, hWid = wS / 2;
+        final path = Path()
+          ..moveTo(hLen, -hWid)
+          ..quadraticBezierTo(0.0, -hWid, -hLen, 0.0)
+          ..quadraticBezierTo(0.0, hWid, hLen, hWid)
+          ..close();
+        c.drawPath(path, fillPaint);
+        c.drawPath(path, strokePaint);
+      } else if (wingType == LateralWingType.sharkConcave) {
+        final hLen = lS / 2, hWid = wS / 2;
+        final path = Path();
+        if (isLeft) {
+          path
+            ..moveTo(hLen, -hWid)
+            ..quadraticBezierTo(0.0, -hWid, -hLen, 0.0)
+            ..quadraticBezierTo(0.0, 0.0, hLen, hWid)
+            ..close();
+        } else {
+          path
+            ..moveTo(hLen, -hWid)
+            ..quadraticBezierTo(0.0, 0.0, -hLen, 0.0)
+            ..quadraticBezierTo(0.0, hWid, hLen, hWid)
+            ..close();
+        }
+        c.drawPath(path, fillPaint);
+        c.drawPath(path, strokePaint);
+      } else if (wingType == LateralWingType.paddle) {
+        final hLen = lS / 2, hWid = wS / 2;
+        final path = Path()
+          ..moveTo(-hLen, -hWid)
+          ..quadraticBezierTo(0.0, -hWid, hLen, 0.0)
+          ..quadraticBezierTo(0.0, hWid, -hLen, hWid)
+          ..close();
+        c.drawPath(path, fillPaint);
+        c.drawPath(path, strokePaint);
+      } else if (wingType == LateralWingType.paddleConcave) {
+        final hLen = lS / 2, hWid = wS / 2;
+        final path = Path();
+        if (isLeft) {
+          path
+            ..moveTo(-hLen, -hWid)
+            ..quadraticBezierTo(0.0, -hWid, hLen, 0.0)
+            ..quadraticBezierTo(0.0, 0.0, -hLen, hWid)
+            ..close();
+        } else {
+          path
+            ..moveTo(-hLen, -hWid)
+            ..quadraticBezierTo(0.0, 0.0, hLen, 0.0)
+            ..quadraticBezierTo(0.0, hWid, -hLen, hWid)
+            ..close();
+        }
+        c.drawPath(path, fillPaint);
+        c.drawPath(path, strokePaint);
+      } else {
+        final rect = Rect.fromCenter(center: Offset.zero, width: lS, height: wS);
+        c.drawOval(rect, fillPaint);
+        c.drawOval(rect, strokePaint);
+      }
+    }
     canvas.save();
     canvas.translate(sx(leftCx), sy(leftCy));
     canvas.rotate(leftAngle);
-    canvas.drawOval(rect, fillPaint);
-    canvas.drawOval(rect, strokePaint);
+    drawWing(canvas, lenScreen, widScreen, isLeft: true);
     canvas.restore();
     canvas.save();
     canvas.translate(sx(rightCx), sy(rightCy));
     canvas.rotate(rightAngle);
-    canvas.drawOval(rect, fillPaint);
-    canvas.drawOval(rect, strokePaint);
+    drawWing(canvas, lenScreen, widScreen, isLeft: false);
     canvas.restore();
   }
 
@@ -113,6 +169,7 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
       old.length != length ||
       old.width != width ||
       old.angleDegrees != angleDegrees ||
+      old.wingType != wingType ||
       old.highlight != highlight ||
       old.highlightForRemove != highlightForRemove;
 }
@@ -896,7 +953,7 @@ class EditorPreview extends StatefulWidget {
   final void Function()? onTailRemoved;
   final void Function(int seg)? onLateralToggled;
   final void Function(int fromIndex, int toSeg)? onLateralMoved;
-  final void Function(int seg)? onLateralAdded;
+  final void Function(int seg, LateralWingType wingType)? onLateralAdded;
   final int? selectedLateralFinIndex;
   final void Function(int index)? onLateralRemoved;
   final void Function(int? index)? onLateralFinSelected;
@@ -967,6 +1024,7 @@ class _EditorPreviewState extends State<EditorPreview>
   bool _editorTouchFrozen = false;
   int _editorPointerCount = 0;
   Offset? _lateralAddDragLocal;
+  LateralDragPayload? _lateralAddDragPayload;
   Offset? _dorsalAddDragLocal;
   double _backgroundTimeSeconds = 0.0;
   double? _lastEditorRealTimeSeconds;
@@ -2340,16 +2398,6 @@ class _EditorPreviewState extends State<EditorPreview>
                       return;
                     }
                     if (_lateralDraggingNode != null) {
-                      final laterals = widget.creature.lateralFins ?? [];
-                      final releaseInBounds = _finRemoveBounds().contains(
-                        Offset(_lastPanX, _lastPanY),
-                      );
-                      if (laterals.length == 1 &&
-                          !releaseInBounds &&
-                          widget.onLateralRemoved != null) {
-                        widget.onLateralRemoved!(0);
-                        widget.onLateralFinSelected?.call(null);
-                      }
                       setState(() => _lateralDraggingNode = null);
                       return;
                     }
@@ -2772,6 +2820,7 @@ class _EditorPreviewState extends State<EditorPreview>
                       ),
                       length: LateralFinConfig.lengthDefault,
                       width: LateralFinConfig.widthDefault,
+                      wingType: _lateralAddDragPayload?.wingType ?? LateralWingType.ellipse,
                       positions: positions,
                       segmentAngles: _spine.segmentAngles,
                       centerX: centerX,
@@ -2835,6 +2884,13 @@ class _EditorPreviewState extends State<EditorPreview>
                                     .lateralFins![_lateralDragFromIndex!]
                                     .angleDegrees
                                 : LateralFinConfig.angleDegreesDefault,
+                        wingType:
+                            _lateralDragFromIndex! <
+                                    (widget.creature.lateralFins?.length ?? 0)
+                                ? widget.creature
+                                    .lateralFins![_lateralDragFromIndex!]
+                                    .wingType
+                                : LateralWingType.ellipse,
                         positions: positions,
                         segmentAngles: _spine.segmentAngles,
                         centerX: centerX,
@@ -2897,6 +2953,13 @@ class _EditorPreviewState extends State<EditorPreview>
                                     .lateralFins![_lateralDragFromIndex!]
                                     .angleDegrees
                                 : LateralFinConfig.angleDegreesDefault,
+                        wingType:
+                            _lateralDragFromIndex! <
+                                    (widget.creature.lateralFins?.length ?? 0)
+                                ? widget.creature
+                                    .lateralFins![_lateralDragFromIndex!]
+                                    .wingType
+                                : LateralWingType.ellipse,
                         positions: positions,
                         segmentAngles: _spine.segmentAngles,
                         centerX: centerX,
@@ -3047,21 +3110,30 @@ class _EditorPreviewState extends State<EditorPreview>
                       as RenderBox?;
               if (box != null && box.hasSize) {
                 final local = box.globalToLocal(d.offset);
-                widget.onLateralAdded!(_segmentAtLocal(local.dx, local.dy));
+                final seg = _segmentAtLocal(local.dx, local.dy);
+                final wingType = d.data.wingType;
+                widget.onLateralAdded!(seg, wingType);
               }
-              setState(() => _lateralAddDragLocal = null);
+              setState(() {
+                _lateralAddDragLocal = null;
+                _lateralAddDragPayload = null;
+              });
             },
             onMove: (d) {
               final box =
                   _previewContentKey.currentContext?.findRenderObject()
                       as RenderBox?;
               if (box != null && box.hasSize) {
-                setState(
-                  () => _lateralAddDragLocal = box.globalToLocal(d.offset),
-                );
+                setState(() {
+                  _lateralAddDragLocal = box.globalToLocal(d.offset);
+                  _lateralAddDragPayload = d.data;
+                });
               }
             },
-            onLeave: (_) => setState(() => _lateralAddDragLocal = null),
+            onLeave: (_) => setState(() {
+              _lateralAddDragLocal = null;
+              _lateralAddDragPayload = null;
+            }),
             builder: (context, candidateData, rejectedData) => child,
           );
         }

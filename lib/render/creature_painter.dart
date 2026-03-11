@@ -535,11 +535,6 @@ class CreaturePainter extends CustomPainter {
       final flareRad = config.angleDegrees * pi / 180.0;
       final lenScreen = len * _paintZ;
       final widScreen = wid * _paintZ;
-      final rect = Rect.fromCenter(
-        center: Offset.zero,
-        width: lenScreen,
-        height: widScreen,
-      );
       final aAttach = segmentAngles[seg < segmentAngles.length ? seg : seg - 1];
       final segHead = seg + 1 < segmentAngles.length ? seg + 1 : seg;
       final aLock = segmentAngles[segHead];
@@ -553,19 +548,108 @@ class CreaturePainter extends CustomPainter {
       final rightCy = py + cos(aAttach) * halfW;
       final leftAngle = aLock + flareRad;
       final rightAngle = aLock - flareRad;
+      final drawWing = config.wingType == LateralWingType.sharkWing
+          ? (Canvas c, double lS, double wS) => _drawSharkWingPath(c, lS, wS, fillPaint, strokePaint)
+          : config.wingType == LateralWingType.paddle
+              ? (Canvas c, double lS, double wS) => _drawPaddlePath(c, lS, wS, fillPaint, strokePaint)
+              : (Canvas c, double lS, double wS) {
+              final rect = Rect.fromCenter(center: Offset.zero, width: lS, height: wS);
+              c.drawOval(rect, fillPaint);
+              c.drawOval(rect, strokePaint);
+            };
       canvas.save();
       canvas.translate(sx(leftCx), sy(leftCy));
       canvas.rotate(leftAngle);
-      canvas.drawOval(rect, fillPaint);
-      canvas.drawOval(rect, strokePaint);
+      if (config.wingType == LateralWingType.sharkConcave) {
+        _drawSharkConcavePath(canvas, lenScreen, widScreen, fillPaint, strokePaint, isLeft: true);
+      } else if (config.wingType == LateralWingType.paddleConcave) {
+        _drawPaddleConcavePath(canvas, lenScreen, widScreen, fillPaint, strokePaint, isLeft: true);
+      } else {
+        drawWing(canvas, lenScreen, widScreen);
+      }
       canvas.restore();
       canvas.save();
       canvas.translate(sx(rightCx), sy(rightCy));
       canvas.rotate(rightAngle);
-      canvas.drawOval(rect, fillPaint);
-      canvas.drawOval(rect, strokePaint);
+      if (config.wingType == LateralWingType.sharkConcave) {
+        _drawSharkConcavePath(canvas, lenScreen, widScreen, fillPaint, strokePaint, isLeft: false);
+      } else if (config.wingType == LateralWingType.paddleConcave) {
+        _drawPaddleConcavePath(canvas, lenScreen, widScreen, fillPaint, strokePaint, isLeft: false);
+      } else {
+        drawWing(canvas, lenScreen, widScreen);
+      }
       canvas.restore();
     }
+  }
+
+  /// Shark fin: point outward, wide base toward body. Inverted from paddle along length.
+  void _drawSharkWingPath(Canvas canvas, double lenScreen, double widScreen, Paint fill, Paint stroke) {
+    final hLen = lenScreen / 2;
+    final hWid = widScreen / 2;
+    final path = Path()
+      ..moveTo(hLen, -hWid)
+      ..quadraticBezierTo(0.0, -hWid, -hLen, 0.0)
+      ..quadraticBezierTo(0.0, hWid, hLen, hWid)
+      ..close();
+    canvas.drawPath(path, fill);
+    canvas.drawPath(path, stroke);
+  }
+
+  /// Shark fin with concave rear curve. Left: rear = second edge (concave). Right: rear = first edge (concave).
+  void _drawSharkConcavePath(Canvas canvas, double lenScreen, double widScreen, Paint fill, Paint stroke, {required bool isLeft}) {
+    final hLen = lenScreen / 2;
+    final hWid = widScreen / 2;
+    final path = Path();
+    if (isLeft) {
+      path
+        ..moveTo(hLen, -hWid)
+        ..quadraticBezierTo(0.0, -hWid, -hLen, 0.0)
+        ..quadraticBezierTo(0.0, 0.0, hLen, hWid)
+        ..close();
+    } else {
+      path
+        ..moveTo(hLen, -hWid)
+        ..quadraticBezierTo(0.0, 0.0, -hLen, 0.0)
+        ..quadraticBezierTo(0.0, hWid, hLen, hWid)
+        ..close();
+    }
+    canvas.drawPath(path, fill);
+    canvas.drawPath(path, stroke);
+  }
+
+  /// Paddle: wide outward, point toward body (original “backwards” shape).
+  void _drawPaddlePath(Canvas canvas, double lenScreen, double widScreen, Paint fill, Paint stroke) {
+    final hLen = lenScreen / 2;
+    final hWid = widScreen / 2;
+    final path = Path()
+      ..moveTo(-hLen, -hWid)
+      ..quadraticBezierTo(0.0, -hWid, hLen, 0.0)
+      ..quadraticBezierTo(0.0, hWid, -hLen, hWid)
+      ..close();
+    canvas.drawPath(path, fill);
+    canvas.drawPath(path, stroke);
+  }
+
+  /// Paddle with concave rear curve. Left: rear = second edge (concave). Right: rear = first edge (concave).
+  void _drawPaddleConcavePath(Canvas canvas, double lenScreen, double widScreen, Paint fill, Paint stroke, {required bool isLeft}) {
+    final hLen = lenScreen / 2;
+    final hWid = widScreen / 2;
+    final path = Path();
+    if (isLeft) {
+      path
+        ..moveTo(-hLen, -hWid)
+        ..quadraticBezierTo(0.0, -hWid, hLen, 0.0)
+        ..quadraticBezierTo(0.0, 0.0, -hLen, hWid)
+        ..close();
+    } else {
+      path
+        ..moveTo(-hLen, -hWid)
+        ..quadraticBezierTo(0.0, 0.0, hLen, 0.0)
+        ..quadraticBezierTo(0.0, hWid, -hLen, hWid)
+        ..close();
+    }
+    canvas.drawPath(path, fill);
+    canvas.drawPath(path, stroke);
   }
 
   void _drawBody(Canvas canvas) {

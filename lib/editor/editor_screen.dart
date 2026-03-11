@@ -64,6 +64,8 @@ class EditorScreenState extends State<EditorScreen> {
       onTabChanged: (i) => setState(() => _tabIndex = i),
       selectedDorsalFinIndex: _selectedDorsalFinIndex,
       onDorsalFinSelected: (i) => setState(() => _selectedDorsalFinIndex = i),
+      selectedLateralFinIndex: _selectedLateralFinIndex,
+      onLateralRemoved: _onLateralRemovedFromViewport,
     );
 
     Widget preview = EditorPreview(
@@ -428,11 +430,15 @@ class EditorScreenState extends State<EditorScreen> {
     setState(() => _creature = _creatureWith(_creature, lateralFins: list));
   }
 
-  void _onLateralAddedFromViewport(int seg) {
+  void _onLateralAddedFromViewport(int seg, LateralWingType wingType) {
     final list = List<LateralFinConfig>.from(_creature.lateralFins ?? []);
-    if (list.any((c) => c.segment == seg)) return;
-    list.add(LateralFinConfig(seg));
-    list.sort((a, b) => a.segment.compareTo(b.segment));
+    final existing = list.indexWhere((c) => c.segment == seg);
+    if (existing >= 0) {
+      list[existing] = list[existing].copyWith(wingType: wingType);
+    } else {
+      list.add(LateralFinConfig(seg, wingType: wingType));
+      list.sort((a, b) => a.segment.compareTo(b.segment));
+    }
     setState(() => _creature = _creatureWith(_creature, lateralFins: list));
   }
 
@@ -441,7 +447,7 @@ class EditorScreenState extends State<EditorScreen> {
     if (index < 0 || index >= list.length) return;
     list.removeAt(index);
     setState(() {
-      _creature = _creatureWith(_creature, lateralFins: list.isEmpty ? null : list);
+      _creature = _creatureWith(_creature, lateralFins: list.isEmpty ? <LateralFinConfig>[] : list);
       if (list.isEmpty) {
         _selectedLateralFinIndex = null;
       } else if (_selectedLateralFinIndex != null) {

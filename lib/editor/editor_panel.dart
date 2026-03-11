@@ -19,6 +19,8 @@ class EditorPanel extends StatelessWidget {
     required this.onTabChanged,
     required this.selectedDorsalFinIndex,
     required this.onDorsalFinSelected,
+    this.selectedLateralFinIndex,
+    this.onLateralRemoved,
   });
 
   final Creature creature;
@@ -27,6 +29,8 @@ class EditorPanel extends StatelessWidget {
   final void Function(int) onTabChanged;
   final int? selectedDorsalFinIndex;
   final void Function(int?) onDorsalFinSelected;
+  final int? selectedLateralFinIndex;
+  final void Function(int index)? onLateralRemoved;
 
   static const List<String> _tabs = ['Body', 'Colour', 'Parts'];
 
@@ -107,6 +111,8 @@ class EditorPanel extends StatelessWidget {
           onCreatureChanged: onCreatureChanged,
           selectedDorsalFinIndex: selectedDorsalFinIndex,
           onDorsalFinSelected: onDorsalFinSelected,
+          selectedLateralFinIndex: selectedLateralFinIndex,
+          onLateralRemoved: onLateralRemoved,
         );
       default:
         return const SizedBox();
@@ -718,12 +724,13 @@ class _DorsalPreviewPainter extends CustomPainter {
       old.bodyColor != bodyColor || old.finColor != finColor;
 }
 
-/// Small lateral fin preview (two ellipses) for the + lat button.
+/// Small lateral fin preview for panel buttons. [wingType] = ellipse (two ovals) or shark (two triangles).
 class _LateralPreviewPainter extends CustomPainter {
-  _LateralPreviewPainter({required this.bodyColor, this.finColor});
+  _LateralPreviewPainter({required this.bodyColor, this.finColor, this.wingType = LateralWingType.ellipse});
 
   final Color bodyColor;
   final Color? finColor;
+  final LateralWingType wingType;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -735,25 +742,81 @@ class _LateralPreviewPainter extends CustomPainter {
     final cy = size.height / 2;
     final len = size.width * 0.22;
     final wid = len / 3.0;
-    final rect = Rect.fromCenter(center: Offset.zero, width: len, height: wid);
     final offset = size.width * 0.18;
-    canvas.save();
-    canvas.translate(cx - offset, cy);
-    canvas.rotate(flareRad);
-    canvas.drawOval(rect, fill);
-    canvas.drawOval(rect, stroke);
-    canvas.restore();
-    canvas.save();
-    canvas.translate(cx + offset, cy);
-    canvas.rotate(-flareRad);
-    canvas.drawOval(rect, fill);
-    canvas.drawOval(rect, stroke);
-    canvas.restore();
+    void drawOne(Canvas c, double dx) {
+      c.save();
+      c.translate(cx + dx, cy);
+      c.rotate(dx < 0 ? flareRad : -flareRad);
+      if (wingType == LateralWingType.sharkWing) {
+        final hLen = len / 2, hWid = wid / 2;
+        final path = Path()
+          ..moveTo(hLen, -hWid)
+          ..quadraticBezierTo(0.0, -hWid, -hLen, 0.0)
+          ..quadraticBezierTo(0.0, hWid, hLen, hWid)
+          ..close();
+        c.drawPath(path, fill);
+        c.drawPath(path, stroke);
+      } else if (wingType == LateralWingType.sharkConcave) {
+        final hLen = len / 2, hWid = wid / 2;
+        final isLeft = dx < 0;
+        final path = Path();
+        if (isLeft) {
+          path
+            ..moveTo(hLen, -hWid)
+            ..quadraticBezierTo(0.0, -hWid, -hLen, 0.0)
+            ..quadraticBezierTo(0.0, 0.0, hLen, hWid)
+            ..close();
+        } else {
+          path
+            ..moveTo(hLen, -hWid)
+            ..quadraticBezierTo(0.0, 0.0, -hLen, 0.0)
+            ..quadraticBezierTo(0.0, hWid, hLen, hWid)
+            ..close();
+        }
+        c.drawPath(path, fill);
+        c.drawPath(path, stroke);
+      } else if (wingType == LateralWingType.paddle) {
+        final hLen = len / 2, hWid = wid / 2;
+        final path = Path()
+          ..moveTo(-hLen, -hWid)
+          ..quadraticBezierTo(0.0, -hWid, hLen, 0.0)
+          ..quadraticBezierTo(0.0, hWid, -hLen, hWid)
+          ..close();
+        c.drawPath(path, fill);
+        c.drawPath(path, stroke);
+      } else if (wingType == LateralWingType.paddleConcave) {
+        final hLen = len / 2, hWid = wid / 2;
+        final isLeft = dx < 0;
+        final path = Path();
+        if (isLeft) {
+          path
+            ..moveTo(-hLen, -hWid)
+            ..quadraticBezierTo(0.0, -hWid, hLen, 0.0)
+            ..quadraticBezierTo(0.0, 0.0, -hLen, hWid)
+            ..close();
+        } else {
+          path
+            ..moveTo(-hLen, -hWid)
+            ..quadraticBezierTo(0.0, 0.0, hLen, 0.0)
+            ..quadraticBezierTo(0.0, hWid, -hLen, hWid)
+            ..close();
+        }
+        c.drawPath(path, fill);
+        c.drawPath(path, stroke);
+      } else {
+        final rect = Rect.fromCenter(center: Offset.zero, width: len, height: wid);
+        c.drawOval(rect, fill);
+        c.drawOval(rect, stroke);
+      }
+      c.restore();
+    }
+    drawOne(canvas, -offset);
+    drawOne(canvas, offset);
   }
 
   @override
   bool shouldRepaint(covariant _LateralPreviewPainter old) =>
-      old.bodyColor != bodyColor || old.finColor != finColor;
+      old.bodyColor != bodyColor || old.finColor != finColor || old.wingType != wingType;
 }
 
 /// Horizontal strip of segment nodes; drag start/end thumbs to set range.
@@ -877,12 +940,16 @@ class _FinsTab extends StatelessWidget {
     required this.onCreatureChanged,
     required this.selectedDorsalFinIndex,
     required this.onDorsalFinSelected,
+    this.selectedLateralFinIndex,
+    this.onLateralRemoved,
   });
 
   final Creature creature;
   final void Function(Creature) onCreatureChanged;
   final int? selectedDorsalFinIndex;
   final void Function(int?)? onDorsalFinSelected;
+  final int? selectedLateralFinIndex;
+  final void Function(int index)? onLateralRemoved;
 
   static const double _boxW = 52;
   static const double _boxH = 36;
@@ -1007,35 +1074,33 @@ class _FinsTab extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text('Pectoral Fin', style: TextStyle(color: EditorStyle.text, fontSize: 11)),
+        Text('Drag Ellipse or Shark to add or replace. Tap in view to select; drag off to remove.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
         const SizedBox(height: 4),
-        Row(
-          mainAxisSize: MainAxisSize.min,
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
           children: [
-            Draggable<LateralDragPayload>(
-              data: LateralDragPayload(),
-              dragAnchorStrategy: pointerDragAnchorStrategy,
-              feedbackOffset: const Offset(-26, -18),
-              feedback: Material(
-                elevation: 0,
-                color: Colors.transparent,
-                child: SizedBox(
-                  width: _boxW,
-                  height: _boxH,
-                  child: CustomPaint(
-                    painter: _LateralPreviewPainter(
-                      bodyColor: Color(creature.color),
-                      finColor: creature.finColor != null ? Color(creature.finColor!) : null,
-                    ),
-                    size: const Size(_boxW, _boxH),
+            _draggableLateralBox(creature, LateralWingType.ellipse),
+            _draggableLateralBox(creature, LateralWingType.sharkWing),
+            _draggableLateralBox(creature, LateralWingType.sharkConcave),
+            _draggableLateralBox(creature, LateralWingType.paddle),
+            _draggableLateralBox(creature, LateralWingType.paddleConcave),
+            if (selectedLateralFinIndex != null &&
+                creature.lateralFins != null &&
+                selectedLateralFinIndex! < creature.lateralFins!.length &&
+                onLateralRemoved != null)
+              GestureDetector(
+                onTap: () => onLateralRemoved!(selectedLateralFinIndex!),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: EditorStyle.fill,
+                    borderRadius: BorderRadius.circular(EditorStyle.radius),
+                    border: Border.all(color: EditorStyle.stroke, width: EditorStyle.strokeWidth),
                   ),
+                  child: Text('Remove', style: TextStyle(fontSize: 11, color: EditorStyle.text)),
                 ),
               ),
-              childWhenDragging: Opacity(
-                opacity: 0.5,
-                child: _lateralBox(),
-              ),
-              child: _lateralBox(),
-            ),
           ],
         ),
       ],
@@ -1125,7 +1190,7 @@ class _FinsTab extends StatelessWidget {
     );
   }
 
-  Widget _lateralBox() {
+  Widget _lateralBox(LateralWingType wingType) {
     return Container(
       width: _boxW,
       height: _boxH,
@@ -1140,10 +1205,37 @@ class _FinsTab extends StatelessWidget {
           painter: _LateralPreviewPainter(
             bodyColor: Color(creature.color),
             finColor: creature.finColor != null ? Color(creature.finColor!) : null,
+            wingType: wingType,
           ),
           size: const Size(_boxW, _boxH),
         ),
       ),
+    );
+  }
+
+  Widget _draggableLateralBox(Creature creature, LateralWingType wingType) {
+    return Draggable<LateralDragPayload>(
+      data: LateralDragPayload(wingType: wingType),
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      feedbackOffset: const Offset(-26, -18),
+      feedback: Material(
+        elevation: 0,
+        color: Colors.transparent,
+        child: SizedBox(
+          width: _boxW,
+          height: _boxH,
+          child: CustomPaint(
+            painter: _LateralPreviewPainter(
+              bodyColor: Color(creature.color),
+              finColor: creature.finColor != null ? Color(creature.finColor!) : null,
+              wingType: wingType,
+            ),
+            size: const Size(_boxW, _boxH),
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(opacity: 0.5, child: _lateralBox(wingType)),
+      child: _lateralBox(wingType),
     );
   }
 }

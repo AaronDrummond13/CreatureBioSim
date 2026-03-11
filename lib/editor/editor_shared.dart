@@ -77,8 +77,11 @@ class _SliderPainter extends CustomPainter {
   bool shouldRepaint(covariant _SliderPainter old) => old.thumbX != thumbX;
 }
 
-/// Marker for lateral fin drag from panel to viewport.
-class LateralDragPayload {}
+/// Marker for lateral fin drag from panel to viewport. [wingType] = which shape to add.
+class LateralDragPayload {
+  const LateralDragPayload({this.wingType = LateralWingType.ellipse});
+  final LateralWingType wingType;
+}
 
 /// Marker for dorsal fin drag from panel to viewport.
 class DorsalDragPayload {}

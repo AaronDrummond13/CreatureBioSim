@@ -48,7 +48,21 @@ class EyeConfig {
       );
 }
 
-/// Pectoral/lateral fin: segment index, size, and flare angle (degrees from spine).
+/// Lateral (pectoral) fin wing shape.
+enum LateralWingType {
+  /// Ellipse (default).
+  ellipse,
+  /// Shark-style: triangle with two curved (hook) edges.
+  sharkWing,
+  /// Shark-style with concave rear curve.
+  sharkConcave,
+  /// Paddle: same shape as shark wing.
+  paddle,
+  /// Paddle with concave rear curve.
+  paddleConcave,
+}
+
+/// Pectoral/lateral fin: segment index, size, flare angle, and wing shape.
 class LateralFinConfig {
   static const double lengthMin = 12.0;
   static const double lengthMax = 60.0;
@@ -60,23 +74,26 @@ class LateralFinConfig {
   static const double angleDegreesMax = 80.0;
   static const double angleDegreesDefault = 45.0;
 
-  LateralFinConfig(this.segment, {double? length, double? width, double? angleDegrees})
+  LateralFinConfig(this.segment, {double? length, double? width, double? angleDegrees, LateralWingType? wingType})
     : length = (length ?? lengthDefault).clamp(lengthMin, lengthMax),
       width = (width ?? widthDefault).clamp(widthMin, widthMax),
-      angleDegrees = (angleDegrees ?? angleDegreesDefault).clamp(angleDegreesMin, angleDegreesMax);
+      angleDegrees = (angleDegrees ?? angleDegreesDefault).clamp(angleDegreesMin, angleDegreesMax),
+      wingType = wingType ?? LateralWingType.ellipse;
 
   final int segment;
   final double length;
   final double width;
   /// Flare angle in degrees (10–80). Left fin: spineAngle + this; right: spineAngle - this.
   final double angleDegrees;
+  final LateralWingType wingType;
 
-  LateralFinConfig copyWith({int? segment, double? length, double? width, double? angleDegrees}) =>
+  LateralFinConfig copyWith({int? segment, double? length, double? width, double? angleDegrees, LateralWingType? wingType}) =>
       LateralFinConfig(
         segment ?? this.segment,
         length: length ?? this.length,
         width: width ?? this.width,
         angleDegrees: angleDegrees ?? this.angleDegrees,
+        wingType: wingType ?? this.wingType,
       );
 }
 

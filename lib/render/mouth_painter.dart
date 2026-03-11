@@ -204,7 +204,7 @@ void _paintTentacleMouth(
   const tentacleCount = 5;
   const jointCount = 4;
   const length = 25.0;
-  const tentacleArcWidth = 0.9;
+  const tentacleArcWidth = 0.8;
   const wobbleSpeed = 2.0;
   const wobbleAmplitude = 4.5;
   const wobblePhase = 0.85;
@@ -334,7 +334,7 @@ void _paintTeethMouth(
 
   /// Joint-angle curve: 0 = straight. >0 = tips bend away from centre, <0 = toward centre. Furthest joint bends most.
   const teethCurve = 0.0;
-  const teethArcWidth = 0.9;
+  const teethArcWidth = 0.8;
   const baseWidths = [3, 3, 2, 1, .5];
 
   final arcCenterX = (rightX + leftX) * 0.5;
