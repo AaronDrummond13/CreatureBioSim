@@ -7,7 +7,6 @@ import 'package:creature_bio_sim/render/creature_painter.dart';
 import 'package:creature_bio_sim/render/mouth_painter.dart' show paintMouth;
 import 'package:creature_bio_sim/render/tail_painter.dart';
 import 'package:creature_bio_sim/render/view.dart';
-import 'package:creature_bio_sim/simulation/camera_follow.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
 import 'package:creature_bio_sim/simulation_view_state.dart';
@@ -1038,14 +1037,8 @@ class _EditorPreviewState extends State<EditorPreview>
           _editorCameraY = head.y;
           _editorCameraInitialized = true;
         } else {
-          final (nx, ny) = lerpCameraToward(
-            _editorCameraX,
-            _editorCameraY,
-            head.x,
-            head.y,
-          );
-          _editorCameraX = nx;
-          _editorCameraY = ny;
+          _editorCameraX = head.x;
+          _editorCameraY = head.y;
         }
         setState(() {});
       }

@@ -6,7 +6,6 @@ import 'package:creature_bio_sim/controller/spawner.dart';
 import 'package:creature_bio_sim/creature.dart' show Creature;
 import 'package:creature_bio_sim/input/simulation_input_layer.dart';
 import 'package:creature_bio_sim/render/simulation_layers.dart';
-import 'package:creature_bio_sim/simulation/camera_follow.dart';
 import 'package:creature_bio_sim/simulation/play_step.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation_view_state.dart';
@@ -121,14 +120,8 @@ class _SimulationScreenState extends State<SimulationScreen>
     final pos = _spine.positions;
     if (pos.isNotEmpty) {
       final head = pos.last;
-      final (nx, ny) = lerpCameraToward(
-        _viewState.cameraX,
-        _viewState.cameraY,
-        head.x,
-        head.y,
-      );
-      _viewState.cameraX = nx;
-      _viewState.cameraY = ny;
+      _viewState.cameraX = head.x;
+      _viewState.cameraY = head.y;
     }
 
     if (mounted) _viewState.onTick();
