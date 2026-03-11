@@ -132,7 +132,12 @@ class Spawner {
       final seg = _rng.nextInt(segmentCount);
       final offset = _rng.nextDouble(); // 0 = single centre, (0,1] = pair
       final radius = _inRange(EyeConfig.radiusMin, EyeConfig.radiusMax);
-      list.add(EyeConfig(seg, offsetFromCenter: offset, radius: radius));
+      list.add(EyeConfig(
+        seg,
+        offsetFromCenter: offset,
+        radius: radius,
+        pupilFraction: _inRange(EyeConfig.pupilFractionMin, EyeConfig.pupilFractionMax),
+      ));
     }
     list.sort((a, b) => a.segment.compareTo(b.segment));
     return list;

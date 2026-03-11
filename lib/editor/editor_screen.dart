@@ -123,6 +123,7 @@ class EditorScreenState extends State<EditorScreen> {
       onEyeRemoved: _onEyeRemovedFromViewport,
       onEyeMoved: _onEyeMovedFromViewport,
       onEyeRadiusChanged: _onEyeRadiusChangedFromViewport,
+      onEyePupilFractionChanged: _onEyePupilFractionChangedFromViewport,
     );
 
     Widget content;
@@ -655,6 +656,13 @@ class EditorScreenState extends State<EditorScreen> {
     final list = List<EyeConfig>.from(_creature.eyes ?? []);
     if (index < 0 || index >= list.length) return;
     list[index] = list[index].copyWith(radius: value);
+    setState(() => _creature = _creatureWith(_creature, eyes: list));
+  }
+
+  void _onEyePupilFractionChangedFromViewport(int index, double pupilFraction) {
+    final list = List<EyeConfig>.from(_creature.eyes ?? []);
+    if (index < 0 || index >= list.length) return;
+    list[index] = list[index].copyWith(pupilFraction: pupilFraction);
     setState(() => _creature = _creatureWith(_creature, eyes: list));
   }
 }

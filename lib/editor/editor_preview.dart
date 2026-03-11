@@ -608,7 +608,7 @@ class _MouthRemoveHighlightPainter extends CustomPainter {
       old.headSx != headSx || old.headSy != headSy || old.radius != radius;
 }
 
-/// Preview when dragging + eye onto creature: one or two white circles at segment + offset.
+/// Preview when dragging + eye onto creature. Same render as CreaturePainter._drawConfigEyes.
 class _EyeAddPreviewPainter extends CustomPainter {
   _EyeAddPreviewPainter({
     required this.segment,
@@ -621,6 +621,9 @@ class _EyeAddPreviewPainter extends CustomPainter {
     required this.cameraY,
     required this.zoom,
     required this.widthAtVertex,
+    required this.creatureColor,
+    this.creatureFinColor,
+    this.pupilFraction = EyeConfig.pupilFractionDefault,
     this.radiusWorld,
   });
 
@@ -634,8 +637,17 @@ class _EyeAddPreviewPainter extends CustomPainter {
   final double cameraY;
   final double zoom;
   final double Function(int i) widthAtVertex;
+  final Color creatureColor;
+  final Color? creatureFinColor;
+  final double pupilFraction;
   /// When null, uses default 6.0 (add preview); when set, uses for move preview.
   final double? radiusWorld;
+
+  static const double _irisFrac = 0.90;
+  static const double _primaryHighlightOffset = 0.2;
+  static const double _primaryHighlightRadiusFrac = 0.3;
+  static const double _secondaryHighlightOffset = 0.26;
+  static const double _secondaryHighlightRadiusFrac = 0.2;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -649,18 +661,77 @@ class _EyeAddPreviewPainter extends CustomPainter {
     final halfW = widthAtVertex(seg);
     final r = radiusWorld ?? 6.0;
     final rScreen = r * zoom;
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.8)
-      ..style = PaintingStyle.fill;
+    final strokeW = (rScreen * 0.12).clamp(1.2, 3.0);
     final isSingle = offsetFromCenter < EyeConfig.singleEyeThreshold;
+    final centers = <Offset>[];
     if (isSingle) {
-      canvas.drawCircle(Offset(sx(cx), sy(cy)), rScreen, paint);
+      centers.add(Offset(sx(cx), sy(cy)));
     } else {
       final off = offsetFromCenter * halfW;
       final dx = -sin(a) * off;
       final dy = cos(a) * off;
-      canvas.drawCircle(Offset(sx(cx + dx), sy(cy + dy)), rScreen, paint);
-      canvas.drawCircle(Offset(sx(cx - dx), sy(cy - dy)), rScreen, paint);
+      centers.add(Offset(sx(cx + dx), sy(cy + dy)));
+      centers.add(Offset(sx(cx - dx), sy(cy - dy)));
+    }
+    final finColor = creatureFinColor ?? creatureColor;
+    final pupilFrac = pupilFraction.clamp(EyeConfig.pupilFractionMin, EyeConfig.pupilFractionMax);
+    for (final center in centers) {
+      final baseFill = Paint()..color = creatureColor..style = PaintingStyle.fill;
+      final baseStroke = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeW * 3 / 4;
+      canvas.drawCircle(center, rScreen, baseFill);
+      canvas.drawCircle(center, rScreen, baseStroke);
+      final irisR = rScreen * _irisFrac;
+      final irisRect = Rect.fromCircle(center: center, radius: irisR);
+      final irisFill = Paint()
+        ..shader = RadialGradient(
+          center: Alignment.center,
+          radius: 0.5,
+          stops: [pupilFrac, 1 - ((1 - pupilFrac) / 2), 1.0],
+          colors: [
+            Color.lerp(creatureColor, Colors.white, 0.3)!,
+            Color.lerp(finColor, creatureColor, 0.5)!,
+            Color.lerp(finColor, Colors.black, 0.8)!,
+          ],
+        ).createShader(irisRect)
+        ..style = PaintingStyle.fill;
+      final irisStroke = Paint()
+        ..color = Color.lerp(finColor, Colors.black, 0.6)!
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeW / 2;
+      canvas.drawCircle(center, irisR, irisFill);
+      canvas.drawCircle(center, irisR, irisStroke);
+      final pupilFill = Paint()..color = Colors.black..style = PaintingStyle.fill;
+      final pupilStroke = Paint()
+        ..color = Color.lerp(creatureColor, Colors.white, 0.2)!
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeW;
+      canvas.drawCircle(center, rScreen * pupilFrac, pupilFill);
+      canvas.drawCircle(center, rScreen * pupilFrac, pupilStroke);
+      final primaryHighlight = Paint()
+        ..color = Colors.white.withValues(alpha: 0.4)
+        ..style = PaintingStyle.fill;
+      final secondaryHighlight = Paint()
+        ..color = Colors.white.withValues(alpha: 0.2)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(
+        Offset(
+          center.dx - rScreen * _primaryHighlightOffset,
+          center.dy - rScreen * _primaryHighlightOffset,
+        ),
+        rScreen * _primaryHighlightRadiusFrac,
+        primaryHighlight,
+      );
+      canvas.drawCircle(
+        Offset(
+          center.dx + rScreen * _secondaryHighlightOffset,
+          center.dy + rScreen * _secondaryHighlightOffset,
+        ),
+        rScreen * _secondaryHighlightRadiusFrac,
+        secondaryHighlight,
+      );
     }
   }
 
@@ -669,6 +740,9 @@ class _EyeAddPreviewPainter extends CustomPainter {
       old.segment != segment ||
       old.offsetFromCenter != offsetFromCenter ||
       old.radiusWorld != radiusWorld ||
+      old.creatureColor != creatureColor ||
+      old.creatureFinColor != creatureFinColor ||
+      old.pupilFraction != pupilFraction ||
       old.positions != positions;
 }
 
@@ -979,6 +1053,7 @@ class EditorPreview extends StatefulWidget {
     this.onEyeRemoved,
     this.onEyeMoved,
     this.onEyeRadiusChanged,
+    this.onEyePupilFractionChanged,
   });
 
   final Creature creature;
@@ -1019,6 +1094,7 @@ class EditorPreview extends StatefulWidget {
   final void Function(int index)? onEyeRemoved;
   final void Function(int index, int segment, double offsetFromCenter)? onEyeMoved;
   final void Function(int index, double value)? onEyeRadiusChanged;
+  final void Function(int index, double pupilFraction)? onEyePupilFractionChanged;
 
   @override
   State<EditorPreview> createState() => _EditorPreviewState();
@@ -1607,7 +1683,7 @@ class _EditorPreviewState extends State<EditorPreview>
           }
           return null;
         }
-        /// Radius handles on the edge of each eye (like lateral fin nodes). One node for single eye, two mirrored for pair.
+        /// Radius and pupil handles. Pupil node is at 90° to radius node. Single: [radius, pupil]. Pair: [leftRadius, rightRadius, leftPupil, rightPupil].
         List<Offset>? _eyeNodePositions() {
           final eyes = widget.creature.eyes ?? [];
           final idx = widget.selectedEyeIndex;
@@ -1621,10 +1697,17 @@ class _EditorPreviewState extends State<EditorPreview>
           double sx(double wx) => centerX + (wx - cameraX) * _zoom;
           double sy(double wy) => centerY + (wy - cameraY) * _zoom;
           final isSingle = eye.offsetFromCenter < EyeConfig.singleEyeThreshold;
+          final pupilDist = eye.radius * eye.pupilFraction;
+          // Radius direction (-sin(a), cos(a)); perpendicular (cos(a), sin(a)).
           if (isSingle) {
-            final handleWorldX = cx + (-sin(a)) * eye.radius;
-            final handleWorldY = cy + cos(a) * eye.radius;
-            return [Offset(sx(handleWorldX), sy(handleWorldY))];
+            final radiusX = cx + (-sin(a)) * eye.radius;
+            final radiusY = cy + cos(a) * eye.radius;
+            final pupilX = cx + cos(a) * pupilDist;
+            final pupilY = cy + sin(a) * pupilDist;
+            return [
+              Offset(sx(radiusX), sy(radiusY)),
+              Offset(sx(pupilX), sy(pupilY)),
+            ];
           }
           final off = eye.offsetFromCenter * halfW;
           final dx = -sin(a) * off;
@@ -1633,13 +1716,11 @@ class _EditorPreviewState extends State<EditorPreview>
           final leftCy = cy + dy;
           final rightCx = cx - dx;
           final rightCy = cy - dy;
-          final leftHandleX = leftCx + (-sin(a)) * eye.radius;
-          final leftHandleY = leftCy + cos(a) * eye.radius;
-          final rightHandleX = rightCx + sin(a) * eye.radius;
-          final rightHandleY = rightCy + (-cos(a)) * eye.radius;
           return [
-            Offset(sx(leftHandleX), sy(leftHandleY)),
-            Offset(sx(rightHandleX), sy(rightHandleY)),
+            Offset(sx(leftCx + (-sin(a)) * eye.radius), sy(leftCy + cos(a) * eye.radius)),
+            Offset(sx(rightCx + sin(a) * eye.radius), sy(rightCy + (-cos(a)) * eye.radius)),
+            Offset(sx(leftCx + cos(a) * pupilDist), sy(leftCy + sin(a) * pupilDist)),
+            Offset(sx(rightCx + cos(a) * pupilDist), sy(rightCy + sin(a) * pupilDist)),
           ];
         }
         int? _hitEyeNode(double px, double py) {
@@ -2381,11 +2462,12 @@ class _EditorPreviewState extends State<EditorPreview>
                       return;
                     if (_eyeDraggingNode != null &&
                         widget.selectedEyeIndex != null &&
-                        widget.onEyeRadiusChanged != null) {
+                        positions.length >= 2 &&
+                        _spine.segmentAngles.isNotEmpty) {
                       final eyes = widget.creature.eyes ?? [];
                       final idx = widget.selectedEyeIndex!;
-                      final nodeSide = _eyeDraggingNode!;
-                      if (idx < eyes.length && positions.length >= 2 && _spine.segmentAngles.isNotEmpty) {
+                      final nodeIndex = _eyeDraggingNode!;
+                      if (idx < eyes.length) {
                         final eye = eyes[idx];
                         final seg = eye.segment.clamp(0, positions.length - 2);
                         final cx = (positions[seg].x + positions[seg + 1].x) / 2;
@@ -2393,28 +2475,55 @@ class _EditorPreviewState extends State<EditorPreview>
                         final a = _spine.segmentAngles[seg];
                         final halfW = widthAtVertex(seg);
                         final isSingle = eye.offsetFromCenter < EyeConfig.singleEyeThreshold;
-                        final off = isSingle ? 0.0 : eye.offsetFromCenter * halfW;
-                        final dx = -sin(a) * off;
-                        final dy = cos(a) * off;
-                        final eyeCenterWx = isSingle ? cx : (nodeSide == 0 ? cx + dx : cx - dx);
-                        final eyeCenterWy = isSingle ? cy : (nodeSide == 0 ? cy + dy : cy - dy);
-                        final wx = (lx - centerX) / _zoom + cameraX;
-                        final wy = (ly - centerY) / _zoom + cameraY;
-                        final dist = sqrt(
-                          (wx - eyeCenterWx) * (wx - eyeCenterWx) +
-                          (wy - eyeCenterWy) * (wy - eyeCenterWy),
-                        );
-                        final r = dist.clamp(EyeConfig.radiusMin, EyeConfig.radiusMax);
-                        // At min: only allow growing again if drag is on the correct side (outward from node).
-                        final atMin = eye.radius <= EyeConfig.radiusMin;
-                        final wouldGrow = r > EyeConfig.radiusMin;
-                        final outX = nodeSide == 0 ? -sin(a) : sin(a);
-                        final outY = nodeSide == 0 ? cos(a) : -cos(a);
-                        final correctSide = (wx - eyeCenterWx) * outX + (wy - eyeCenterWy) * outY > 0;
-                        final rToApply = (atMin && wouldGrow && !correctSide)
-                            ? EyeConfig.radiusMin
-                            : r;
-                        widget.onEyeRadiusChanged!(idx, rToApply);
+                        final isRadiusNode = isSingle ? (nodeIndex == 0) : (nodeIndex < 2);
+                        final isPupilNode = isSingle ? (nodeIndex == 1) : (nodeIndex >= 2);
+                        if (isRadiusNode && widget.onEyeRadiusChanged != null) {
+                          final nodeSide = isSingle ? 0 : nodeIndex;
+                          final off = isSingle ? 0.0 : eye.offsetFromCenter * halfW;
+                          final dx = -sin(a) * off;
+                          final dy = cos(a) * off;
+                          final eyeCenterWx = isSingle ? cx : (nodeSide == 0 ? cx + dx : cx - dx);
+                          final eyeCenterWy = isSingle ? cy : (nodeSide == 0 ? cy + dy : cy - dy);
+                          final wx = (lx - centerX) / _zoom + cameraX;
+                          final wy = (ly - centerY) / _zoom + cameraY;
+                          final dist = sqrt(
+                            (wx - eyeCenterWx) * (wx - eyeCenterWx) +
+                            (wy - eyeCenterWy) * (wy - eyeCenterWy),
+                          );
+                          final r = dist.clamp(EyeConfig.radiusMin, EyeConfig.radiusMax);
+                          final atMin = eye.radius <= EyeConfig.radiusMin;
+                          final wouldGrow = r > EyeConfig.radiusMin;
+                          final outX = nodeSide == 0 ? -sin(a) : sin(a);
+                          final outY = nodeSide == 0 ? cos(a) : -cos(a);
+                          final correctSide = (wx - eyeCenterWx) * outX + (wy - eyeCenterWy) * outY > 0;
+                          final rToApply = (atMin && wouldGrow && !correctSide)
+                              ? EyeConfig.radiusMin
+                              : r;
+                          widget.onEyeRadiusChanged!(idx, rToApply);
+                        } else if (isPupilNode && widget.onEyePupilFractionChanged != null) {
+                          final off = isSingle ? 0.0 : eye.offsetFromCenter * halfW;
+                          final dx = -sin(a) * off;
+                          final dy = cos(a) * off;
+                          final eyeCenterWx = isSingle ? cx : (nodeIndex == 2 ? cx + dx : cx - dx);
+                          final eyeCenterWy = isSingle ? cy : (nodeIndex == 2 ? cy + dy : cy - dy);
+                          final wx = (lx - centerX) / _zoom + cameraX;
+                          final wy = (ly - centerY) / _zoom + cameraY;
+                          final dist = sqrt(
+                            (wx - eyeCenterWx) * (wx - eyeCenterWx) +
+                            (wy - eyeCenterWy) * (wy - eyeCenterWy),
+                          );
+                          final rawFrac = (dist / eye.radius).clamp(EyeConfig.pupilFractionMin, EyeConfig.pupilFractionMax);
+                          final atMin = eye.pupilFraction <= EyeConfig.pupilFractionMin;
+                          final wouldGrow = rawFrac > EyeConfig.pupilFractionMin;
+                          // Outward from center toward pupil node = (cos(a), sin(a)); only allow growing if drag is on that side.
+                          final outX = cos(a);
+                          final outY = sin(a);
+                          final correctSide = (wx - eyeCenterWx) * outX + (wy - eyeCenterWy) * outY > 0;
+                          final pupilFrac = (atMin && wouldGrow && !correctSide)
+                              ? EyeConfig.pupilFractionMin
+                              : rawFrac;
+                          widget.onEyePupilFractionChanged!(idx, pupilFrac);
+                        }
                       }
                       setState(() {});
                       return;
@@ -2860,6 +2969,8 @@ class _EditorPreviewState extends State<EditorPreview>
                           cameraY: cameraY,
                           zoom: _zoom,
                           widthAtVertex: (i) => widthAtVertex(i),
+                          creatureColor: Color(widget.creature.color),
+                          creatureFinColor: widget.creature.finColor != null ? Color(widget.creature.finColor!) : null,
                         ),
                         size: Size(w, h),
                       );
@@ -2881,9 +2992,9 @@ class _EditorPreviewState extends State<EditorPreview>
                       );
                       final eyes = widget.creature.eyes ?? [];
                       final idx = widget.selectedEyeIndex!;
-                      final radiusWorld = idx < eyes.length
-                          ? eyes[idx].radius
-                          : null;
+                      final eye = idx < eyes.length ? eyes[idx] : null;
+                      final radiusWorld = eye?.radius;
+                      final pupilFraction = eye?.pupilFraction ?? EyeConfig.pupilFractionDefault;
                       return CustomPaint(
                         painter: _EyeAddPreviewPainter(
                           segment: seg,
@@ -2896,6 +3007,9 @@ class _EditorPreviewState extends State<EditorPreview>
                           cameraY: cameraY,
                           zoom: _zoom,
                           widthAtVertex: (i) => widthAtVertex(i),
+                          creatureColor: Color(widget.creature.color),
+                          creatureFinColor: widget.creature.finColor != null ? Color(widget.creature.finColor!) : null,
+                          pupilFraction: pupilFraction,
                           radiusWorld: radiusWorld,
                         ),
                         size: Size(w, h),

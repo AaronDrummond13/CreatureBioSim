@@ -445,7 +445,7 @@ class CreaturePainter extends CustomPainter {
     }
   }
 
-  /// Draw eyes from [creature.eyes]: white circles at segment + offset; single eye when offset < threshold.
+  /// Draw eyes from [creature.eyes]: full iris (no sclera) + pupil, with bubble-style highlight; single eye when offset < threshold.
   void _drawConfigEyes(Canvas canvas) {
     final eyes = creature.eyes!;
     final positions = _paintPositions;
@@ -453,9 +453,11 @@ class CreaturePainter extends CustomPainter {
     if (positions.length < 2 || segmentAngles.isEmpty) return;
     double sx(double wx) => _paintCenterX + (wx - view.cameraX) * _paintZ;
     double sy(double wy) => _paintCenterY + (wy - view.cameraY) * _paintZ;
-    final paint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
+    const irisFrac = 0.90;
+    const primaryHighlightOffset = 0.2;
+    const primaryHighlightRadiusFrac = 0.3;
+    const secondaryHighlightOffset = 0.26;
+    const secondaryHighlightRadiusFrac = 0.2;
     for (final eye in eyes) {
       final seg = eye.segment;
       if (seg < 0 || seg >= segmentAngles.length || seg + 1 >= positions.length)
@@ -466,15 +468,92 @@ class CreaturePainter extends CustomPainter {
       final a = segmentAngles[seg];
       final rWorld = eye.radius * _bodyScale;
       final rScreen = rWorld * _paintZ;
+      final strokeW = (rScreen * 0.12).clamp(1.2, 3.0);
       final isSingle = eye.offsetFromCenter < EyeConfig.singleEyeThreshold;
+      final centers = <Offset>[];
       if (isSingle) {
-        canvas.drawCircle(Offset(sx(cx), sy(cy)), rScreen, paint);
+        centers.add(Offset(sx(cx), sy(cy)));
       } else {
         final off = eye.offsetFromCenter * halfW;
         final dx = -sin(a) * off;
         final dy = cos(a) * off;
-        canvas.drawCircle(Offset(sx(cx + dx), sy(cy + dy)), rScreen, paint);
-        canvas.drawCircle(Offset(sx(cx - dx), sy(cy - dy)), rScreen, paint);
+        centers.add(Offset(sx(cx + dx), sy(cy + dy)));
+        centers.add(Offset(sx(cx - dx), sy(cy - dy)));
+      }
+      final pupilFrac = eye.pupilFraction;
+      for (final center in centers) {
+        final baseFill = Paint()
+          ..color = Color(creature.color)
+          ..style = PaintingStyle.fill;
+        final baseStroke = Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeW * 3 / 4;
+        canvas.drawCircle(center, rScreen, baseFill);
+        canvas.drawCircle(center, rScreen, baseStroke);
+        final irisR = rScreen * irisFrac;
+        final irisRect = Rect.fromCircle(center: center, radius: irisR);
+        final irisFill = Paint()
+          ..shader = RadialGradient(
+            center: Alignment.center,
+            radius: 0.5,
+            stops: [pupilFrac, 1 - ((1 - pupilFrac) / 2), 1.0],
+            colors: [
+              Color.lerp(Color(creature.color), Colors.white, 0.3)!,
+              Color.lerp(
+                Color(creature.finColor ?? creature.color),
+                Color(creature.color),
+                0.5,
+              )!,
+              Color.lerp(
+                Color(creature.finColor ?? creature.color),
+                Colors.black,
+                0.8,
+              )!,
+            ],
+          ).createShader(irisRect)
+          ..style = PaintingStyle.fill;
+        final irisStroke = Paint()
+          ..color = Color.lerp(
+            Color(creature.finColor ?? creature.color),
+            Colors.black,
+            0.6,
+          )!
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeW / 2;
+        canvas.drawCircle(center, irisR, irisFill);
+        canvas.drawCircle(center, irisR, irisStroke);
+        final pupilFill = Paint()
+          ..color = Colors.black
+          ..style = PaintingStyle.fill;
+        final pupilStroke = Paint()
+          ..color = Color.lerp(Color(creature.color), Colors.white, 0.2)!
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeW;
+        canvas.drawCircle(center, rScreen * pupilFrac, pupilFill);
+        canvas.drawCircle(center, rScreen * pupilFrac, pupilStroke);
+        final primaryHighlight = Paint()
+          ..color = Colors.white.withValues(alpha: 0.4)
+          ..style = PaintingStyle.fill;
+        final secondaryHighlight = Paint()
+          ..color = Colors.white.withValues(alpha: 0.2)
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(
+          Offset(
+            center.dx - rScreen * primaryHighlightOffset,
+            center.dy - rScreen * primaryHighlightOffset,
+          ),
+          rScreen * primaryHighlightRadiusFrac,
+          primaryHighlight,
+        );
+        canvas.drawCircle(
+          Offset(
+            center.dx + rScreen * secondaryHighlightOffset,
+            center.dy + rScreen * secondaryHighlightOffset,
+          ),
+          rScreen * secondaryHighlightRadiusFrac,
+          secondaryHighlight,
+        );
       }
     }
   }
@@ -498,21 +577,29 @@ class CreaturePainter extends CustomPainter {
     double sy(double wy) => centerY + (wy - cameraY) * zoom;
     double wAt(int i) => widthAtWorld(i) * zoom;
     Offset rightAt(int i) {
-      final a = segmentAngles[i < segmentAngles.length ? i : segmentAngles.length - 1];
+      final a =
+          segmentAngles[i < segmentAngles.length
+              ? i
+              : segmentAngles.length - 1];
       final w = wAt(i);
       return Offset(
         sx(positions[i].x) - sin(a) * w,
         sy(positions[i].y) + cos(a) * w,
       );
     }
+
     Offset leftAt(int i) {
-      final a = segmentAngles[i < segmentAngles.length ? i : segmentAngles.length - 1];
+      final a =
+          segmentAngles[i < segmentAngles.length
+              ? i
+              : segmentAngles.length - 1];
       final w = wAt(i);
       return Offset(
         sx(positions[i].x) + sin(a) * w,
         sy(positions[i].y) - cos(a) * w,
       );
     }
+
     final rightSide = <Offset>[for (var i = 0; i <= n; i++) rightAt(i)];
     final leftSide = <Offset>[for (var i = n; i >= 0; i--) leftAt(i)];
     final rightOut = <Offset>[];
@@ -546,12 +633,25 @@ class CreaturePainter extends CustomPainter {
       if (len >= 1e-6) return Offset(o.dx / len, o.dy / len);
       return Offset.zero;
     }
+
     final rLast = rightOut.last;
     final lFirst = leftOut.first;
-    final c0Right = Offset(rLast.dx + k * headRadius * norm(headRightTangent).dx, rLast.dy + k * headRadius * norm(headRightTangent).dy);
-    final c1Right = Offset(headTip.dx - k * headRadius * norm(headTipTangent).dx, headTip.dy - k * headRadius * norm(headTipTangent).dy);
-    final c0Tip = Offset(headTip.dx + k * headRadius * norm(headTipTangent).dx, headTip.dy + k * headRadius * norm(headTipTangent).dy);
-    final c1Left = Offset(lFirst.dx - k * headRadius * norm(headLeftTangent).dx, lFirst.dy - k * headRadius * norm(headLeftTangent).dy);
+    final c0Right = Offset(
+      rLast.dx + k * headRadius * norm(headRightTangent).dx,
+      rLast.dy + k * headRadius * norm(headRightTangent).dy,
+    );
+    final c1Right = Offset(
+      headTip.dx - k * headRadius * norm(headTipTangent).dx,
+      headTip.dy - k * headRadius * norm(headTipTangent).dy,
+    );
+    final c0Tip = Offset(
+      headTip.dx + k * headRadius * norm(headTipTangent).dx,
+      headTip.dy + k * headRadius * norm(headTipTangent).dy,
+    );
+    final c1Left = Offset(
+      lFirst.dx - k * headRadius * norm(headLeftTangent).dx,
+      lFirst.dy - k * headRadius * norm(headLeftTangent).dy,
+    );
     final curve = <Offset>[];
     const steps = 11;
     for (var i = 0; i < steps; i++) {
@@ -562,7 +662,14 @@ class CreaturePainter extends CustomPainter {
       final t = i / (steps - 1);
       curve.add(_cubicAt(t, headTip, c0Tip, c1Left, lFirst));
     }
-    return curve.map((s) => Offset(cameraX + (s.dx - centerX) / zoom, cameraY + (s.dy - centerY) / zoom)).toList();
+    return curve
+        .map(
+          (s) => Offset(
+            cameraX + (s.dx - centerX) / zoom,
+            cameraY + (s.dy - centerY) / zoom,
+          ),
+        )
+        .toList();
   }
 
   List<Offset>? _computeHeadCapFaceCurveWorld() {
@@ -664,11 +771,17 @@ class CreaturePainter extends CustomPainter {
       final leftAngle = aLock + flareRad;
       final rightAngle = aLock - flareRad;
       final drawWing = config.wingType == LateralWingType.sharkWing
-          ? (Canvas c, double lS, double wS) => _drawSharkWingPath(c, lS, wS, fillPaint, strokePaint)
+          ? (Canvas c, double lS, double wS) =>
+                _drawSharkWingPath(c, lS, wS, fillPaint, strokePaint)
           : config.wingType == LateralWingType.paddle
-              ? (Canvas c, double lS, double wS) => _drawPaddlePath(c, lS, wS, fillPaint, strokePaint)
-              : (Canvas c, double lS, double wS) {
-              final rect = Rect.fromCenter(center: Offset.zero, width: lS, height: wS);
+          ? (Canvas c, double lS, double wS) =>
+                _drawPaddlePath(c, lS, wS, fillPaint, strokePaint)
+          : (Canvas c, double lS, double wS) {
+              final rect = Rect.fromCenter(
+                center: Offset.zero,
+                width: lS,
+                height: wS,
+              );
               c.drawOval(rect, fillPaint);
               c.drawOval(rect, strokePaint);
             };
@@ -676,9 +789,23 @@ class CreaturePainter extends CustomPainter {
       canvas.translate(sx(leftCx), sy(leftCy));
       canvas.rotate(leftAngle);
       if (config.wingType == LateralWingType.sharkConcave) {
-        _drawSharkConcavePath(canvas, lenScreen, widScreen, fillPaint, strokePaint, isLeft: true);
+        _drawSharkConcavePath(
+          canvas,
+          lenScreen,
+          widScreen,
+          fillPaint,
+          strokePaint,
+          isLeft: true,
+        );
       } else if (config.wingType == LateralWingType.paddleConcave) {
-        _drawPaddleConcavePath(canvas, lenScreen, widScreen, fillPaint, strokePaint, isLeft: true);
+        _drawPaddleConcavePath(
+          canvas,
+          lenScreen,
+          widScreen,
+          fillPaint,
+          strokePaint,
+          isLeft: true,
+        );
       } else {
         drawWing(canvas, lenScreen, widScreen);
       }
@@ -687,9 +814,23 @@ class CreaturePainter extends CustomPainter {
       canvas.translate(sx(rightCx), sy(rightCy));
       canvas.rotate(rightAngle);
       if (config.wingType == LateralWingType.sharkConcave) {
-        _drawSharkConcavePath(canvas, lenScreen, widScreen, fillPaint, strokePaint, isLeft: false);
+        _drawSharkConcavePath(
+          canvas,
+          lenScreen,
+          widScreen,
+          fillPaint,
+          strokePaint,
+          isLeft: false,
+        );
       } else if (config.wingType == LateralWingType.paddleConcave) {
-        _drawPaddleConcavePath(canvas, lenScreen, widScreen, fillPaint, strokePaint, isLeft: false);
+        _drawPaddleConcavePath(
+          canvas,
+          lenScreen,
+          widScreen,
+          fillPaint,
+          strokePaint,
+          isLeft: false,
+        );
       } else {
         drawWing(canvas, lenScreen, widScreen);
       }
@@ -698,7 +839,13 @@ class CreaturePainter extends CustomPainter {
   }
 
   /// Shark fin: point outward, wide base toward body. Inverted from paddle along length.
-  void _drawSharkWingPath(Canvas canvas, double lenScreen, double widScreen, Paint fill, Paint stroke) {
+  void _drawSharkWingPath(
+    Canvas canvas,
+    double lenScreen,
+    double widScreen,
+    Paint fill,
+    Paint stroke,
+  ) {
     final hLen = lenScreen / 2;
     final hWid = widScreen / 2;
     final path = Path()
@@ -711,7 +858,14 @@ class CreaturePainter extends CustomPainter {
   }
 
   /// Shark fin with concave rear curve. Left: rear = second edge (concave). Right: rear = first edge (concave). Stronger convex and concave.
-  void _drawSharkConcavePath(Canvas canvas, double lenScreen, double widScreen, Paint fill, Paint stroke, {required bool isLeft}) {
+  void _drawSharkConcavePath(
+    Canvas canvas,
+    double lenScreen,
+    double widScreen,
+    Paint fill,
+    Paint stroke, {
+    required bool isLeft,
+  }) {
     final hLen = lenScreen / 2;
     final hWid = widScreen / 2;
     const convexBulge = 1.55;
@@ -734,7 +888,13 @@ class CreaturePainter extends CustomPainter {
   }
 
   /// Paddle: wide outward, point toward body (original “backwards” shape).
-  void _drawPaddlePath(Canvas canvas, double lenScreen, double widScreen, Paint fill, Paint stroke) {
+  void _drawPaddlePath(
+    Canvas canvas,
+    double lenScreen,
+    double widScreen,
+    Paint fill,
+    Paint stroke,
+  ) {
     final hLen = lenScreen / 2;
     final hWid = widScreen / 2;
     final r = (lenScreen < widScreen ? lenScreen : widScreen) * 0.08;
@@ -751,7 +911,14 @@ class CreaturePainter extends CustomPainter {
   }
 
   /// Paddle with concave rear curve. Left: rear = second edge (concave). Right: rear = first edge (concave). Stronger convex and concave; rounded corner only where flat meets convex.
-  void _drawPaddleConcavePath(Canvas canvas, double lenScreen, double widScreen, Paint fill, Paint stroke, {required bool isLeft}) {
+  void _drawPaddleConcavePath(
+    Canvas canvas,
+    double lenScreen,
+    double widScreen,
+    Paint fill,
+    Paint stroke, {
+    required bool isLeft,
+  }) {
     final hLen = lenScreen / 2;
     final hWid = widScreen / 2;
     final r = (lenScreen < widScreen ? lenScreen : widScreen) * 0.08;

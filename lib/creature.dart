@@ -26,38 +26,60 @@ enum CaudalFinType {
 class EyeConfig {
   static const double offsetMin = 0.0;
   static const double offsetMax = 1.0;
-  static const double radiusMin = 2.0;
-  static const double radiusMax = 18.0;
-  static const double radiusDefault = 6.0;
-  /// When offsetFromCenter < this, draw a single eye on the spine; otherwise symmetric pair.
-  static const double singleEyeThreshold = 0.08;
+  static const double radiusMin = 3.0;
+  static const double radiusMax = 17.0;
+  static const double radiusDefault = 8.0;
+  static const double pupilFractionMin = 0.2;
+  static const double pupilFractionMax = 0.7;
+  static const double pupilFractionDefault = 0.5;
 
-  EyeConfig(this.segment, {double? offsetFromCenter, double? radius})
-    : offsetFromCenter = (offsetFromCenter ?? 0.0).clamp(offsetMin, offsetMax),
-      radius = (radius ?? radiusDefault).clamp(radiusMin, radiusMax);
+  /// When offsetFromCenter < this, draw a single eye on the spine; otherwise symmetric pair.
+  static const double singleEyeThreshold = 0.3;
+
+  EyeConfig(
+    this.segment, {
+    double? offsetFromCenter,
+    double? radius,
+    double? pupilFraction,
+  }) : offsetFromCenter = (offsetFromCenter ?? 0.0).clamp(offsetMin, offsetMax),
+       radius = (radius ?? radiusDefault).clamp(radiusMin, radiusMax),
+       pupilFraction = (pupilFraction ?? pupilFractionDefault).clamp(
+         pupilFractionMin,
+         pupilFractionMax,
+       );
 
   final int segment;
   final double offsetFromCenter;
   final double radius;
+  final double pupilFraction;
 
-  EyeConfig copyWith({int? segment, double? offsetFromCenter, double? radius}) =>
-      EyeConfig(
-        segment ?? this.segment,
-        offsetFromCenter: offsetFromCenter ?? this.offsetFromCenter,
-        radius: radius ?? this.radius,
-      );
+  EyeConfig copyWith({
+    int? segment,
+    double? offsetFromCenter,
+    double? radius,
+    double? pupilFraction,
+  }) => EyeConfig(
+    segment ?? this.segment,
+    offsetFromCenter: offsetFromCenter ?? this.offsetFromCenter,
+    radius: radius ?? this.radius,
+    pupilFraction: pupilFraction ?? this.pupilFraction,
+  );
 }
 
 /// Lateral (pectoral) fin wing shape.
 enum LateralWingType {
   /// Ellipse (default).
   ellipse,
+
   /// Shark-style: triangle with two curved (hook) edges.
   sharkWing,
+
   /// Shark-style with concave rear curve.
   sharkConcave,
+
   /// Paddle: same shape as shark wing.
   paddle,
+
   /// Paddle with concave rear curve.
   paddleConcave,
 }
@@ -74,27 +96,41 @@ class LateralFinConfig {
   static const double angleDegreesMax = 80.0;
   static const double angleDegreesDefault = 45.0;
 
-  LateralFinConfig(this.segment, {double? length, double? width, double? angleDegrees, LateralWingType? wingType})
-    : length = (length ?? lengthDefault).clamp(lengthMin, lengthMax),
-      width = (width ?? widthDefault).clamp(widthMin, widthMax),
-      angleDegrees = (angleDegrees ?? angleDegreesDefault).clamp(angleDegreesMin, angleDegreesMax),
-      wingType = wingType ?? LateralWingType.ellipse;
+  LateralFinConfig(
+    this.segment, {
+    double? length,
+    double? width,
+    double? angleDegrees,
+    LateralWingType? wingType,
+  }) : length = (length ?? lengthDefault).clamp(lengthMin, lengthMax),
+       width = (width ?? widthDefault).clamp(widthMin, widthMax),
+       angleDegrees = (angleDegrees ?? angleDegreesDefault).clamp(
+         angleDegreesMin,
+         angleDegreesMax,
+       ),
+       wingType = wingType ?? LateralWingType.ellipse;
 
   final int segment;
   final double length;
   final double width;
+
   /// Flare angle in degrees (10–80). Left fin: spineAngle + this; right: spineAngle - this.
   final double angleDegrees;
   final LateralWingType wingType;
 
-  LateralFinConfig copyWith({int? segment, double? length, double? width, double? angleDegrees, LateralWingType? wingType}) =>
-      LateralFinConfig(
-        segment ?? this.segment,
-        length: length ?? this.length,
-        width: width ?? this.width,
-        angleDegrees: angleDegrees ?? this.angleDegrees,
-        wingType: wingType ?? this.wingType,
-      );
+  LateralFinConfig copyWith({
+    int? segment,
+    double? length,
+    double? width,
+    double? angleDegrees,
+    LateralWingType? wingType,
+  }) => LateralFinConfig(
+    segment ?? this.segment,
+    length: length ?? this.length,
+    width: width ?? this.width,
+    angleDegrees: angleDegrees ?? this.angleDegrees,
+    wingType: wingType ?? this.wingType,
+  );
 }
 
 /// Tail (caudal) fin config: type and optional dimensions. Null dimension = derive in renderer.
