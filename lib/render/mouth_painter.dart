@@ -73,9 +73,16 @@ void paintMouth(
     ..strokeWidth = (1.5 * zoom).clamp(1.0, 2.0);
 
   if (creature.mouth == MouthType.tentacle) {
+    final count = creature.mouthCount ?? 5;
+    final length = creature.mouthLength ?? MouthParams.lengthDefault;
+    final wobbleAmplitude = (creature.mouthWobbleAmplitude ?? MouthParams.wobbleDefault)
+        .clamp(MouthParams.wobbleMin, MouthParams.wobbleMax);
     _paintTentacleMouth(
       canvas,
       mouthTime,
+      count,
+      length,
+      wobbleAmplitude,
       forwardX,
       forwardY,
       perpX,
@@ -97,9 +104,16 @@ void paintMouth(
     return;
   }
   if (creature.mouth == MouthType.teeth) {
+    final count = creature.mouthCount ?? 4;
+    final length = creature.mouthLength ?? MouthParams.lengthDefault;
+    final curve = (creature.mouthCurve ?? MouthParams.curveDefault)
+        .clamp(MouthParams.curveMin, MouthParams.curveMax);
     _paintTeethMouth(
       canvas,
       mouthTime,
+      count,
+      length,
+      curve,
       forwardX,
       forwardY,
       perpX,
@@ -199,6 +213,9 @@ void _baseOnFaceCurve(
 void _paintTentacleMouth(
   Canvas canvas,
   double timeSeconds,
+  int tentacleCount,
+  double length,
+  double wobbleAmplitude,
   double forwardX,
   double forwardY,
   double perpX,
@@ -217,11 +234,8 @@ void _paintTentacleMouth(
   double Function(double) sx,
   double Function(double) sy,
 ) {
-  const tentacleCount = 7;
   const jointCount = 5;
-  const length = 25.0;
   const wobbleSpeed = 2.0;
-  const wobbleAmplitude = 5;
   const wobblePhase = 0.85;
   const tentaclePhaseOffset = 2.4;
   const baseWidths = [3.6, 2.6, 1.5, 0.65, 0.18];
@@ -322,6 +336,9 @@ void _paintTentacleMouth(
 void _paintTeethMouth(
   Canvas canvas,
   double timeSeconds,
+  int toothCount,
+  double length,
+  double teethCurve,
   double forwardX,
   double forwardY,
   double perpX,
@@ -340,10 +357,7 @@ void _paintTeethMouth(
   double Function(double) sx,
   double Function(double) sy,
 ) {
-  const toothCount = 4;
   const jointCount = 4;
-  const length = 25.0;
-  const teethCurve = -1;
   const baseWidths = [2, 1.5, 1.2, .5, .2];
   const tMin = 0.3;
   const tMax = 0.7;

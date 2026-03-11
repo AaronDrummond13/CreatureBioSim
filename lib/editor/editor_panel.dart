@@ -245,6 +245,10 @@ class _ColourTabState extends State<_ColourTab> {
                   lateralFins: creature.lateralFins,
                   trophicType: creature.trophicType,
                   mouth: creature.mouth,
+                  mouthCount: creature.mouthCount,
+                  mouthLength: creature.mouthLength,
+                  mouthCurve: creature.mouthCurve,
+                  mouthWobbleAmplitude: creature.mouthWobbleAmplitude,
                   eyes: creature.eyes,
                 )),
                 child: Container(
@@ -272,6 +276,10 @@ class _ColourTabState extends State<_ColourTab> {
                   lateralFins: creature.lateralFins,
                   trophicType: creature.trophicType,
                   mouth: creature.mouth,
+                  mouthCount: creature.mouthCount,
+                  mouthLength: creature.mouthLength,
+                  mouthCurve: creature.mouthCurve,
+                  mouthWobbleAmplitude: creature.mouthWobbleAmplitude,
                   eyes: creature.eyes,
                 ));
               },
@@ -999,30 +1007,39 @@ class _FinsTab extends StatelessWidget {
         const SizedBox(height: 14),
         Text('Head', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
         Text('Drag onto creature to add or replace. Drag off in view to remove.', style: TextStyle(fontSize: 11, color: EditorStyle.textMuted)),
-        const SizedBox(height: 6),
-        Row(
-          mainAxisSize: MainAxisSize.min,
+        const SizedBox(height: 8),
+        _mouthGroupLabel('Herbivore'),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
           children: [
-            _draggableMouthBox(creature, MouthType.tentacle),
-            const SizedBox(width: 6),
-            _draggableMouthBox(creature, MouthType.teeth),
-            const SizedBox(width: 6),
-            _draggableMouthBox(creature, MouthType.mandible),
+            _mouthButton(creature, MouthType.tentacle, 3, 'Shrimp'),
+            _mouthButton(creature, MouthType.tentacle, 5, 'Squid'),
+            _mouthButton(creature, MouthType.tentacle, 7, 'Octopus'),
           ],
         ),
+        const SizedBox(height: 8),
+        _mouthGroupLabel('Carnivore'),
         const SizedBox(height: 4),
-        Padding(
-          padding: const EdgeInsets.only(left: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Herbivore', style: TextStyle(fontSize: 10, color: EditorStyle.textMuted)),
-              const SizedBox(width: 12),
-              Text('Carnivore', style: TextStyle(fontSize: 10, color: EditorStyle.textMuted)),
-              const SizedBox(width: 12),
-              Text('Omnivore', style: TextStyle(fontSize: 10, color: EditorStyle.textMuted)),
-            ],
-          ),
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: [
+            _mouthButton(creature, MouthType.teeth, 2, 'Fangs'),
+            _mouthButton(creature, MouthType.teeth, 4, 'Biter'),
+            _mouthButton(creature, MouthType.teeth, 6, 'Teeth'),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _mouthGroupLabel('Omnivore'),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: [
+            _mouthButton(creature, MouthType.mandible, null, 'Mandible'),
+          ],
         ),
         const SizedBox(height: 14),
         Text('Fins', style: TextStyle(color: EditorStyle.text, fontWeight: FontWeight.w600, fontSize: 12)),
@@ -1107,7 +1124,25 @@ class _FinsTab extends StatelessWidget {
     );
   }
 
-  Widget _draggableMouthBox(Creature creature, MouthType mouthType) {
+  Widget _mouthGroupLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: EditorStyle.textMuted)),
+    );
+  }
+
+  Widget _mouthButton(Creature creature, MouthType mouthType, int? mouthCount, String label) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _draggableMouthBox(creature, mouthType, mouthCount),
+        const SizedBox(height: 2),
+        Text(label, style: TextStyle(fontSize: 9, color: EditorStyle.textMuted)),
+      ],
+    );
+  }
+
+  Widget _draggableMouthBox(Creature creature, MouthType mouthType, [int? mouthCount]) {
     Widget mouthBox() => Container(
       width: _boxW,
       height: _boxH,
@@ -1125,7 +1160,7 @@ class _FinsTab extends StatelessWidget {
       ),
     );
     return Draggable<MouthDragPayload>(
-      data: MouthDragPayload(mouthType),
+      data: MouthDragPayload(mouthType, mouthCount),
       dragAnchorStrategy: pointerDragAnchorStrategy,
       feedbackOffset: const Offset(-26, -18),
       feedback: Material(

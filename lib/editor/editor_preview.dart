@@ -505,6 +505,7 @@ class _MouthAddPreviewPainter extends CustomPainter {
   _MouthAddPreviewPainter({
     required this.creature,
     required this.previewMouthType,
+    this.previewMouthCount,
     required this.positions,
     required this.segmentAngles,
     required this.centerX,
@@ -519,6 +520,7 @@ class _MouthAddPreviewPainter extends CustomPainter {
 
   final Creature creature;
   final MouthType previewMouthType;
+  final int? previewMouthCount;
   final List<Vector2> positions;
   final List<double> segmentAngles;
   final double centerX;
@@ -541,6 +543,10 @@ class _MouthAddPreviewPainter extends CustomPainter {
       lateralFins: creature.lateralFins,
       trophicType: creature.trophicType,
       mouth: previewMouthType,
+      mouthCount: previewMouthCount,
+      mouthLength: creature.mouthLength ?? MouthParams.lengthDefault,
+      mouthCurve: creature.mouthCurve ?? MouthParams.curveDefault,
+      mouthWobbleAmplitude: creature.mouthWobbleAmplitude ?? MouthParams.wobbleDefault,
     );
     paintMouth(
       canvas,
@@ -563,6 +569,7 @@ class _MouthAddPreviewPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _MouthAddPreviewPainter old) =>
       old.previewMouthType != previewMouthType ||
+      old.previewMouthCount != previewMouthCount ||
       old.positions != positions ||
       old.segmentAngles != segmentAngles ||
       old.centerX != centerX ||
@@ -902,6 +909,34 @@ class _LateralNodesOverlayPainter extends CustomPainter {
       old.activeNode != activeNode || old.positions.length != positions.length;
 }
 
+class _MouthNodesOverlayPainter extends CustomPainter {
+  _MouthNodesOverlayPainter({required this.positions, this.activeNode});
+
+  final List<Offset> positions;
+  final int? activeNode;
+
+  static const double nodeRadius = 14.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var i = 0; i < positions.length; i++) {
+      final active = activeNode == i;
+      final stroke = Paint()
+        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5;
+      final fill = Paint()
+        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
+      canvas.drawCircle(positions[i], nodeRadius, fill);
+      canvas.drawCircle(positions[i], nodeRadius, stroke);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MouthNodesOverlayPainter old) =>
+      old.activeNode != activeNode || old.positions.length != positions.length;
+}
+
 /// Preview: creature centered, draggable target, zoom. Optional viewport fin editing.
 class EditorPreview extends StatefulWidget {
   const EditorPreview({
@@ -933,6 +968,11 @@ class EditorPreview extends StatefulWidget {
     this.onLateralAngleChanged,
     this.onMouthAdded,
     this.onMouthRemoved,
+    this.onMouthLengthChanged,
+    this.onMouthCurveChanged,
+    this.onMouthWobbleAmplitudeChanged,
+    this.selectedMouth = false,
+    this.onMouthSelected,
     this.selectedEyeIndex,
     this.onEyeSelected,
     this.onEyeAdded,
@@ -966,8 +1006,13 @@ class EditorPreview extends StatefulWidget {
   final void Function(int index, double value)? onLateralLengthChanged;
   final void Function(int index, double value)? onLateralWidthChanged;
   final void Function(int index, double angleDegrees)? onLateralAngleChanged;
-  final void Function(MouthType? type)? onMouthAdded;
+  final void Function(MouthType? type, int? mouthCount)? onMouthAdded;
   final void Function()? onMouthRemoved;
+  final void Function(double length)? onMouthLengthChanged;
+  final void Function(double curve)? onMouthCurveChanged;
+  final void Function(double wobbleAmplitude)? onMouthWobbleAmplitudeChanged;
+  final bool selectedMouth;
+  final void Function(bool selected)? onMouthSelected;
   final int? selectedEyeIndex;
   final void Function(int? index)? onEyeSelected;
   final void Function(int segment, double offsetFromCenter)? onEyeAdded;
@@ -1001,6 +1046,7 @@ class _EditorPreviewState extends State<EditorPreview>
   Offset? _mouthAddDragLocal;
   MouthDragPayload? _mouthAddDragPayload;
   bool _mouthDragFromCreature = false;
+  int? _mouthDraggingNode; // 0=length, 1=width
   Offset? _eyeAddDragLocal;
   bool _eyeDragFromCreature = false;
   int? _eyeDraggingNode; // 0 = radius node
@@ -1179,6 +1225,18 @@ class _EditorPreviewState extends State<EditorPreview>
         (newLaterals == 0 || _lateralDragFromIndex! >= newLaterals)) {
       _lateralDragFromIndex = null;
       _lateralPanStartIndex = null;
+    }
+    if (widget.editTabIndex != oldWidget.editTabIndex) {
+      _tailSelected = false;
+      _tailDragFromCreature = false;
+      _tailDraggingNode = null;
+      _mouthDragFromCreature = false;
+      _mouthDraggingNode = null;
+      _dorsalDragFromFin = false;
+      _dorsalDraggingNode = null;
+      _eyeDragFromCreature = false;
+      _eyeDraggingNode = null;
+      _lateralDraggingNode = null;
     }
   }
 
@@ -1469,6 +1527,51 @@ class _EditorPreviewState extends State<EditorPreview>
           final sx = centerX + (head.x - cameraX) * _zoom;
           final sy = centerY + (head.y - cameraY) * _zoom;
           return (px - sx) * (px - sx) + (py - sy) * (py - sy) <= headW * headW;
+        }
+
+        const double _mouthNodeRadius = 14.0;
+        /// Match mouth_painter: headSizeRef 30, sizeScale = headW/30; spikes extend length*sizeScale in world.
+        const double _mouthHeadSizeRef = 30.0;
+        /// Extra forward offset so nodes sit clearly in front of the drawn spikes (world units).
+        const double _mouthNodeForwardOffset = 14.0;
+        /// Two nodes when creature has teeth or tentacle: [length, width]. Length = end of spikes + offset; width = middle + offset.
+        List<Offset>? _mouthNodePositions() {
+          if (positions.length < 2 || _spine.segmentAngles.isEmpty) return null;
+          final mouth = widget.creature.mouth;
+          if (mouth != MouthType.teeth && mouth != MouthType.tentacle) return null;
+          double sx(double wx) => centerX + (wx - cameraX) * _zoom;
+          double sy(double wy) => centerY + (wy - cameraY) * _zoom;
+          final head = positions.last;
+          final headA = _spine.segmentAngles.last;
+          final forwardX = cos(headA);
+          final forwardY = sin(headA);
+          final perpX = -sin(headA);
+          final perpY = cos(headA);
+          final headSeg = (positions.length - 2).clamp(0, positions.length - 1);
+          final headW = widthAtSegment(headSeg);
+          final sizeScale = headW / _mouthHeadSizeRef;
+          final length = widget.creature.mouthLength ?? MouthParams.lengthDefault;
+          final spikeLengthWorld = length * sizeScale;
+          final lengthNodeX = head.x + forwardX * (spikeLengthWorld + _mouthNodeForwardOffset);
+          final lengthNodeY = head.y + forwardY * (spikeLengthWorld + _mouthNodeForwardOffset);
+          final midForward = spikeLengthWorld * 0.5 + _mouthNodeForwardOffset;
+          final widthNodeX = head.x + forwardX * midForward + perpX * (headW * 0.6);
+          final widthNodeY = head.y + forwardY * midForward + perpY * (headW * 0.6);
+          return [
+            Offset(sx(lengthNodeX), sy(lengthNodeY)),
+            Offset(sx(widthNodeX), sy(widthNodeY)),
+          ];
+        }
+        int? _hitMouthNode(double px, double py) {
+          final nodes = _mouthNodePositions();
+          if (nodes == null) return null;
+          final r2 = _mouthNodeRadius * _mouthNodeRadius;
+          for (var i = 0; i < nodes.length; i++) {
+            final o = nodes[i];
+            if ((px - o.dx) * (px - o.dx) + (py - o.dy) * (py - o.dy) <= r2)
+              return i;
+          }
+          return null;
         }
 
         const double _eyeGrabRadius = 18.0;
@@ -1939,15 +2042,24 @@ class _EditorPreviewState extends State<EditorPreview>
                             final lateralIdx = _lateralIndexNearScreen(lx, ly);
                             if (lateralIdx != null) {
                               _lateralPanStartIndex = lateralIdx;
-                            } else if (_isPointOnMouth(lx, ly) &&
-                                widget.creature.mouth != null &&
-                                widget.onMouthRemoved != null) {
-                              widget.onDorsalFinSelected?.call(null);
-                              setState(() {
-                                _tailSelected = false;
-                                _mouthDragFromCreature = true;
-                              });
                             } else {
+                              final mouthNodeHit = widget.selectedMouth ? _hitMouthNode(lx, ly) : null;
+                              if (mouthNodeHit != null &&
+                                  (mouthNodeHit == 0 && widget.onMouthLengthChanged != null ||
+                                   mouthNodeHit == 1 && (widget.onMouthCurveChanged != null || widget.onMouthWobbleAmplitudeChanged != null))) {
+                                setState(() => _mouthDraggingNode = mouthNodeHit);
+                              } else if (_isPointOnMouth(lx, ly) &&
+                                  widget.creature.mouth != null &&
+                                  widget.onMouthRemoved != null) {
+                                widget.onDorsalFinSelected?.call(null);
+                                widget.onLateralFinSelected?.call(null);
+                                widget.onEyeSelected?.call(null);
+                                widget.onMouthSelected?.call(true);
+                                setState(() {
+                                  _tailSelected = false;
+                                  _mouthDragFromCreature = true;
+                                });
+                              } else {
                               final tailNode = _hitTailNode(lx, ly);
                               if (tailNode != null &&
                                   _tailSelected &&
@@ -1966,6 +2078,8 @@ class _EditorPreviewState extends State<EditorPreview>
                                   widget.onTailRemoved != null) {
                                 widget.onDorsalFinSelected?.call(null);
                                 widget.onLateralFinSelected?.call(null);
+                                widget.onEyeSelected?.call(null);
+                                widget.onMouthSelected?.call(false);
                                 setState(() {
                                   _tailSelected = true;
                                   _tailDragFromCreature = true;
@@ -1973,25 +2087,30 @@ class _EditorPreviewState extends State<EditorPreview>
                               } else if (widget.panelClosed) {
                                 final worldX = (lx - centerX) / _zoom + cameraX;
                                 final worldY = (ly - centerY) / _zoom + cameraY;
+                                widget.onMouthSelected?.call(false);
                                 setState(() {
                                   _dragTargetX = worldX;
                                   _dragTargetY = worldY;
                                 });
                               } else {
+                                widget.onMouthSelected?.call(false);
                                 setState(() => _editorPotentialPan = true);
                               }
                             }
                           }
                           }
                         }
+                        }
                       } else if (widget.panelClosed) {
                         final worldX = (lx - centerX) / _zoom + cameraX;
                         final worldY = (ly - centerY) / _zoom + cameraY;
+                        widget.onMouthSelected?.call(false);
                         setState(() {
                           _dragTargetX = worldX;
                           _dragTargetY = worldY;
                         });
                       } else {
+                        widget.onMouthSelected?.call(false);
                         setState(() => _editorPotentialPan = true);
                       }
                     }
@@ -2102,6 +2221,39 @@ class _EditorPreviewState extends State<EditorPreview>
                                 .clamp(LateralFinConfig.angleDegreesMin, LateralFinConfig.angleDegreesMax);
                             widget.onLateralAngleChanged!(idx, flareDeg);
                           }
+                        }
+                      }
+                      _lastPanX = lx;
+                      _lastPanY = ly;
+                      setState(() {});
+                      return;
+                    }
+                    if (_mouthDraggingNode != null) {
+                      final head = positions.last;
+                      if (_mouthDraggingNode == 0 && widget.onMouthLengthChanged != null) {
+                        final worldX = (lx - centerX) / _zoom + cameraX;
+                        final worldY = (ly - centerY) / _zoom + cameraY;
+                        final headA = _spine.segmentAngles.last;
+                        final forwardX = cos(headA);
+                        final forwardY = sin(headA);
+                        final signedDist = (worldX - head.x) * forwardX + (worldY - head.y) * forwardY;
+                        final headSeg = (positions.length - 2).clamp(0, positions.length - 1);
+                        final headW = widthAtSegment(headSeg);
+                        final sizeScale = (headW / _mouthHeadSizeRef).clamp(0.1, 10.0);
+                        final logicalLength = signedDist / sizeScale;
+                        final v = logicalLength.clamp(MouthParams.lengthMin, MouthParams.lengthMax);
+                        widget.onMouthLengthChanged!(v);
+                      } else if (_mouthDraggingNode == 1) {
+                        const sense = 0.025;
+                        final delta = (ly - _lastPanY) * sense;
+                        if (widget.creature.mouth == MouthType.teeth && widget.onMouthCurveChanged != null) {
+                          final cur = widget.creature.mouthCurve ?? MouthParams.curveDefault;
+                          final v = (cur + delta).clamp(MouthParams.curveMin, MouthParams.curveMax);
+                          widget.onMouthCurveChanged!(v);
+                        } else if (widget.creature.mouth == MouthType.tentacle && widget.onMouthWobbleAmplitudeChanged != null) {
+                          final cur = widget.creature.mouthWobbleAmplitude ?? MouthParams.wobbleDefault;
+                          final v = (cur + delta).clamp(MouthParams.wobbleMin, MouthParams.wobbleMax);
+                          widget.onMouthWobbleAmplitudeChanged!(v);
                         }
                       }
                       _lastPanX = lx;
@@ -2342,6 +2494,10 @@ class _EditorPreviewState extends State<EditorPreview>
                       setState(() => _tailDraggingNode = null);
                       return;
                     }
+                    if (_mouthDraggingNode != null) {
+                      setState(() => _mouthDraggingNode = null);
+                      return;
+                    }
                     if (_bodyWidthDragSeg != null) {
                       setState(() => _bodyWidthDragSeg = null);
                       return;
@@ -2525,6 +2681,18 @@ class _EditorPreviewState extends State<EditorPreview>
                   ),
                 ),
               ),
+            if (widget.selectedMouth && _mouthNodePositions() != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _MouthNodesOverlayPainter(
+                      positions: _mouthNodePositions()!,
+                      activeNode: _mouthDraggingNode,
+                    ),
+                    size: Size(w, h),
+                  ),
+                ),
+              ),
             if (widget.selectedEyeIndex != null && _eyeNodePositions() != null)
               Positioned.fill(
                 child: IgnorePointer(
@@ -2662,6 +2830,7 @@ class _EditorPreviewState extends State<EditorPreview>
                         cameraX: cameraX,
                         cameraY: cameraY,
                       ),
+                      previewMouthCount: _mouthAddDragPayload?.mouthCount,
                     ),
                     size: Size(w, h),
                   ),
@@ -3164,7 +3333,7 @@ class _EditorPreviewState extends State<EditorPreview>
               if (box != null && box.hasSize) {
                 final local = box.globalToLocal(d.offset);
                 if (creatureScreenBounds().inflate(80).contains(local)) {
-                  widget.onMouthAdded!(d.data.mouthType);
+                  widget.onMouthAdded!(d.data.mouthType, d.data.mouthCount);
                 }
               }
               setState(() {

@@ -135,6 +135,26 @@ enum TrophicType { none, herbivore, carnivore, omnivore }
 /// Mouth style. Null = no mouth. Tentacle = shrimp/herbivore (wiggly). Teeth = carnivore (rigid spikes). Mandible = omnivore (ant-like, open/close).
 enum MouthType { tentacle, teeth, mandible }
 
+/// Teeth count variants: 2 fangs, 4 biter, 6 teeth.
+const List<int> teethCountOptions = [2, 4, 6];
+
+/// Tentacle count variants: 3 shrimp, 5 squid, 7 octopus.
+const List<int> tentacleCountOptions = [3, 5, 7];
+
+/// Mouth length/curve/wobble limits for editor nodes.
+class MouthParams {
+  MouthParams._();
+  static const double lengthMin = 12.0;
+  static const double lengthMax = 45.0;
+  static const double lengthDefault = 25.0;
+  static const double curveMin = -1.0;
+  static const double curveMax = 1.0;
+  static const double curveDefault = 0.0;
+  static const double wobbleMin = 3.0;
+  static const double wobbleMax = 8.0;
+  static const double wobbleDefault = 4.5;
+}
+
 /// Creature definition: identity and appearance, outside engine and renderer.
 /// Spine length is implied by [segmentWidths] (segmentCount = segmentWidths.length). Capped at [maxSegmentCount].
 class Creature {
@@ -166,6 +186,18 @@ class Creature {
   /// Mouth style. Null = no mouth drawn. Default tentacle (shrimp/herbivore feelers).
   final MouthType? mouth;
 
+  /// Teeth: 2, 4, or 6. Tentacles: 3, 5, or 7. Ignored for mandible. Null = painter default (4 teeth, 5 tentacles).
+  final int? mouthCount;
+
+  /// Mouth element length (world). Null = [MouthParams.lengthDefault]. Used for teeth and tentacles.
+  final double? mouthLength;
+
+  /// Teeth only: curve -1 to 1 (tips bend in/out). Null = [MouthParams.curveDefault].
+  final double? mouthCurve;
+
+  /// Tentacles only: wobble amplitude 3–8. Null = [MouthParams.wobbleDefault].
+  final double? mouthWobbleAmplitude;
+
   /// Optional eye placements (segment, offset, radius). When null or empty, renderer may use default head eyes for non-babies.
   final List<EyeConfig>? eyes;
 
@@ -196,6 +228,10 @@ class Creature {
     this.lateralFins,
     this.trophicType = TrophicType.herbivore,
     this.mouth,
+    this.mouthCount,
+    this.mouthLength,
+    this.mouthCurve,
+    this.mouthWobbleAmplitude,
     this.eyes,
     this.color = 0xFF2E7D32,
   }) : segmentWidths = segmentWidths

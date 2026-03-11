@@ -95,8 +95,9 @@ class TailDragPayload {
   final CaudalFinType? tailFin;
 }
 
-/// Payload for mouth drag from panel to viewport. [mouthType] = type to add/replace.
+/// Payload for mouth drag from panel to viewport. [mouthType] = type to add/replace; [mouthCount] = 2,4,6 for teeth or 3,5,7 for tentacles (ignored for mandible).
 class MouthDragPayload {
-  const MouthDragPayload(this.mouthType);
+  const MouthDragPayload(this.mouthType, [this.mouthCount]);
   final MouthType mouthType;
+  final int? mouthCount;
 }

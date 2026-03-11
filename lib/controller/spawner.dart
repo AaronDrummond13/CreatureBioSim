@@ -87,6 +87,11 @@ class Spawner {
     final mouth = trophicType == TrophicType.herbivore
         ? MouthType.tentacle
         : (trophicType == TrophicType.carnivore ? MouthType.teeth : MouthType.mandible);
+    final mouthCount = mouth == MouthType.teeth
+        ? teethCountOptions[_rng.nextInt(teethCountOptions.length)]
+        : (mouth == MouthType.tentacle
+            ? tentacleCountOptions[_rng.nextInt(tentacleCountOptions.length)]
+            : null);
     final eyes = _randomEyes(segmentCount);
     return Creature(
       segmentWidths: widths,
@@ -100,6 +105,10 @@ class Spawner {
           : lateralFins,
       trophicType: trophicType,
       mouth: mouth,
+      mouthCount: mouthCount,
+      mouthLength: (mouth == MouthType.teeth || mouth == MouthType.tentacle) ? MouthParams.lengthDefault : null,
+      mouthCurve: mouth == MouthType.teeth ? MouthParams.curveDefault : null,
+      mouthWobbleAmplitude: mouth == MouthType.tentacle ? MouthParams.wobbleDefault : null,
       eyes: (eyes == null || eyes.isEmpty) ? null : eyes,
     );
   }

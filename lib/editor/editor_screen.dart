@@ -61,7 +61,13 @@ class EditorScreenState extends State<EditorScreen> {
       creature: _creature,
       onCreatureChanged: _updateCreature,
       tabIndex: _tabIndex,
-      onTabChanged: (i) => setState(() => _tabIndex = i),
+      onTabChanged: (i) => setState(() {
+        _tabIndex = i;
+        _selectedDorsalFinIndex = null;
+        _selectedLateralFinIndex = null;
+        _selectedEyeIndex = null;
+        _selectedMouth = false;
+      }),
       selectedDorsalFinIndex: _selectedDorsalFinIndex,
       onDorsalFinSelected: (i) => setState(() => _selectedDorsalFinIndex = i),
       selectedLateralFinIndex: _selectedLateralFinIndex,
@@ -77,6 +83,7 @@ class EditorScreenState extends State<EditorScreen> {
       onDorsalFinSelected: (i) => setState(() {
         _selectedDorsalFinIndex = i;
         if (i != null) _selectedLateralFinIndex = null;
+        if (i != null) _selectedMouth = false;
       }),
       selectedLateralFinIndex: _selectedLateralFinIndex,
       onLateralFinSelected: _onLateralFinSelectedFromViewport,
@@ -100,12 +107,18 @@ class EditorScreenState extends State<EditorScreen> {
       onLateralRemoved: _onLateralRemovedFromViewport,
       onMouthAdded: _onMouthAddedFromViewport,
       onMouthRemoved: _onMouthRemovedFromViewport,
+      onMouthLengthChanged: _onMouthLengthChangedFromViewport,
+      onMouthCurveChanged: _onMouthCurveChangedFromViewport,
+      onMouthWobbleAmplitudeChanged: _onMouthWobbleAmplitudeChangedFromViewport,
       selectedEyeIndex: _selectedEyeIndex,
       onEyeSelected: (i) => setState(() {
         _selectedEyeIndex = i;
         if (i != null) _selectedDorsalFinIndex = null;
         if (i != null) _selectedLateralFinIndex = null;
+        if (i != null) _selectedMouth = false;
       }),
+      selectedMouth: _selectedMouth,
+      onMouthSelected: (selected) => setState(() => _selectedMouth = selected),
       onEyeAdded: _onEyeAddedFromViewport,
       onEyeRemoved: _onEyeRemovedFromViewport,
       onEyeMoved: _onEyeMovedFromViewport,
@@ -193,6 +206,7 @@ class EditorScreenState extends State<EditorScreen> {
   int? _selectedDorsalFinIndex;
   int? _selectedLateralFinIndex;
   int? _selectedEyeIndex;
+  bool _selectedMouth = false;
 
   void _onDorsalRangeFromViewport(int start, int end) {
     final fins = List<(List<int>, double?)>.from(_creature.dorsalFins ?? []);
@@ -210,6 +224,10 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      mouthCount: _creature.mouthCount,
+      mouthLength: _creature.mouthLength,
+      mouthCurve: _creature.mouthCurve,
+      mouthWobbleAmplitude: _creature.mouthWobbleAmplitude,
       eyes: _creature.eyes,
     ));
   }
@@ -326,6 +344,10 @@ class EditorScreenState extends State<EditorScreen> {
         lateralFins: _creature.lateralFins,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
+        mouthCount: _creature.mouthCount,
+        mouthLength: _creature.mouthLength,
+        mouthCurve: _creature.mouthCurve,
+        mouthWobbleAmplitude: _creature.mouthWobbleAmplitude,
         eyes: _creature.eyes,
       );
       _selectedDorsalFinIndex = null;
@@ -343,6 +365,10 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      mouthCount: _creature.mouthCount,
+      mouthLength: _creature.mouthLength,
+      mouthCurve: _creature.mouthCurve,
+      mouthWobbleAmplitude: _creature.mouthWobbleAmplitude,
       eyes: _creature.eyes,
     ));
   }
@@ -358,6 +384,10 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      mouthCount: _creature.mouthCount,
+      mouthLength: _creature.mouthLength,
+      mouthCurve: _creature.mouthCurve,
+      mouthWobbleAmplitude: _creature.mouthWobbleAmplitude,
       eyes: _creature.eyes,
     ));
   }
@@ -373,6 +403,10 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      mouthCount: _creature.mouthCount,
+      mouthLength: _creature.mouthLength,
+      mouthCurve: _creature.mouthCurve,
+      mouthWobbleAmplitude: _creature.mouthWobbleAmplitude,
       eyes: _creature.eyes,
     ));
   }
@@ -394,6 +428,10 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      mouthCount: _creature.mouthCount,
+      mouthLength: _creature.mouthLength,
+      mouthCurve: _creature.mouthCurve,
+      mouthWobbleAmplitude: _creature.mouthWobbleAmplitude,
       eyes: _creature.eyes,
     ));
   }
@@ -408,6 +446,10 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: _creature.trophicType,
       mouth: _creature.mouth,
+      mouthCount: _creature.mouthCount,
+      mouthLength: _creature.mouthLength,
+      mouthCurve: _creature.mouthCurve,
+      mouthWobbleAmplitude: _creature.mouthWobbleAmplitude,
       eyes: _creature.eyes,
     ));
   }
@@ -463,7 +505,10 @@ class EditorScreenState extends State<EditorScreen> {
   void _onLateralFinSelectedFromViewport(int? index) {
     setState(() {
       _selectedLateralFinIndex = index;
-      if (index != null) _selectedDorsalFinIndex = null;
+      if (index != null) {
+        _selectedDorsalFinIndex = null;
+        _selectedMouth = false;
+      }
     });
   }
 
@@ -488,10 +533,13 @@ class EditorScreenState extends State<EditorScreen> {
     setState(() => _creature = _creatureWith(_creature, lateralFins: list));
   }
 
-  void _onMouthAddedFromViewport(MouthType? type) {
+  void _onMouthAddedFromViewport(MouthType? type, int? mouthCount) {
     final trophicType = type == MouthType.teeth
         ? TrophicType.carnivore
         : (type == MouthType.tentacle ? TrophicType.herbivore : (type == MouthType.mandible ? TrophicType.omnivore : TrophicType.none));
+    final count = type == MouthType.teeth
+        ? (mouthCount ?? 4)
+        : (type == MouthType.tentacle ? (mouthCount ?? 5) : null);
     setState(() => _creature = Creature(
       segmentWidths: _creature.segmentWidths,
       color: _creature.color,
@@ -501,6 +549,10 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: trophicType,
       mouth: type,
+      mouthCount: count,
+      mouthLength: (type == MouthType.teeth || type == MouthType.tentacle) ? MouthParams.lengthDefault : null,
+      mouthCurve: type == MouthType.teeth ? MouthParams.curveDefault : null,
+      mouthWobbleAmplitude: type == MouthType.tentacle ? MouthParams.wobbleDefault : null,
       eyes: _creature.eyes,
     ));
   }
@@ -515,8 +567,27 @@ class EditorScreenState extends State<EditorScreen> {
       lateralFins: _creature.lateralFins,
       trophicType: TrophicType.none,
       mouth: null,
+      mouthCount: null,
+      mouthLength: null,
+      mouthCurve: null,
+      mouthWobbleAmplitude: null,
       eyes: _creature.eyes,
     ));
+  }
+
+  void _onMouthLengthChangedFromViewport(double length) {
+    final v = length.clamp(MouthParams.lengthMin, MouthParams.lengthMax);
+    setState(() => _creature = _creatureWith(_creature, mouthLength: v));
+  }
+
+  void _onMouthCurveChangedFromViewport(double curve) {
+    final v = curve.clamp(MouthParams.curveMin, MouthParams.curveMax);
+    setState(() => _creature = _creatureWith(_creature, mouthCurve: v));
+  }
+
+  void _onMouthWobbleAmplitudeChangedFromViewport(double wobbleAmplitude) {
+    final v = wobbleAmplitude.clamp(MouthParams.wobbleMin, MouthParams.wobbleMax);
+    setState(() => _creature = _creatureWith(_creature, mouthWobbleAmplitude: v));
   }
 
   void _onEyeAddedFromViewport(int segment, double offsetFromCenter) {
@@ -533,6 +604,10 @@ class EditorScreenState extends State<EditorScreen> {
         lateralFins: _creature.lateralFins,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
+        mouthCount: _creature.mouthCount,
+        mouthLength: _creature.mouthLength,
+        mouthCurve: _creature.mouthCurve,
+        mouthWobbleAmplitude: _creature.mouthWobbleAmplitude,
         eyes: list,
       );
       _selectedEyeIndex = list.length - 1;
@@ -553,6 +628,10 @@ class EditorScreenState extends State<EditorScreen> {
         lateralFins: _creature.lateralFins,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
+        mouthCount: _creature.mouthCount,
+        mouthLength: _creature.mouthLength,
+        mouthCurve: _creature.mouthCurve,
+        mouthWobbleAmplitude: _creature.mouthWobbleAmplitude,
         eyes: list.isEmpty ? null : list,
       );
       if (_selectedEyeIndex == index) _selectedEyeIndex = null;
@@ -586,6 +665,11 @@ Creature _creatureWith(Creature creature, {
   List<(List<int>, double?)>? dorsalFins,
   List<LateralFinConfig>? lateralFins,
   List<EyeConfig>? eyes,
+  MouthType? mouth,
+  int? mouthCount,
+  double? mouthLength,
+  double? mouthCurve,
+  double? mouthWobbleAmplitude,
   bool filterDorsalLateral = false,
   int? newSegmentCount,
 }) {
@@ -606,7 +690,11 @@ Creature _creatureWith(Creature creature, {
     tail: creature.tail,
     lateralFins: lateral,
     trophicType: creature.trophicType,
-    mouth: creature.mouth,
+    mouth: mouth ?? creature.mouth,
+    mouthCount: mouthCount ?? creature.mouthCount,
+    mouthLength: mouthLength ?? creature.mouthLength,
+    mouthCurve: mouthCurve ?? creature.mouthCurve,
+    mouthWobbleAmplitude: mouthWobbleAmplitude ?? creature.mouthWobbleAmplitude,
     eyes: eyeList,
   );
 }
