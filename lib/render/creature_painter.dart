@@ -710,22 +710,23 @@ class CreaturePainter extends CustomPainter {
     canvas.drawPath(path, stroke);
   }
 
-  /// Shark fin with concave rear curve. Left: rear = second edge (concave). Right: rear = first edge (concave).
+  /// Shark fin with concave rear curve. Left: rear = second edge (concave). Right: rear = first edge (concave). Stronger convex and concave.
   void _drawSharkConcavePath(Canvas canvas, double lenScreen, double widScreen, Paint fill, Paint stroke, {required bool isLeft}) {
     final hLen = lenScreen / 2;
     final hWid = widScreen / 2;
+    const convexBulge = 1.55;
     final path = Path();
     if (isLeft) {
       path
         ..moveTo(hLen, -hWid)
-        ..quadraticBezierTo(0.0, -hWid, -hLen, 0.0)
-        ..quadraticBezierTo(0.0, 0.0, hLen, hWid)
+        ..quadraticBezierTo(0.0, -hWid * convexBulge, -hLen, 0.0)
+        ..quadraticBezierTo(0.6 * hLen, -0.55 * hWid, hLen, hWid)
         ..close();
     } else {
       path
         ..moveTo(hLen, -hWid)
-        ..quadraticBezierTo(0.0, 0.0, -hLen, 0.0)
-        ..quadraticBezierTo(0.0, hWid, hLen, hWid)
+        ..quadraticBezierTo(-0.6 * hLen, 0.55 * hWid, -hLen, 0.0)
+        ..quadraticBezierTo(0.0, hWid * convexBulge, hLen, hWid)
         ..close();
     }
     canvas.drawPath(path, fill);
@@ -736,31 +737,41 @@ class CreaturePainter extends CustomPainter {
   void _drawPaddlePath(Canvas canvas, double lenScreen, double widScreen, Paint fill, Paint stroke) {
     final hLen = lenScreen / 2;
     final hWid = widScreen / 2;
+    final r = (lenScreen < widScreen ? lenScreen : widScreen) * 0.08;
     final path = Path()
-      ..moveTo(-hLen, -hWid)
+      ..moveTo(-hLen + r, -hWid)
       ..quadraticBezierTo(0.0, -hWid, hLen, 0.0)
-      ..quadraticBezierTo(0.0, hWid, -hLen, hWid)
+      ..quadraticBezierTo(0.0, hWid, -hLen + r, hWid)
+      ..arcToPoint(Offset(-hLen, hWid - r), radius: Radius.circular(r))
+      ..lineTo(-hLen, -hWid + r)
+      ..arcToPoint(Offset(-hLen + r, -hWid), radius: Radius.circular(r))
       ..close();
     canvas.drawPath(path, fill);
     canvas.drawPath(path, stroke);
   }
 
-  /// Paddle with concave rear curve. Left: rear = second edge (concave). Right: rear = first edge (concave).
+  /// Paddle with concave rear curve. Left: rear = second edge (concave). Right: rear = first edge (concave). Stronger convex and concave; rounded corner only where flat meets convex.
   void _drawPaddleConcavePath(Canvas canvas, double lenScreen, double widScreen, Paint fill, Paint stroke, {required bool isLeft}) {
     final hLen = lenScreen / 2;
     final hWid = widScreen / 2;
+    final r = (lenScreen < widScreen ? lenScreen : widScreen) * 0.08;
+    const convexBulge = 1.55;
     final path = Path();
     if (isLeft) {
       path
-        ..moveTo(-hLen, -hWid)
-        ..quadraticBezierTo(0.0, -hWid, hLen, 0.0)
-        ..quadraticBezierTo(0.0, 0.0, -hLen, hWid)
+        ..moveTo(-hLen + r, -hWid)
+        ..quadraticBezierTo(0.0, -hWid * convexBulge, hLen, 0.0)
+        ..quadraticBezierTo(-0.5 * hLen, 0.5 * hWid, -hLen, hWid)
+        ..lineTo(-hLen, -hWid + r)
+        ..arcToPoint(Offset(-hLen + r, -hWid), radius: Radius.circular(r))
         ..close();
     } else {
       path
         ..moveTo(-hLen, -hWid)
-        ..quadraticBezierTo(0.0, 0.0, hLen, 0.0)
-        ..quadraticBezierTo(0.0, hWid, -hLen, hWid)
+        ..quadraticBezierTo(0.5 * hLen, -0.5 * hWid, hLen, 0.0)
+        ..quadraticBezierTo(0.0, hWid * convexBulge, -hLen + r, hWid)
+        ..arcToPoint(Offset(-hLen, hWid - r), radius: Radius.circular(r))
+        ..lineTo(-hLen, -hWid)
         ..close();
     }
     canvas.drawPath(path, fill);
