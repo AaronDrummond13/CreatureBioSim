@@ -7,6 +7,13 @@ import 'package:creature_bio_sim/simulation/spine.dart';
 class Spawner {
   Spawner({int? seed}) : _rng = Random(seed);
 
+  /// Herbivore, carnivore, omnivore only; [TrophicType.none] is valid in editor but not for spawning.
+  static const _spawnableTrophic = [
+    TrophicType.herbivore,
+    TrophicType.carnivore,
+    TrophicType.omnivore,
+  ];
+
   final Random _rng;
 
   /// Creates a random creature and spine positioned at [headX], [headY].
@@ -75,14 +82,10 @@ class Spawner {
             length: _inRange(TailConfig.lengthMin, TailConfig.lengthMax),
           )
         : null;
-    final trophicType = TrophicType.values[_rng.nextInt(TrophicType.values.length)];
-    final mouth = trophicType == TrophicType.none
-        ? null
-        : (trophicType == TrophicType.herbivore
-            ? MouthType.tentacle
-            : (trophicType == TrophicType.carnivore
-                ? MouthType.teeth
-                : MouthType.mandible));
+    final trophicType = _spawnableTrophic[_rng.nextInt(_spawnableTrophic.length)];
+    final mouth = trophicType == TrophicType.herbivore
+        ? MouthType.tentacle
+        : (trophicType == TrophicType.carnivore ? MouthType.teeth : MouthType.mandible);
     return Creature(
       segmentWidths: widths,
       color: color,

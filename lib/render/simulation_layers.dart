@@ -16,6 +16,14 @@ import 'package:creature_bio_sim/world/biome_map.dart';
 import 'package:creature_bio_sim/world/world.dart'
     show aabbOverlapsRect, circleOverlapsRect;
 
+/// Player creature render levels (back-to-front). Used to order painter layers.
+///
+/// 1. Tail fin + lateral fins
+/// 2. Body (mouth drawn in same pass before body fill)
+/// 3. Digestion cloud (inner-body consumed remnants)
+/// 4. Dorsal fin + eyes (drawn together above cloud)
+const int playerCreatureLevelCount = 4;
+
 /// Builds the ordered list of paint layers for the play (simulation) screen.
 List<Widget> buildSimulationLayers({
   required Size size,
@@ -154,6 +162,7 @@ List<Widget> buildSimulationLayers({
       ),
     ),
     if (!isDead) ...[
+      // Player: tail + lateral, body (+ mouth) only (no dorsal, no eyes).
       Positioned.fill(
         child: CustomPaint(
           painter: CreaturePainter(
@@ -161,11 +170,12 @@ List<Widget> buildSimulationLayers({
             spine: spine,
             view: cameraView,
             timeSeconds: t,
-            drawEyes: false,
+            skipDorsalAndEyes: true,
             lastAteAt: lastAteTimeSeconds,
           ),
         ),
       ),
+      // Digestion cloud (clipped to body path).
       Positioned.fill(
         child: CustomPaint(
           painter: InnerBodyCloudPainter(
@@ -184,6 +194,7 @@ List<Widget> buildSimulationLayers({
           ),
         ),
       ),
+      // Dorsal fin + eyes (drawn together above cloud).
       Positioned.fill(
         child: CustomPaint(
           painter: CreaturePainter(
@@ -191,7 +202,7 @@ List<Widget> buildSimulationLayers({
             spine: spine,
             view: cameraView,
             timeSeconds: t,
-            eyesOnly: true,
+            dorsalAndEyesOnly: true,
             lastAteAt: lastAteTimeSeconds,
           ),
         ),

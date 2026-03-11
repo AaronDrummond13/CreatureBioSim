@@ -39,6 +39,12 @@ class CreaturePainter extends CustomPainter {
   /// If true, draw only eyes (used after inner-body cloud for correct stacking).
   final bool eyesOnly;
 
+  /// If true, draw only dorsal fins and eyes (e.g. above inner-body cloud). Mutually exclusive with [eyesOnly].
+  final bool dorsalAndEyesOnly;
+
+  /// If true, draw tail, lateral, mouth, body only (no dorsal, no eyes); used so dorsal+eyes can be drawn above cloud.
+  final bool skipDorsalAndEyes;
+
   /// When true, draw at [kBabyRenderScale] (40%) and no eyes (baby creature).
   final bool isBaby;
 
@@ -82,6 +88,8 @@ class CreaturePainter extends CustomPainter {
     this.blurLayerBackgroundColor,
     this.drawEyes = true,
     this.eyesOnly = false,
+    this.dorsalAndEyesOnly = false,
+    this.skipDorsalAndEyes = false,
     this.isBaby = false,
     this.isEpic = false,
     this.bodyContourStyle = BodyContourStyle.tubular,
@@ -392,19 +400,27 @@ class CreaturePainter extends CustomPainter {
       if (useBlurLayer) canvas.restore();
       return;
     }
+    if (dorsalAndEyesOnly) {
+      _drawDorsalFins(canvas);
+      if (!isBaby) _drawEyes(canvas);
+      if (useBlurLayer) canvas.restore();
+      return;
+    }
     _drawCreature(canvas);
 
     if (useBlurLayer) canvas.restore();
   }
 
-  /// Draw order: tail fin (under body) → lateral fins → mouth → body → dorsal fins → eyes.
+  /// Draw order (matches player creature levels 1–3 + eyes): tail fin → lateral fins → mouth → body [→ dorsal fins → eyes when !skipDorsalAndEyes and drawEyes].
   void _drawCreature(Canvas canvas) {
     _drawTailFin(canvas);
     _drawLateralFins(canvas);
     _drawMouth(canvas);
     _drawBody(canvas);
-    _drawDorsalFins(canvas);
-    if (drawEyes && !isBaby) _drawEyes(canvas);
+    if (!skipDorsalAndEyes) {
+      _drawDorsalFins(canvas);
+      if (drawEyes && !isBaby) _drawEyes(canvas);
+    }
   }
 
   void _drawMouth(Canvas canvas) {
@@ -1128,6 +1144,8 @@ class CreaturePainter extends CustomPainter {
       oldDelegate.blurLayerBackgroundColor != blurLayerBackgroundColor ||
       oldDelegate.drawEyes != drawEyes ||
       oldDelegate.eyesOnly != eyesOnly ||
+      oldDelegate.dorsalAndEyesOnly != dorsalAndEyesOnly ||
+      oldDelegate.skipDorsalAndEyes != skipDorsalAndEyes ||
       oldDelegate.isBaby != isBaby ||
       oldDelegate.isEpic != isEpic ||
       oldDelegate.bodyContourStyle != bodyContourStyle ||
