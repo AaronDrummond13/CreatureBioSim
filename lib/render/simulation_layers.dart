@@ -106,6 +106,9 @@ List<Widget> buildSimulationLayers({
       bottom,
     );
   }).toList();
+  final babyEntities = visibleEntities.where((e) => e.isBaby).toList();
+  final normalEntities = visibleEntities.where((e) => !e.isBaby && !e.isEpic).toList();
+  final epicEntities = visibleEntities.where((e) => e.isEpic).toList();
   final visibleMammoths = mammothStore.getVisible(
     viewState.cameraX,
     viewState.cameraY,
@@ -147,7 +150,7 @@ List<Widget> buildSimulationLayers({
         ),
       ),
     ),
-    ...visibleEntities.map(
+    ...babyEntities.map(
       (e) => Positioned.fill(
         child: CustomPaint(
           painter: CreaturePainter(
@@ -155,8 +158,22 @@ List<Widget> buildSimulationLayers({
             spine: e.spine,
             view: cameraView,
             timeSeconds: t,
-            isBaby: e.isBaby,
-            isEpic: e.isEpic,
+            isBaby: true,
+            isEpic: false,
+          ),
+        ),
+      ),
+    ),
+    ...normalEntities.map(
+      (e) => Positioned.fill(
+        child: CustomPaint(
+          painter: CreaturePainter(
+            creature: e.creature,
+            spine: e.spine,
+            view: cameraView,
+            timeSeconds: t,
+            isBaby: false,
+            isEpic: false,
           ),
         ),
       ),
@@ -208,6 +225,20 @@ List<Widget> buildSimulationLayers({
         ),
       ),
     ],
+    ...epicEntities.map(
+      (e) => Positioned.fill(
+        child: CustomPaint(
+          painter: CreaturePainter(
+            creature: e.creature,
+            spine: e.spine,
+            view: cameraView,
+            timeSeconds: t,
+            isBaby: false,
+            isEpic: true,
+          ),
+        ),
+      ),
+    ),
     Positioned.fill(
       child: CustomPaint(
         painter: FoodPainter(
