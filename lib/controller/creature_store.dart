@@ -186,4 +186,29 @@ class CreatureStore {
       e.chunkCy = cy;
     }
   }
+
+  /// Remove all creature chunk entries whose chunk center is beyond [cullRadius] from (cx, cy).
+  /// Called by ChunkManager to clean up chunks created by wandering creatures.
+  void cullOutOfRange(double cx, double cy, double cullRadius) {
+    final cullR2 = cullRadius * cullRadius;
+    final cellSize = kChunkSizeWorld;
+    final keysToRemove = <String>[];
+    for (final key in _byChunk.keys) {
+      final parts = key.split(',');
+      if (parts.length != 2) continue;
+      final ci = int.tryParse(parts[0]);
+      final cj = int.tryParse(parts[1]);
+      if (ci == null || cj == null) continue;
+      final x0 = ci * cellSize;
+      final x1 = (ci + 1) * cellSize;
+      final y0 = cj * cellSize;
+      final y1 = (cj + 1) * cellSize;
+      if (distSqToAabb(cx, cy, x0, x1, y0, y1) > cullR2) {
+        keysToRemove.add(key);
+      }
+    }
+    for (final key in keysToRemove) {
+      _byChunk.remove(key);
+    }
+  }
 }

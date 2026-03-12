@@ -20,8 +20,11 @@ const double kBiomeRegionSizeWorld = kChunkSizeWorld * kBiomeRegionChunks;
 /// Biome grid size (wrap). 10×10 biome regions that wrap.
 const int kBiomeGridSize = 10;
 
-/// Radius (world units) around the camera for chunk load/cull. Chunks within this distance are kept; food and creatures are generated for them.
+/// Radius (world units) around the camera for chunk generation (spawn). Food and creatures are generated within this distance.
 const double kChunkLoadRadiusWorld = 4000.0;
+
+/// Radius (world units) around the camera for chunk culling. Food and creatures beyond this are removed. Slightly larger than load to give leeway.
+const double kChunkCullRadiusWorld = 4800.0;
 
 /// Chunk index for world x (unbounded).
 int chunkIndexX(double worldX) => (worldX / kChunkSizeWorld).floor();

@@ -38,7 +38,7 @@ class SimulationViewState extends ChangeNotifier {
   double joystickMaxRadius = 60.0;
   double? joystickGrabTime;
 
-  static const double minZoom = 0.3;
+  static const double minZoom = 0.07;
   static const double maxZoom = 3;
 
   CameraView get cameraView =>

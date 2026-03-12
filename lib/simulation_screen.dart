@@ -10,7 +10,7 @@ import 'package:creature_bio_sim/simulation/play_step.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation_view_state.dart';
 import 'package:creature_bio_sim/world/biome_map.dart';
-import 'package:creature_bio_sim/world/world.dart' show kChunkLoadRadiusWorld;
+import 'package:creature_bio_sim/world/world.dart' show kChunkLoadRadiusWorld, kChunkCullRadiusWorld;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -141,6 +141,7 @@ class _SimulationScreenState extends State<SimulationScreen>
                 _viewState.cameraX,
                 _viewState.cameraY,
                 kChunkLoadRadiusWorld,
+                kChunkCullRadiusWorld,
               );
               _chunksInitialized = true;
             }

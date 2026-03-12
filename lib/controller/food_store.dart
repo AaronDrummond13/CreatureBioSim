@@ -165,6 +165,20 @@ class FoodStore {
     }
   }
 
+  /// Remove any food item whose actual position is beyond [cullRadius] from (cx, cy).
+  /// Catches drifted items that changed chunk and escaped clearChunk.
+  void cullOutOfRange(double cx, double cy, double cullRadius) {
+    final cullR2 = cullRadius * cullRadius;
+    for (var i = _items.length - 1; i >= 0; i--) {
+      final item = _items[i];
+      final dx = item.x - cx;
+      final dy = item.y - cy;
+      if (dx * dx + dy * dy > cullR2) {
+        _items.removeAt(i);
+      }
+    }
+  }
+
   /// Fractional value → int: floor + chance for one more (e.g. 0.5 → 0 or 1 with 50% chance).
   int _countFromRate(double rate) {
     if (rate <= 0) return 0;

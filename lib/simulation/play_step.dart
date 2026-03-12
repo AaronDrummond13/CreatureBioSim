@@ -10,7 +10,7 @@ import 'package:creature_bio_sim/simulation/bot_consumption.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation_view_state.dart';
 import 'package:creature_bio_sim/world/food.dart' show CellType;
-import 'package:creature_bio_sim/world/world.dart' show kChunkLoadRadiusWorld;
+import 'package:creature_bio_sim/world/world.dart' show kChunkLoadRadiusWorld, kChunkCullRadiusWorld;
 
 /// Mutable output from [runPlayStep]: death flag and last ate time.
 class PlayStepOutput {
@@ -160,6 +160,7 @@ void runPlayStep(
       viewState.cameraX,
       viewState.cameraY,
       kChunkLoadRadiusWorld,
+      kChunkCullRadiusWorld,
     );
     creatureStore.tick();
     runBotConsumption(
