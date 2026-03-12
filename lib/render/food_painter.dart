@@ -98,7 +98,7 @@ class FoodPainter extends CustomPainter {
       final cx = sx(food.x);
       final cy = sy(food.y);
       final rInner = rScreen * innerRadiusFrac.clamp(0.01, 0.99);
-      if (food.cellType != CellType.bubble) {
+      if (food.cellType == CellType.plant) {
         canvas.save();
         canvas.translate(cx, cy);
         canvas.rotate(
@@ -187,7 +187,7 @@ class FoodPainter extends CustomPainter {
         canvas.drawCircle(Offset(nx, ny), nr, nucleusPaint);
         canvas.drawCircle(Offset(nx, ny), nr, nucleusStrokePaint);
       }
-      if (food.cellType != CellType.bubble) {
+      if (food.cellType == CellType.plant) {
         canvas.restore();
       }
     }
