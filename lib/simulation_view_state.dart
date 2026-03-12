@@ -41,6 +41,24 @@ class SimulationViewState extends ChangeNotifier {
   static const double minZoom = 0.07;
   static const double maxZoom = 3;
 
+  /// Target world width visible on screen at default zoom and at max zoom-out.
+  static const double targetDefaultWorldWidth = 1100.0;
+  static const double targetMaxWorldWidth = 11000.0;
+
+  double _effectiveMinZoom = minZoom;
+  double get effectiveMinZoom => _effectiveMinZoom;
+
+  bool _screenInitialized = false;
+
+  /// Call once when screen size is known. Sets default zoom and effective min zoom
+  /// so all devices see roughly the same world extent.
+  void initWithScreenSize(double screenWidth) {
+    if (_screenInitialized) return;
+    _screenInitialized = true;
+    _effectiveMinZoom = (screenWidth / targetMaxWorldWidth).clamp(minZoom, maxZoom);
+    zoom = (screenWidth / targetDefaultWorldWidth).clamp(_effectiveMinZoom, maxZoom);
+  }
+
   CameraView get cameraView =>
       CameraView(cameraX: cameraX, cameraY: cameraY, zoom: zoom);
 
@@ -160,8 +178,8 @@ class SimulationViewState extends ChangeNotifier {
     clearLastTouch();
   }
 
-  /// Clamp [newZoom] to [minZoom]..[maxZoom].
-  double clampZoom(double newZoom) => newZoom.clamp(minZoom, maxZoom);
+  /// Clamp [newZoom] to [effectiveMinZoom]..[maxZoom].
+  double clampZoom(double newZoom) => newZoom.clamp(_effectiveMinZoom, maxZoom);
 
   /// Called each tick so the view subtree rebuilds; gesture region does not.
   void onTick() => notifyListeners();

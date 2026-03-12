@@ -130,6 +130,7 @@ class _SimulationScreenState extends State<SimulationScreen>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    _viewState.initWithScreenSize(size.width);
     return Stack(
       children: [
         ListenableBuilder(
