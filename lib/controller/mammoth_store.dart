@@ -121,7 +121,8 @@ class MammothStore {
     final y0 = j * cell;
     final spawnX = x0 + _random.nextDouble() * cell;
     final spawnY = y0 + _random.nextDouble() * cell;
-    final (creature, spine) = spawner.createRandomAt(spawnX, spawnY);
+    final mammothAgility = Spine.defaultTurnAgility * Spine.mammothPenalty;
+    final (creature, spine) = spawner.createRandomAt(spawnX, spawnY, turnAgility: mammothAgility);
     final pos = spine.positions;
     final homeX = pos.isNotEmpty ? pos.last.x : null;
     final homeY = pos.isNotEmpty ? pos.last.y : null;

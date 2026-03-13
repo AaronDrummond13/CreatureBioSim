@@ -93,14 +93,10 @@ void runPlayStep(
           intendedTargetY: viewState.touchY,
         );
       } else {
-        final step = headMoveSpeed / len;
-        final nx = head.x + dx * step;
-        final ny = head.y + dy * step;
         spine.resolve(
-          nx,
-          ny,
-          intendedTargetX: viewState.touchX,
-          intendedTargetY: viewState.touchY,
+          viewState.touchX,
+          viewState.touchY,
+          speed: headMoveSpeed,
         );
       }
       final headAfter = spine.positions.last;

@@ -1386,16 +1386,11 @@ class _EditorPreviewState extends State<EditorPreview>
             intendedTargetX: _dragTargetX,
             intendedTargetY: _dragTargetY,
           );
-          // No global nudge when arrived — avoids spazzing from rotating in place.
         } else {
-          final step = _headMoveSpeed / len;
-          final nx = head.x + dx * step;
-          final ny = head.y + dy * step;
           _spine.resolve(
-            nx,
-            ny,
-            intendedTargetX: _dragTargetX,
-            intendedTargetY: _dragTargetY,
+            _dragTargetX,
+            _dragTargetY,
+            speed: _headMoveSpeed,
           );
         }
       }

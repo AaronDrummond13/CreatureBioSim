@@ -129,6 +129,9 @@ class CreatureStore {
       [false, true, true, true], // 1 adult, 3 kids
     ];
 
+    final botAgility = Spine.defaultTurnAgility * Spine.botPenalty;
+    final epicAgility = botAgility * Spine.epicPenalty;
+
     for (var g = 0; g < numGroups; g++) {
       final cx = x0 + _random.nextDouble() * cellSize;
       final cy = y0 + _random.nextDouble() * cellSize;
@@ -137,6 +140,7 @@ class CreatureStore {
         cx,
         cy,
         babyFlags: babyFlags,
+        turnAgility: botAgility,
       );
       for (final (spine, isBaby) in group) {
         _addCreature(list, i, j, creature, spine, isBaby: isBaby);
@@ -145,13 +149,13 @@ class CreatureStore {
     for (var s = 0; s < numSingles; s++) {
       final cx = x0 + _random.nextDouble() * cellSize;
       final cy = y0 + _random.nextDouble() * cellSize;
-      final (creature, spine) = spawner.createRandomAt(cx, cy);
+      final (creature, spine) = spawner.createRandomAt(cx, cy, turnAgility: botAgility);
       _addCreature(list, i, j, creature, spine);
     }
     for (var e = 0; e < numEpics; e++) {
       final cx = x0 + _random.nextDouble() * cellSize;
       final cy = y0 + _random.nextDouble() * cellSize;
-      final (creature, spine) = spawner.createRandomAt(cx, cy);
+      final (creature, spine) = spawner.createRandomAt(cx, cy, turnAgility: epicAgility);
       _addCreature(list, i, j, creature, spine, isEpic: true);
     }
 

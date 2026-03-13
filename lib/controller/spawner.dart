@@ -18,9 +18,9 @@ class Spawner {
   final Random _rng;
 
   /// Creates a random creature and spine positioned at [headX], [headY].
-  (Creature, Spine) createRandomAt(double headX, double headY) {
+  (Creature, Spine) createRandomAt(double headX, double headY, {double turnAgility = Spine.defaultTurnAgility}) {
     final creature = _randomCreature();
-    final spine = Spine(segmentCount: creature.segmentCount);
+    final spine = Spine(segmentCount: creature.segmentCount, turnAgility: turnAgility);
     _positionSpineHeadAt(spine, headX, headY);
     return (creature, spine);
   }
@@ -30,12 +30,13 @@ class Spawner {
     double centerX,
     double centerY, {
     required List<bool> babyFlags,
+    double turnAgility = Spine.defaultTurnAgility,
   }) {
     final creature = _randomCreature();
     const spread = 60.0;
     final list = <(Spine, bool)>[];
     for (var i = 0; i < babyFlags.length; i++) {
-      final spine = Spine(segmentCount: creature.segmentCount);
+      final spine = Spine(segmentCount: creature.segmentCount, turnAgility: turnAgility);
       final x = centerX + (_rng.nextDouble() * 2 - 1) * spread;
       final y = centerY + (_rng.nextDouble() * 2 - 1) * spread;
       _positionSpineHeadAt(spine, x, y);

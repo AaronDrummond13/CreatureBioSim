@@ -57,8 +57,8 @@ class BotController {
   double _strollTargetY = 0;
   double _strollAngle = 0;
 
-  static const int _minWanderDuration = 400;
-  static const int _maxWanderDuration = 960;
+  static const int _minWanderDuration = 100;
+  static const int _maxWanderDuration = 240;
   static const double _wanderTargetDist = 9999.0;
   static const double _slalomAmplitudeMin = 2.0;
   static const double _slalomAmplitudeMax = 20.0;
@@ -68,8 +68,8 @@ class BotController {
   static const int _maxSpinDuration = 60;
   static const int _minStandDuration = 40;
   static const int _maxStandDuration = 120;
-  static const int _minStrollDuration = 240;
-  static const int _maxStrollDuration = 560;
+  static const int _minStrollDuration = 60;
+  static const int _maxStrollDuration = 140;
   static const double _spinTargetDist = 70.0;
   static const double _strollDriftSpeed = 0.35;
   static const double _strollAngleNudge = 0.08;
@@ -251,14 +251,10 @@ class BotController {
         intendedTargetY: useTargetY,
       );
     } else {
-      final step = useSpeed / len;
-      final nx = head.x + dx * step;
-      final ny = head.y + dy * step;
       spine.resolve(
-        nx,
-        ny,
-        intendedTargetX: useTargetX,
-        intendedTargetY: useTargetY,
+        useTargetX,
+        useTargetY,
+        speed: useSpeed,
       );
     }
   }
