@@ -1,6 +1,7 @@
 import 'package:creature_bio_sim/controller/creature_store.dart';
 import 'package:creature_bio_sim/controller/food_store.dart';
 import 'package:creature_bio_sim/creature.dart' show TrophicType;
+import 'package:creature_bio_sim/render/creature_painter.dart' show CreaturePainter;
 import 'package:creature_bio_sim/world/food.dart' show CellType;
 
 /// Bot consumption rules: bots eat food (by trophic type), non-herbivore bots eat
@@ -15,9 +16,10 @@ void runBotConsumption(
   for (final e in creatureStore.entities) {
     if (e.isBaby || e.spine.positions.isEmpty) continue;
     final head = e.spine.positions.last;
-    final headSize = e.creature.segmentWidths.isNotEmpty
+    final rawHeadSize = e.creature.segmentWidths.isNotEmpty
         ? e.creature.segmentWidths.last
         : foodRadius;
+    final headSize = e.isEpic ? rawHeadSize * CreaturePainter.kEpicRenderScale : rawHeadSize;
     final headCollision = headSize * headMouthSizeFrac;
     final consumeRadius = foodRadius + headCollision;
     final allowedFood =
@@ -34,6 +36,8 @@ void runBotConsumption(
       consumeRadius,
       timeSeconds,
       allowedFood,
+      false,
+      e.isEpic,
     );
   }
   final babiesToRemove = <StoredCreature>[];

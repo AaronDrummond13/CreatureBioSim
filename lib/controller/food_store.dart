@@ -34,20 +34,24 @@ class FoodStore {
     double? timeSeconds,
     Set<CellType>? allowedCellTypes,
     bool consumedByPlayer = false,
+    bool canEatGiant = false,
   ]) {
     final r = radius ?? radiusWorld;
     final r2 = r * r;
     var count = 0;
     for (var i = _items.length - 1; i >= 0; i--) {
       final item = _items[i];
-      if (item.isGiant) continue;
+      if (item.isGiant && !canEatGiant) continue;
       if (allowedCellTypes != null && !allowedCellTypes.contains(item.cellType)) continue;
       final dx = item.x - headX;
       final dy = item.y - headY;
-      if (dx * dx + dy * dy <= r2) {
+      final d2 = dx * dx + dy * dy;
+      final hitR = item.isGiant ? (item.radiusWorld ?? radiusWorld) + r : r;
+      if (d2 <= hitR * hitR) {
         if (timeSeconds != null) {
           final n = _random.nextInt(3) + 1;
           final bubbleSizes = List<int>.generate(n, (_) => _random.nextInt(3));
+          final remnantScale = item.isGiant ? (item.radiusWorld ?? radiusWorld) / radiusWorld : 1.0;
           _consumedRemnants.add(
             ConsumedRemnant(
               x: item.x,
@@ -60,6 +64,7 @@ class FoodStore {
               headY: headY,
               bubbleSizes: bubbleSizes,
               consumedByPlayer: consumedByPlayer,
+              scale: remnantScale,
             ),
           );
         }
