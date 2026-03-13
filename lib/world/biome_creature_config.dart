@@ -5,7 +5,7 @@ class BiomeCreatureConfig {
   const BiomeCreatureConfig({
     this.groupsPerChunk = 0.08,
     this.singlesPerChunk = 0.02,
-    this.epicsPerChunk = 0.007,
+    this.epicsPerChunk = 0.01,
   });
   final double groupsPerChunk;
   final double singlesPerChunk;

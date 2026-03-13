@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 
 import 'package:creature_bio_sim/world/consumed_remnant.dart';
 import 'package:creature_bio_sim/world/food.dart' show CellType, FoodItem;
-import 'package:creature_bio_sim/render/render_utils.dart' show drawBubble, drawBubbleShape;
+import 'package:creature_bio_sim/render/render_utils.dart'
+    show drawBubble, drawBubbleShape;
 import 'package:creature_bio_sim/render/view.dart';
 
 /// Paints plant cells (green hollow hexagon) and animal cells (red hollow circle).
@@ -91,7 +92,6 @@ class FoodPainter extends CustomPainter {
       ..color = Colors.white.withValues(alpha: bubbleSecondaryOpacity)
       ..style = PaintingStyle.fill;
 
-    const rotationSpeed = 0.12;
     for (final food in items) {
       final rWorld = food.radiusWorld ?? foodRadiusWorld;
       final rScreen = rWorld * z;
@@ -101,9 +101,7 @@ class FoodPainter extends CustomPainter {
       if (food.cellType == CellType.plant || food.cellType == CellType.animal) {
         canvas.save();
         canvas.translate(cx, cy);
-        canvas.rotate(
-          timeSeconds * rotationSpeed * food.rotationSign + food.rotationPhase,
-        );
+        canvas.rotate(timeSeconds * food.rotationSpeed + food.rotationPhase);
         canvas.translate(-cx, -cy);
       }
       if (food.cellType == CellType.bubble) {
@@ -131,7 +129,13 @@ class FoodPainter extends CustomPainter {
           strokePaint.strokeWidth = (baseStroke * scale).clamp(2.0, 6.0);
           innerStrokePaint.strokeWidth = strokePaint.strokeWidth;
         }
-        canvas.saveLayer(Rect.fromCircle(center: center, radius: rScreen + strokePaint.strokeWidth), Paint());
+        canvas.saveLayer(
+          Rect.fromCircle(
+            center: center,
+            radius: rScreen + strokePaint.strokeWidth,
+          ),
+          Paint(),
+        );
         canvas.drawCircle(center, rScreen, animalFillPaint);
         canvas.drawCircle(center, rInner, Paint()..blendMode = BlendMode.clear);
         canvas.drawCircle(center, rInner, animalInnerFillPaint);
@@ -218,13 +222,32 @@ class FoodPainter extends CustomPainter {
       final (dirAx, dirAy) = _remnantDir(r.x - r.headX, r.y - r.headY);
       final (driftAway, spreadWorld, t) = _remnantBurstParams(age, scale);
       _drawRemnantPuffs(
-        canvas, r, dirAx, dirAy, driftAway, spreadWorld, t,
-        sx, sy, z, scale,
+        canvas,
+        r,
+        dirAx,
+        dirAy,
+        driftAway,
+        spreadWorld,
+        t,
+        sx,
+        sy,
+        z,
+        scale,
       );
       if (age < _remnantLineDuration) {
         _drawRemnantLines(
-          canvas, r, dirAx, dirAy, driftAway, spreadWorld, t, age,
-          sx, sy, z, scale,
+          canvas,
+          r,
+          dirAx,
+          dirAy,
+          driftAway,
+          spreadWorld,
+          t,
+          age,
+          sx,
+          sy,
+          z,
+          scale,
         );
       }
     }
@@ -310,13 +333,10 @@ class FoodPainter extends CustomPainter {
       final dist = spreadWorld * (0.35 + 0.65 * ((i * 0.73) % 1.0));
       final puffWx = r.x + cos(angle) * dist + dirAx * driftAway;
       final puffWy = r.y + sin(angle) * dist + dirAy * driftAway;
-      final rPuff =
-          puffRadiusBase * (0.7 + 0.4 * ((i * 0.5) % 1.0)) * growFrac;
+      final rPuff = puffRadiusBase * (0.7 + 0.4 * ((i * 0.5) % 1.0)) * growFrac;
       final useLighter = i % 2 == 1;
       final opacity = (useLighter ? 0.32 : 0.5) * alphaFade;
-      _drawRemnantPuff(
-        canvas, sx(puffWx), sy(puffWy), rPuff, color, opacity,
-      );
+      _drawRemnantPuff(canvas, sx(puffWx), sy(puffWy), rPuff, color, opacity);
     }
   }
 
@@ -360,20 +380,14 @@ class FoodPainter extends CustomPainter {
       final start = Offset(sx(startWx), sy(startWy));
       final end = Offset(sx(endWx), sy(endWy));
       if (r.cellType == CellType.animal) {
-        final mid = Offset(
-          (start.dx + end.dx) / 2,
-          (start.dy + end.dy) / 2,
-        );
+        final mid = Offset((start.dx + end.dx) / 2, (start.dy + end.dy) / 2);
         final segDx = end.dx - start.dx;
         final segDy = end.dy - start.dy;
         final len = sqrt(segDx * segDx + segDy * segDy);
         final bulge = len > 1e-6 ? len * 0.28 : 0.0;
         final perpX = -segDy / len;
         final perpY = segDx / len;
-        final control = Offset(
-          mid.dx + perpX * bulge,
-          mid.dy + perpY * bulge,
-        );
+        final control = Offset(mid.dx + perpX * bulge, mid.dy + perpY * bulge);
         final path = Path()
           ..moveTo(start.dx, start.dy)
           ..quadraticBezierTo(control.dx, control.dy, end.dx, end.dy);
@@ -427,8 +441,10 @@ class FoodPainter extends CustomPainter {
   ) {
     final dotsAlpha =
         (1 - age / _remnantDotsDuration).clamp(0.0, 1.0) * 0.85 * 0.5;
-    final dotRadiusScreen =
-        (foodRadiusWorld * z * 0.18 * scale).clamp(2.0, 8.0);
+    final dotRadiusScreen = (foodRadiusWorld * z * 0.18 * scale).clamp(
+      2.0,
+      8.0,
+    );
     const maxSpreadWorld = 100.0;
     final t = (age / _remnantDotsDuration).clamp(0.0, 1.0);
     final nDots = 3 + ((r.x * 0.1 + r.y * 0.13 + r.consumedAt).floor() % 3);
@@ -469,8 +485,7 @@ class FoodPainter extends CustomPainter {
     final tb = (age / _remnantBubbleDuration).clamp(0.0, 1.0);
     const bubbleMaxDriftWorld = 90.0;
     final drift = bubbleMaxDriftWorld * (2 * tb - tb * tb) * scale;
-    final bubbleAlpha =
-        (1 - age / _remnantBubbleDuration).clamp(0.0, 1.0);
+    final bubbleAlpha = (1 - age / _remnantBubbleDuration).clamp(0.0, 1.0);
     const spreadRad = 0.55;
     const bubbleSizeSmall = 0.7;
     const bubbleSizeMedium = 1.0;
@@ -479,8 +494,10 @@ class FoodPainter extends CustomPainter {
     final bubbleSizes = r.bubbleSizes;
     if (bubbleSizes.isEmpty) return;
     final nBubbles = bubbleSizes.length.clamp(1, 3);
-    final baseBubbleR =
-        (foodRadiusWorld * z * 0.36 * scale).clamp(3.0, 14.0 * scale);
+    final baseBubbleR = (foodRadiusWorld * z * 0.36 * scale).clamp(
+      3.0,
+      14.0 * scale,
+    );
     for (var b = 0; b < nBubbles; b++) {
       final angle = nBubbles == 1
           ? 0.0
@@ -541,7 +558,12 @@ class FoodPainter extends CustomPainter {
   }
 
   /// Closed path: smooth curved hexagon (rounded edges via quadratic bezier). [rotation] rotates the hex in radians.
-  Path _smoothHexagonPath(double cx, double cy, double radius, [double rotation = 0]) {
+  Path _smoothHexagonPath(
+    double cx,
+    double cy,
+    double radius, [
+    double rotation = 0,
+  ]) {
     const int sides = 6;
     final path = Path();
     final points = <Offset>[];

@@ -10,7 +10,7 @@ import 'package:creature_bio_sim/world/world.dart';
 /// Food items linked to chunks. Generation/clear is driven by [ChunkManager]. Spawn counts per chunk come from [biomeFoodConfig] for the chunk's biome.
 class FoodStore {
   FoodStore({this.biomeMap, this.radiusWorld = 20.0, Random? random})
-      : _random = random ?? Random();
+    : _random = random ?? Random();
 
   /// When set, chunk biome is used to look up [biomeFoodConfig]. When null, uses [Biome.clear] config.
   final BiomeMap? biomeMap;
@@ -42,7 +42,8 @@ class FoodStore {
     for (var i = _items.length - 1; i >= 0; i--) {
       final item = _items[i];
       if (item.isGiant && !canEatGiant) continue;
-      if (allowedCellTypes != null && !allowedCellTypes.contains(item.cellType)) continue;
+      if (allowedCellTypes != null && !allowedCellTypes.contains(item.cellType))
+        continue;
       final dx = item.x - headX;
       final dy = item.y - headY;
       final d2 = dx * dx + dy * dy;
@@ -51,7 +52,9 @@ class FoodStore {
         if (timeSeconds != null) {
           final n = _random.nextInt(3) + 1;
           final bubbleSizes = List<int>.generate(n, (_) => _random.nextInt(3));
-          final remnantScale = item.isGiant ? (item.radiusWorld ?? radiusWorld) / radiusWorld : 1.0;
+          final remnantScale = item.isGiant
+              ? (item.radiusWorld ?? radiusWorld) / radiusWorld
+              : 1.0;
           _consumedRemnants.add(
             ConsumedRemnant(
               x: item.x,
@@ -72,13 +75,18 @@ class FoodStore {
         count++;
       }
     }
-    // Match food_painter rotation so collision matches visual position of attached cells.
-    const rotationSpeed = 0.12;
+
     for (final item in _items) {
-      if (!item.isGiant || item.attachedOffsets == null || item.attachedOffsets!.isEmpty) continue;
-      if (allowedCellTypes != null && !allowedCellTypes.contains(CellType.plant)) continue;
+      if (!item.isGiant ||
+          item.attachedOffsets == null ||
+          item.attachedOffsets!.isEmpty)
+        continue;
+      if (allowedCellTypes != null &&
+          !allowedCellTypes.contains(CellType.plant))
+        continue;
       final list = item.attachedOffsets!;
-      final angle = (timeSeconds ?? 0) * rotationSpeed * item.rotationSign + item.rotationPhase;
+      final angle =
+          (timeSeconds ?? 0) * item.rotationSpeed + item.rotationPhase;
       final c = cos(angle);
       final s = sin(angle);
       for (var j = list.length - 1; j >= 0; j--) {
@@ -90,7 +98,10 @@ class FoodStore {
         if (ddx * ddx + ddy * ddy <= r2) {
           if (timeSeconds != null) {
             final n = _random.nextInt(3) + 1;
-            final bubbleSizes = List<int>.generate(n, (_) => _random.nextInt(3));
+            final bubbleSizes = List<int>.generate(
+              n,
+              (_) => _random.nextInt(3),
+            );
             _consumedRemnants.add(
               ConsumedRemnant(
                 x: ax,
@@ -145,7 +156,13 @@ class FoodStore {
   }
 
   /// Only checks items in the same chunk (ci, cj). [newItemRadius] = radius of item being placed (world units).
-  bool _tooCloseInChunk(int ci, int cj, double x, double y, double newItemRadius) {
+  bool _tooCloseInChunk(
+    int ci,
+    int cj,
+    double x,
+    double y,
+    double newItemRadius,
+  ) {
     for (final item in _items) {
       if (item.chunkCx != ci || item.chunkCy != cj) continue;
       final itemRadius = item.radiusWorld ?? radiusWorld;
@@ -238,7 +255,8 @@ class FoodStore {
             nucleusOffsetX: nux,
             nucleusOffsetY: nuy,
             cellType: types[added],
-            rotationSign: _random.nextBool() ? 1.0 : -1.0,
+            rotationSpeed:
+                (_random.nextBool() ? 0.2 : -0.2) * (1 + _random.nextDouble()),
             rotationPhase: _random.nextDouble() * 2 * pi,
           ),
         );
@@ -254,16 +272,22 @@ class FoodStore {
         final theta = _random.nextDouble() * 2 * pi;
         final x = centerX + dist * cos(theta);
         final y = centerY + dist * sin(theta);
-        if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <= r2 &&
+        if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <=
+                r2 &&
             !_tooCloseInChunk(i, j, x, y, giantPlantRadiusWorld)) {
-          final nux = (_random.nextDouble() * 2 - 1) * giantPlantRadiusWorld * 0.08;
-          final nuy = (_random.nextDouble() * 2 - 1) * giantPlantRadiusWorld * 0.08;
+          final nux =
+              (_random.nextDouble() * 2 - 1) * giantPlantRadiusWorld * 0.08;
+          final nuy =
+              (_random.nextDouble() * 2 - 1) * giantPlantRadiusWorld * 0.08;
           const double outFrac = 1.08;
           final count = 2 + _random.nextInt(5);
           final offsets = <(double, double)>[];
           for (var vi = 0; vi < count; vi++) {
             final angle = (vi / count) * 2 * pi - pi / 2;
-            offsets.add((giantPlantRadiusWorld * outFrac * cos(angle), giantPlantRadiusWorld * outFrac * sin(angle)));
+            offsets.add((
+              giantPlantRadiusWorld * outFrac * cos(angle),
+              giantPlantRadiusWorld * outFrac * sin(angle),
+            ));
           }
           _items.add(
             FoodItem(
@@ -277,7 +301,9 @@ class FoodStore {
               isGiant: true,
               radiusWorld: giantPlantRadiusWorld,
               attachedOffsets: offsets,
-              rotationSign: _random.nextBool() ? 1.0 : -1.0,
+              rotationSpeed:
+                  (_random.nextBool() ? 0.2 : -0.2) *
+                  (1 + _random.nextDouble()),
               rotationPhase: _random.nextDouble() * 2 * pi,
             ),
           );
@@ -294,10 +320,13 @@ class FoodStore {
         final theta = _random.nextDouble() * 2 * pi;
         final x = centerX + dist * cos(theta);
         final y = centerY + dist * sin(theta);
-        if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <= r2 &&
+        if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <=
+                r2 &&
             !_tooCloseInChunk(i, j, x, y, giantAnimalRadiusWorld)) {
-          final nux = (_random.nextDouble() * 2 - 1) * giantAnimalRadiusWorld * 0.08;
-          final nuy = (_random.nextDouble() * 2 - 1) * giantAnimalRadiusWorld * 0.08;
+          final nux =
+              (_random.nextDouble() * 2 - 1) * giantAnimalRadiusWorld * 0.08;
+          final nuy =
+              (_random.nextDouble() * 2 - 1) * giantAnimalRadiusWorld * 0.08;
           _items.add(
             FoodItem(
               x,
@@ -309,7 +338,9 @@ class FoodStore {
               cellType: CellType.animal,
               isGiant: true,
               radiusWorld: giantAnimalRadiusWorld,
-              rotationSign: _random.nextBool() ? 1.0 : -1.0,
+              rotationSpeed:
+                  (_random.nextBool() ? 0.2 : -0.2) *
+                  (1 + _random.nextDouble()),
               rotationPhase: _random.nextDouble() * 2 * pi,
             ),
           );
@@ -326,7 +357,8 @@ class FoodStore {
         final theta = _random.nextDouble() * 2 * pi;
         final x = centerX + dist * cos(theta);
         final y = centerY + dist * sin(theta);
-        if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <= r2 &&
+        if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <=
+                r2 &&
             !_tooCloseInChunk(i, j, x, y, giantBubbleRadiusWorld)) {
           _items.add(
             FoodItem(
@@ -337,7 +369,7 @@ class FoodStore {
               cellType: CellType.bubble,
               isGiant: true,
               radiusWorld: giantBubbleRadiusWorld,
-              rotationSign: _random.nextBool() ? 1.0 : -1.0,
+              rotationSpeed: 0,
               rotationPhase: _random.nextDouble() * 2 * pi,
             ),
           );
@@ -366,10 +398,8 @@ class FoodStore {
     if (dt <= 0 || dt > 0.1) dt = 1 / 60.0;
     final t = timeSeconds;
     final newItems = _items.map((item) {
-      var dx =
-          driftSpeed * (sin(t * 0.3) + 0.4 * sin(t + item.x * 0.015)) * dt;
-      var dy =
-          driftSpeed * (cos(t * 0.4) + 0.4 * cos(t + item.y * 0.015)) * dt;
+      var dx = driftSpeed * (sin(t * 0.3) + 0.4 * sin(t + item.x * 0.015)) * dt;
+      var dy = driftSpeed * (cos(t * 0.4) + 0.4 * cos(t + item.y * 0.015)) * dt;
       if (item.isGiant) {
         dx *= 0.35;
         dy *= 0.35;
@@ -387,7 +417,7 @@ class FoodStore {
         isGiant: item.isGiant,
         radiusWorld: item.radiusWorld,
         attachedOffsets: item.attachedOffsets,
-        rotationSign: item.rotationSign,
+        rotationSpeed: item.rotationSpeed,
         rotationPhase: item.rotationPhase,
       );
     }).toList();

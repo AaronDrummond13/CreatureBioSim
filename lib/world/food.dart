@@ -17,7 +17,7 @@ class FoodItem {
     this.isGiant = false,
     this.radiusWorld,
     this.attachedOffsets,
-    this.rotationSign = 1.0,
+    this.rotationSpeed = 1.0,
     this.rotationPhase = 0.0,
   });
 
@@ -30,8 +30,10 @@ class FoodItem {
   final CellType cellType;
   final bool isGiant;
   final double? radiusWorld;
+
   /// 1.0 = clockwise, -1.0 = anticlockwise (when multiplied by time for rotation).
-  final double rotationSign;
+  final double rotationSpeed;
+
   /// Phase offset in radians so items don't all start at the same angle.
   final double rotationPhase;
 
