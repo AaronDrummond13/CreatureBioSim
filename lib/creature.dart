@@ -196,7 +196,7 @@ class MouthParams {
 class Creature {
   static const double minVertexWidth = 12.0;
   static const double maxVertexWidth = 36.0;
-  static const int maxSegmentCount = 16;
+  static const int maxSegmentCount = 32;
 
   /// Fill colour as 0xAARRGGBB. Renderer uses this when drawing.
   final int color;

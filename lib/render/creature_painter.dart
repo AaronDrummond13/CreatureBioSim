@@ -1487,7 +1487,7 @@ class CreaturePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = (2.0 * _paintZ).clamp(1.0, 2.0);
     const tension = 0.2;
-    final maxAngle = spine.maxJointAngleRad;
+    final maxAngle = Spine.maxJointAngleRad;
     for (final fin in fins) {
       final run = fin.$1;
       final fullH = (fin.$2 ?? dorsalFinHeight) * _bodyScale;

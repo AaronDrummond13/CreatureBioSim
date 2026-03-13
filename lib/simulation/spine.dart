@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:creature_bio_sim/creature.dart' show Creature;
 import 'package:creature_bio_sim/simulation/angle_util.dart';
 import 'package:creature_bio_sim/simulation/spine_node.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
@@ -14,16 +15,13 @@ class Spine {
   static const double defaultTurnAgility = 1;
   static const double minSegmentLength = 5.0;
   static const double maxSegmentLength = 30.0;
-  static const int maxSegmentCount = 15;
-  static const double minMaxJointAngleRad = 0.2;
-  static const double maxMaxJointAngleRad = 0.6;
+  static const int maxSegmentCount = Creature.maxSegmentCount;
   static const double _kJointStiffness = 8.0;
   static const double _kCenteringForce = 0.04;
-  static const double _kMaxAngleChangePerTick = 0.07;
 
   final int segmentCount;
   final double segmentLength;
-  final double maxJointAngleRad;
+  static const double maxJointAngleRad = 0.4;
 
   /// 0.0–1.0: fraction of maxJointAngleRad the head can turn per tick.
   /// 1.0 = full agility (player default), lower = sluggish turning (epics, mammoths).
@@ -37,14 +35,9 @@ class Spine {
   Spine({
     int segmentCount = 1,
     double segmentLength = 12.0,
-    double maxJointAngleRad = 0.4,
     double turnAgility = defaultTurnAgility,
   }) : segmentCount = segmentCount.clamp(1, maxSegmentCount),
        segmentLength = segmentLength.clamp(minSegmentLength, maxSegmentLength),
-       maxJointAngleRad = maxJointAngleRad.clamp(
-         minMaxJointAngleRad,
-         maxMaxJointAngleRad,
-       ),
        turnAgility = turnAgility.clamp(0.05, 1.0) {
     for (var i = 0; i <= this.segmentCount; i++) {
       nodes.add(SpineNode(i * segmentLength, 0));
@@ -159,17 +152,13 @@ class Spine {
       );
     }
 
-    // Rate-limit body segments (not head): cap per-tick angle change to
-    // prevent explosive unwinding. Head (n-1) is exempt — turnAgility governs it.
+    final hardLimit = maxJointAngleRad * 3 / 4;
     for (var i = 0; i < n - 1; i++) {
-      final delta = relativeAngleDiff(_prevAngles[i], _segmentAngles[i]);
-      if (delta.abs() > _kMaxAngleChangePerTick) {
-        _segmentAngles[i] = angleLerp(
-          _prevAngles[i],
-          _segmentAngles[i],
-          _kMaxAngleChangePerTick / delta.abs(),
-        );
-      }
+      _segmentAngles[i] = constrainAngle(
+        _segmentAngles[i],
+        _segmentAngles[i + 1],
+        hardLimit,
+      );
     }
 
     // Rebuild positions from final angles (head stays at target).
