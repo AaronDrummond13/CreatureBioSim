@@ -11,7 +11,7 @@ class Spine {
   static const double botPenalty = 0.9;
   static const double epicPenalty = 0.7;
   static const double mammothPenalty = 0.5;
-  static const double defaultTurnAgility = .7;
+  static const double defaultTurnAgility = 1;
   static const double minSegmentLength = 5.0;
   static const double maxSegmentLength = 30.0;
   static const int maxSegmentCount = 15;
@@ -19,7 +19,7 @@ class Spine {
   static const double maxMaxJointAngleRad = 0.6;
   static const double _kJointStiffness = 8.0;
   static const double _kCenteringForce = 0.04;
-  static const double _kMaxAngleChangePerTick = 0.3;
+  static const double _kMaxAngleChangePerTick = 0.07;
 
   final int segmentCount;
   final double segmentLength;
@@ -132,7 +132,10 @@ class Spine {
           ? _prevAngles[i - 1]
           : (n > 1 ? _prevAngles[1] : curAngle);
       _segmentAngles[i] = softConstrainAngle(
-        curAngle, anchor, maxJointAngleRad, _kJointStiffness,
+        curAngle,
+        anchor,
+        maxJointAngleRad,
+        _kJointStiffness,
       );
       nodes[i].position.x =
           next.position.x - math.cos(_segmentAngles[i]) * segmentLength;
@@ -144,20 +147,26 @@ class Spine {
     // then gently center toward it to unravel hooks.
     for (var i = 0; i < n - 1; i++) {
       _segmentAngles[i] = softConstrainAngle(
-        _segmentAngles[i], _segmentAngles[i + 1],
-        maxJointAngleRad, _kJointStiffness,
+        _segmentAngles[i],
+        _segmentAngles[i + 1],
+        maxJointAngleRad,
+        _kJointStiffness,
       );
       _segmentAngles[i] = angleLerp(
-        _segmentAngles[i], _segmentAngles[i + 1], _kCenteringForce,
+        _segmentAngles[i],
+        _segmentAngles[i + 1],
+        _kCenteringForce,
       );
     }
 
-    // Rate-limit: cap per-tick angle change to prevent explosive unwinding.
-    for (var i = 0; i < n; i++) {
+    // Rate-limit body segments (not head): cap per-tick angle change to
+    // prevent explosive unwinding. Head (n-1) is exempt — turnAgility governs it.
+    for (var i = 0; i < n - 1; i++) {
       final delta = relativeAngleDiff(_prevAngles[i], _segmentAngles[i]);
       if (delta.abs() > _kMaxAngleChangePerTick) {
         _segmentAngles[i] = angleLerp(
-          _prevAngles[i], _segmentAngles[i],
+          _prevAngles[i],
+          _segmentAngles[i],
           _kMaxAngleChangePerTick / delta.abs(),
         );
       }
