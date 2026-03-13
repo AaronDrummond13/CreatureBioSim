@@ -13,8 +13,6 @@ class Spine {
   static const double epicPenalty = 0.7;
   static const double mammothPenalty = 0.5;
   static const double defaultTurnAgility = 1;
-  static const double minSegmentLength = 5.0;
-  static const double maxSegmentLength = 30.0;
   static const int maxSegmentCount = Creature.maxSegmentCount;
   static const double _kJointStiffness = 8.0;
   static const double _kCenteringForce = 0.04;
@@ -34,10 +32,9 @@ class Spine {
 
   Spine({
     int segmentCount = 1,
-    double segmentLength = 12.0,
+    this.segmentLength = 14.0,
     double turnAgility = defaultTurnAgility,
   }) : segmentCount = segmentCount.clamp(1, maxSegmentCount),
-       segmentLength = segmentLength.clamp(minSegmentLength, maxSegmentLength),
        turnAgility = turnAgility.clamp(0.05, 1.0) {
     for (var i = 0; i <= this.segmentCount; i++) {
       nodes.add(SpineNode(i * segmentLength, 0));

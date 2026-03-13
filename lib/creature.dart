@@ -137,10 +137,10 @@ class LateralFinConfig {
 class TailConfig {
   static const double rootWidthMin = 1.0;
   static const double rootWidthMax = 25.0;
-  static const double maxWidthMin = 10.0;
-  static const double maxWidthMax = 40.0;
-  static const double lengthMin = 50.0;
-  static const double lengthMax = 150.0;
+  static const double maxWidthMin = 4.0;
+  static const double maxWidthMax = 64.0;
+  static const double lengthMin = 42.0;
+  static const double lengthMax = 100.0;
 
   TailConfig(this.type, {double? rootWidth, double? maxWidth, double? length})
     : rootWidth = rootWidth?.clamp(rootWidthMin, rootWidthMax),
@@ -196,7 +196,7 @@ class MouthParams {
 class Creature {
   static const double minVertexWidth = 12.0;
   static const double maxVertexWidth = 36.0;
-  static const int maxSegmentCount = 24;
+  static const int maxSegmentCount = 16;
 
   /// Fill colour as 0xAARRGGBB. Renderer uses this when drawing.
   final int color;
