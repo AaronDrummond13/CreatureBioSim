@@ -2161,7 +2161,7 @@ class _EditorPreviewState extends State<EditorPreview>
                               ? Color(widget.creature.finColor!)
                               : null,
                           pupilFraction: pupilFraction,
-                          radiusWorld: radiusWorld,
+                          radiusWorld: radiusWorld ?? EyeConfig.radiusDefault,
                         ),
                         size: Size(w, h),
                       );

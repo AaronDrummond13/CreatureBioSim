@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:creature_bio_sim/creature.dart';
+import 'package:creature_bio_sim/render/eye_painter.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
@@ -19,7 +20,7 @@ class EyePreviewPainter extends CustomPainter {
     required this.creatureColor,
     this.creatureFinColor,
     this.pupilFraction = EyeConfig.pupilFractionDefault,
-    this.radiusWorld,
+    this.radiusWorld = EyeConfig.radiusDefault,
   });
 
   final int segment;
@@ -35,9 +36,7 @@ class EyePreviewPainter extends CustomPainter {
   final Color creatureColor;
   final Color? creatureFinColor;
   final double pupilFraction;
-
-  /// When null, uses default 6.0 (add preview); when set, uses for move preview.
-  final double? radiusWorld;
+  final double radiusWorld;
 
   static const double _irisFrac = 0.90;
   static const double _primaryHighlightOffset = 0.2;
@@ -55,7 +54,7 @@ class EyePreviewPainter extends CustomPainter {
     final cy = (positions[seg].y + positions[seg + 1].y) / 2;
     final a = segmentAngles[seg];
     final halfW = widthAtVertex(seg);
-    final r = radiusWorld ?? 6.0;
+    final r = radiusWorld;
     final rScreen = r * zoom;
     final strokeW = (rScreen * 0.12).clamp(1.2, 3.0);
     final isSingle = offsetFromCenter < EyeConfig.singleEyeThreshold;
@@ -75,65 +74,19 @@ class EyePreviewPainter extends CustomPainter {
       EyeConfig.pupilFractionMax,
     );
     for (final center in centers) {
-      final baseFill = Paint()
-        ..color = creatureColor
-        ..style = PaintingStyle.fill;
-      final baseStroke = Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeW * 3 / 4;
-      canvas.drawCircle(center, rScreen, baseFill);
-      canvas.drawCircle(center, rScreen, baseStroke);
-      final irisR = rScreen * _irisFrac;
-      final irisRect = Rect.fromCircle(center: center, radius: irisR);
-      final irisFill = Paint()
-        ..shader = RadialGradient(
-          center: Alignment.center,
-          radius: 0.5,
-          stops: [pupilFrac, 1 - ((1 - pupilFrac) / 2), 1.0],
-          colors: [
-            Color.lerp(creatureColor, Colors.white, 0.3)!,
-            Color.lerp(finColor, creatureColor, 0.5)!,
-            Color.lerp(finColor, Colors.black, 0.8)!,
-          ],
-        ).createShader(irisRect)
-        ..style = PaintingStyle.fill;
-      final irisStroke = Paint()
-        ..color = Color.lerp(finColor, Colors.black, 0.6)!
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeW / 2;
-      canvas.drawCircle(center, irisR, irisFill);
-      canvas.drawCircle(center, irisR, irisStroke);
-      final pupilFill = Paint()
-        ..color = Colors.black
-        ..style = PaintingStyle.fill;
-      final pupilStroke = Paint()
-        ..color = Color.lerp(creatureColor, Colors.white, 0.2)!
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeW;
-      canvas.drawCircle(center, rScreen * pupilFrac, pupilFill);
-      canvas.drawCircle(center, rScreen * pupilFrac, pupilStroke);
-      final primaryHighlight = Paint()
-        ..color = Colors.white.withValues(alpha: 0.4)
-        ..style = PaintingStyle.fill;
-      final secondaryHighlight = Paint()
-        ..color = Colors.white.withValues(alpha: 0.2)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(
-        Offset(
-          center.dx - rScreen * _primaryHighlightOffset,
-          center.dy - rScreen * _primaryHighlightOffset,
-        ),
-        rScreen * _primaryHighlightRadiusFrac,
-        primaryHighlight,
-      );
-      canvas.drawCircle(
-        Offset(
-          center.dx + rScreen * _secondaryHighlightOffset,
-          center.dy + rScreen * _secondaryHighlightOffset,
-        ),
-        rScreen * _secondaryHighlightRadiusFrac,
-        secondaryHighlight,
+      drawEye(
+        canvas: canvas,
+        center: center,
+        radius: rScreen,
+        strokeW: strokeW,
+        irisFrac: _irisFrac,
+        pupilFrac: pupilFrac,
+        creatureColor: creatureColor,
+        finColor: finColor,
+        primaryHighlightOffset: _primaryHighlightOffset,
+        primaryHighlightRadiusFrac: _primaryHighlightRadiusFrac,
+        secondaryHighlightOffset: _secondaryHighlightOffset,
+        secondaryHighlightRadiusFrac: _secondaryHighlightRadiusFrac,
       );
     }
   }
