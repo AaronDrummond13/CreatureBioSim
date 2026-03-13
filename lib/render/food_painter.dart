@@ -124,21 +124,20 @@ class FoodPainter extends CustomPainter {
         canvas.drawCircle(Offset(cx, cy), rScreen, strokePaint);
         if (food.isGiant) strokePaint.strokeWidth = baseStroke;
       } else if (food.cellType == CellType.animal) {
-        final outer = Path()
-          ..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: rScreen));
-        final inner = Path()
-          ..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: rInner));
-        final ring = Path.combine(PathOperation.difference, outer, inner);
+        final center = Offset(cx, cy);
         final baseStroke = (2.0 * z).clamp(1.0, 2.0);
         if (food.isGiant) {
           final scale = (rScreen / (foodRadiusWorld * z)).clamp(1.0, 3.0);
           strokePaint.strokeWidth = (baseStroke * scale).clamp(2.0, 6.0);
           innerStrokePaint.strokeWidth = strokePaint.strokeWidth;
         }
-        canvas.drawPath(inner, animalInnerFillPaint);
-        canvas.drawPath(ring, animalFillPaint);
-        canvas.drawPath(outer, strokePaint);
-        canvas.drawPath(inner, innerStrokePaint);
+        canvas.saveLayer(Rect.fromCircle(center: center, radius: rScreen + strokePaint.strokeWidth), Paint());
+        canvas.drawCircle(center, rScreen, animalFillPaint);
+        canvas.drawCircle(center, rInner, Paint()..blendMode = BlendMode.clear);
+        canvas.drawCircle(center, rInner, animalInnerFillPaint);
+        canvas.drawCircle(center, rScreen, strokePaint);
+        canvas.drawCircle(center, rInner, innerStrokePaint);
+        canvas.restore();
         if (food.isGiant) {
           strokePaint.strokeWidth = baseStroke;
           innerStrokePaint.strokeWidth = baseStroke;
