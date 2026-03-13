@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:creature_bio_sim/editor/node_painter.dart';
 import 'package:flutter/material.dart';
 
 /// Three nodes for tail sizing: root width, max width, length (when creature has tail).
@@ -33,8 +34,6 @@ class TailNodePainter extends CustomPainter {
   /// 0=root, 1=max, 2=length; null=none active.
   final int? activeNode;
 
-  static const double nodeRadius = 14.0;
-
   @override
   void paint(Canvas canvas, Size size) {
     double sx(double wx) => centerX + (wx - cameraX) * zoom;
@@ -55,17 +54,8 @@ class TailNodePainter extends CustomPainter {
       Offset(sx(maxPx), sy(maxPy)),
       Offset(sx(tipPx), sy(tipPy)),
     ];
-    for (var i = 0; i < 3; i++) {
-      final active = activeNode == i;
-      final stroke = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3;
-      final fill = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
-      canvas.drawCircle(points[i], nodeRadius, fill);
-      canvas.drawCircle(points[i], nodeRadius, stroke);
-    }
+    for (var i = 0; i < 3; i++)
+      drawNode(canvas, points[i], active: activeNode == i);
   }
 
   @override

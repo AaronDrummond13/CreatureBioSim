@@ -1,3 +1,4 @@
+import 'package:creature_bio_sim/editor/node_painter.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
@@ -50,17 +51,8 @@ class DorsalNodePainter extends CustomPainter {
     final sy2 = sy(midCy) - 24;
 
     final points = [Offset(sx0, sy0), Offset(sx1, sy1), Offset(sx2, sy2)];
-    for (var i = 0; i < points.length; i++) {
-      final active = activeNode == i;
-      final stroke = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
-      final fill = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
-      canvas.drawCircle(points[i], 14, fill);
-      canvas.drawCircle(points[i], 14, stroke);
-    }
+    for (var i = 0; i < points.length; i++)
+      drawNode(canvas, points[i], active: activeNode == i);
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:creature_bio_sim/editor/node_painter.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
@@ -39,16 +40,7 @@ class BodyNodePainter extends CustomPainter {
     final tailOutY = tail.y + dy / len * outsideOffset;
     final sx0 = centerX + (tailOutX - cameraX) * zoom;
     final sy0 = centerY + (tailOutY - cameraY) * zoom;
-    const r = 24.0;
-    final active = activeNode == 0;
-    final stroke = Paint()
-      ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    final fill = Paint()
-      ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
-    canvas.drawCircle(Offset(sx0, sy0), r, fill);
-    canvas.drawCircle(Offset(sx0, sy0), r, stroke);
+    drawNode(canvas, Offset(sx0, sy0), active: activeNode == 0, radius: 14);
   }
 
   @override

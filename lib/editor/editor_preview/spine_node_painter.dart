@@ -1,3 +1,4 @@
+import 'package:creature_bio_sim/editor/node_painter.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
@@ -21,8 +22,6 @@ class SpineNodePainter extends CustomPainter {
   final double zoom;
   final int? activeSegment;
 
-  static const double nodeRadius = 18.0;
-
   @override
   void paint(Canvas canvas, Size size) {
     if (positions.length < 2) return;
@@ -32,15 +31,7 @@ class SpineNodePainter extends CustomPainter {
       final cy = (positions[seg].y + positions[seg + 1].y) / 2;
       final sx = centerX + (cx - cameraX) * zoom;
       final sy = centerY + (cy - cameraY) * zoom;
-      final active = activeSegment == seg;
-      final stroke = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5;
-      final fill = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
-      canvas.drawCircle(Offset(sx, sy), nodeRadius, fill);
-      canvas.drawCircle(Offset(sx, sy), nodeRadius, stroke);
+      drawNode(canvas, Offset(sx, sy), active: activeSegment == seg);
     }
   }
 

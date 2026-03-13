@@ -14,6 +14,7 @@ import 'package:creature_bio_sim/editor/editor_preview/remove_tail_painter.dart'
 import 'package:creature_bio_sim/editor/editor_preview/spine_node_painter.dart';
 import 'package:creature_bio_sim/editor/editor_preview/tail_node_painter.dart';
 import 'package:creature_bio_sim/editor/editor_preview/tail_preview_painter.dart';
+import 'package:creature_bio_sim/editor/node_painter.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 import 'package:creature_bio_sim/creature.dart';
@@ -891,7 +892,7 @@ class _EditorPreviewState extends State<EditorPreview>
         int? hitSegmentWidthNode(double px, double py) {
           if (positions.length < 2 || widget.onSegmentWidthDelta == null)
             return null;
-          final r2 = SpineNodePainter.nodeRadius * SpineNodePainter.nodeRadius;
+          final r2 = nodeRadius * nodeRadius;
           final n = positions.length - 1;
           for (var seg = 0; seg < n; seg++) {
             final cx = (positions[seg].x + positions[seg + 1].x) / 2;
@@ -960,7 +961,7 @@ class _EditorPreviewState extends State<EditorPreview>
           final len = effectiveTailLen();
           double sx(double wx) => centerX + (wx - cameraX) * _zoom;
           double sy(double wy) => centerY + (wy - cameraY) * _zoom;
-          final r2 = TailNodePainter.nodeRadius * TailNodePainter.nodeRadius;
+          final r2 = nodeRadius * nodeRadius;
           final rootPx = tail.x + leftDirX * rootW,
               rootPy = tail.y + leftDirY * rootW;
           if ((px - sx(rootPx)) * (px - sx(rootPx)) +

@@ -1,3 +1,4 @@
+import 'package:creature_bio_sim/editor/node_painter.dart';
 import 'package:flutter/material.dart';
 
 class MouthNodePainter extends CustomPainter {
@@ -6,21 +7,10 @@ class MouthNodePainter extends CustomPainter {
   final List<Offset> positions;
   final int? activeNode;
 
-  static const double nodeRadius = 14.0;
-
   @override
   void paint(Canvas canvas, Size size) {
-    for (var i = 0; i < positions.length; i++) {
-      final active = activeNode == i;
-      final stroke = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5;
-      final fill = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
-      canvas.drawCircle(positions[i], nodeRadius, fill);
-      canvas.drawCircle(positions[i], nodeRadius, stroke);
-    }
+    for (var i = 0; i < positions.length; i++)
+      drawNode(canvas, positions[i], active: activeNode == i);
   }
 
   @override

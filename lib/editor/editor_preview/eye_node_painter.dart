@@ -1,3 +1,4 @@
+import 'package:creature_bio_sim/editor/node_painter.dart';
 import 'package:flutter/material.dart';
 
 /// Mirrored node overlay for eye radius handles (one or two nodes, like lateral fin).
@@ -7,23 +8,10 @@ class EyeNodePainter extends CustomPainter {
   final List<Offset> nodePositions;
   final int? activeNodeIndex;
 
-  static const double radius = 14.0;
-
   @override
   void paint(Canvas canvas, Size size) {
-    for (var i = 0; i < nodePositions.length; i++) {
-      final active = activeNodeIndex == i;
-      final pos = nodePositions[i];
-      final fill = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.2)
-        ..style = PaintingStyle.fill;
-      final stroke = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.5)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
-      canvas.drawCircle(pos, radius, fill);
-      canvas.drawCircle(pos, radius, stroke);
-    }
+    for (var i = 0; i < nodePositions.length; i++)
+      drawNode(canvas, nodePositions[i], active: activeNodeIndex == i);
   }
 
   @override
