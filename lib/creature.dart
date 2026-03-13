@@ -28,7 +28,7 @@ class EyeConfig {
   static const double offsetMax = 0.8;
   static const double radiusMin = 3.0;
   static const double radiusMax = 17.0;
-  static const double radiusDefault = 8.0;
+  static const double radiusDefault = 10.0;
   static const double pupilFractionMin = 0.2;
   static const double pupilFractionMax = 0.7;
   static const double pupilFractionDefault = 0.5;
