@@ -98,7 +98,7 @@ class FoodPainter extends CustomPainter {
       final cx = sx(food.x);
       final cy = sy(food.y);
       final rInner = rScreen * innerRadiusFrac.clamp(0.01, 0.99);
-      if (food.cellType == CellType.plant) {
+      if (food.cellType == CellType.plant || food.cellType == CellType.animal) {
         canvas.save();
         canvas.translate(cx, cy);
         canvas.rotate(
@@ -186,7 +186,7 @@ class FoodPainter extends CustomPainter {
         canvas.drawCircle(Offset(nx, ny), nr, nucleusPaint);
         canvas.drawCircle(Offset(nx, ny), nr, nucleusStrokePaint);
       }
-      if (food.cellType == CellType.plant) {
+      if (food.cellType == CellType.plant || food.cellType == CellType.animal) {
         canvas.restore();
       }
     }
