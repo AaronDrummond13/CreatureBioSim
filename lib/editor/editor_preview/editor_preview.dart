@@ -1,1030 +1,30 @@
 import 'dart:math' show atan2, cos, pi, sin, sqrt;
+import 'package:creature_bio_sim/editor/editor_preview/body_node_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/dorsal_node_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/dorsal_preview_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/eye_node_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/eye_preview_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/mouth_node_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/mouth_preview_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/pec_fin_node_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/pec_fin_segment_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/remove_dorsal_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/remove_mouth_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/remove_tail_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/spine_node_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/tail_node_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/tail_preview_painter.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/dorsal_fin_rules.dart';
 import 'package:creature_bio_sim/render/background_painter.dart';
 import 'package:creature_bio_sim/render/creature_painter.dart';
-import 'package:creature_bio_sim/render/mouth_painter.dart' show paintMouth;
-import 'package:creature_bio_sim/render/tail_painter.dart';
 import 'package:creature_bio_sim/render/view.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
 import 'package:creature_bio_sim/simulation_view_state.dart';
 import 'package:creature_bio_sim/editor/editor_shared.dart';
 import 'package:creature_bio_sim/editor/editor_style.dart';
-
-/// Draws one lateral fin on the creature at the given segment (for add/move preview). [highlight] = draw in highlight color; [highlightForRemove] = red (will be removed).
-class _LateralFinAtSegmentPainter extends CustomPainter {
-  _LateralFinAtSegmentPainter({
-    required this.segment,
-    required this.length,
-    required this.width,
-    this.angleDegrees = 45.0,
-    this.wingType = LateralWingType.ellipse,
-    required this.positions,
-    required this.segmentAngles,
-    required this.centerX,
-    required this.centerY,
-    required this.cameraX,
-    required this.cameraY,
-    required this.zoom,
-    required this.segWidth,
-    required this.finColor,
-    this.highlight = false,
-    this.highlightForRemove = false,
-  });
-
-  final int segment;
-  final double length;
-  final double width;
-  final double angleDegrees;
-  final LateralWingType wingType;
-  final List<Vector2> positions;
-  final List<double> segmentAngles;
-  final double centerX;
-  final double centerY;
-  final double cameraX;
-  final double cameraY;
-  final double zoom;
-  final double segWidth;
-  final Color finColor;
-  final bool highlight;
-  final bool highlightForRemove;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (positions.length < 2 || segment < 0 || segment >= positions.length - 1)
-      return;
-    if (segment >= segmentAngles.length) return;
-    double sx(double wx) => centerX + (wx - cameraX) * zoom;
-    double sy(double wy) => centerY + (wy - cameraY) * zoom;
-    final flareRad = angleDegrees * pi / 180.0;
-    final len = length;
-    final wid = width;
-    final lenScreen = len * zoom;
-    final widScreen = wid * zoom;
-    final aAttach = segmentAngles[segment];
-    final segHead = segment + 1 < segmentAngles.length ? segment + 1 : segment;
-    final aLock = segmentAngles[segHead];
-    final halfW = segWidth;
-    final px = positions[segment].x;
-    final py = positions[segment].y;
-    final leftCx = px + sin(aAttach) * halfW,
-        leftCy = py - cos(aAttach) * halfW;
-    final rightCx = px - sin(aAttach) * halfW,
-        rightCy = py + cos(aAttach) * halfW;
-    final leftAngle = aLock + flareRad, rightAngle = aLock - flareRad;
-    final fillColor = highlightForRemove
-        ? Colors.red.withValues(alpha: 0.5)
-        : (highlight
-              ? Colors.white.withValues(alpha: 0.6)
-              : finColor.withValues(alpha: 0.9));
-    final strokeColor = highlightForRemove
-        ? Colors.red
-        : (highlight ? Colors.amber : Colors.white);
-    final fillPaint = Paint()
-      ..color = fillColor
-      ..style = PaintingStyle.fill;
-    final strokePaint = Paint()
-      ..color = strokeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = (2.0 * zoom).clamp(1.0, 2.0);
-    void drawWing(Canvas c, double lS, double wS, {bool isLeft = true}) {
-      if (wingType == LateralWingType.sharkWing) {
-        final hLen = lS / 2, hWid = wS / 2;
-        final path = Path()
-          ..moveTo(hLen, -hWid)
-          ..quadraticBezierTo(0.0, -hWid, -hLen, 0.0)
-          ..quadraticBezierTo(0.0, hWid, hLen, hWid)
-          ..close();
-        c.drawPath(path, fillPaint);
-        c.drawPath(path, strokePaint);
-      } else if (wingType == LateralWingType.sharkConcave) {
-        final hLen = lS / 2, hWid = wS / 2;
-        final path = Path();
-        if (isLeft) {
-          path
-            ..moveTo(hLen, -hWid)
-            ..quadraticBezierTo(0.0, -hWid, -hLen, 0.0)
-            ..quadraticBezierTo(0.0, 0.0, hLen, hWid)
-            ..close();
-        } else {
-          path
-            ..moveTo(hLen, -hWid)
-            ..quadraticBezierTo(0.0, 0.0, -hLen, 0.0)
-            ..quadraticBezierTo(0.0, hWid, hLen, hWid)
-            ..close();
-        }
-        c.drawPath(path, fillPaint);
-        c.drawPath(path, strokePaint);
-      } else if (wingType == LateralWingType.paddle) {
-        final hLen = lS / 2, hWid = wS / 2;
-        final path = Path()
-          ..moveTo(-hLen, -hWid)
-          ..quadraticBezierTo(0.0, -hWid, hLen, 0.0)
-          ..quadraticBezierTo(0.0, hWid, -hLen, hWid)
-          ..close();
-        c.drawPath(path, fillPaint);
-        c.drawPath(path, strokePaint);
-      } else if (wingType == LateralWingType.paddleConcave) {
-        final hLen = lS / 2, hWid = wS / 2;
-        final path = Path();
-        if (isLeft) {
-          path
-            ..moveTo(-hLen, -hWid)
-            ..quadraticBezierTo(0.0, -hWid, hLen, 0.0)
-            ..quadraticBezierTo(0.0, 0.0, -hLen, hWid)
-            ..close();
-        } else {
-          path
-            ..moveTo(-hLen, -hWid)
-            ..quadraticBezierTo(0.0, 0.0, hLen, 0.0)
-            ..quadraticBezierTo(0.0, hWid, -hLen, hWid)
-            ..close();
-        }
-        c.drawPath(path, fillPaint);
-        c.drawPath(path, strokePaint);
-      } else {
-        final rect = Rect.fromCenter(
-          center: Offset.zero,
-          width: lS,
-          height: wS,
-        );
-        c.drawOval(rect, fillPaint);
-        c.drawOval(rect, strokePaint);
-      }
-    }
-
-    canvas.save();
-    canvas.translate(sx(leftCx), sy(leftCy));
-    canvas.rotate(leftAngle);
-    drawWing(canvas, lenScreen, widScreen, isLeft: true);
-    canvas.restore();
-    canvas.save();
-    canvas.translate(sx(rightCx), sy(rightCy));
-    canvas.rotate(rightAngle);
-    drawWing(canvas, lenScreen, widScreen, isLeft: false);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _LateralFinAtSegmentPainter old) =>
-      old.segment != segment ||
-      old.length != length ||
-      old.width != width ||
-      old.angleDegrees != angleDegrees ||
-      old.wingType != wingType ||
-      old.highlight != highlight ||
-      old.highlightForRemove != highlightForRemove;
-}
-
-/// Highlights a [dorsalFinMinSegments]-segment dorsal fin on the creature when dragging + dorsal over the viewport.
-class _DorsalDropHighlightPainter extends CustomPainter {
-  _DorsalDropHighlightPainter({
-    required this.startSeg,
-    required this.positions,
-    required this.centerX,
-    required this.centerY,
-    required this.cameraX,
-    required this.cameraY,
-    required this.zoom,
-    required this.finColor,
-  });
-
-  final int startSeg;
-  final List<Vector2> positions;
-  final double centerX;
-  final double centerY;
-  final double cameraX;
-  final double cameraY;
-  final double zoom;
-  final Color finColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (positions.length < 2 || startSeg < 0) return;
-    final endSeg = (startSeg + dorsalFinMinSegments - 1).clamp(
-      startSeg,
-      positions.length - 2,
-    );
-    double sx(double wx) => centerX + (wx - cameraX) * zoom;
-    double sy(double wy) => centerY + (wy - cameraY) * zoom;
-    const fullH = 14.0;
-    const baseH = fullH * 0.3;
-    final topPts = <Offset>[];
-    final spinePts = <Offset>[];
-    for (var i = startSeg; i <= endSeg + 1 && i < positions.length; i++) {
-      final p = Offset(sx(positions[i].x), sy(positions[i].y));
-      spinePts.add(p);
-      final idx = i - startSeg;
-      final isEnd = idx == 0 || idx == (endSeg - startSeg + 1);
-      final h = (isEnd ? baseH : fullH * 0.7) * zoom;
-      final prev = i > startSeg ? positions[i - 1] : positions[i];
-      final dx = positions[i].x - prev.x;
-      final dy = positions[i].y - prev.y;
-      final perp = (dx * dx + dy * dy) > 0 ? h / sqrt(dx * dx + dy * dy) : 0.0;
-      topPts.add(Offset(p.dx - dy * perp, p.dy + dx * perp));
-    }
-    if (topPts.isEmpty || spinePts.isEmpty) return;
-    final path = Path()..moveTo(topPts.first.dx, topPts.first.dy);
-    for (var i = 1; i < topPts.length; i++)
-      path.lineTo(topPts[i].dx, topPts[i].dy);
-    for (var i = spinePts.length - 1; i >= 0; i--)
-      path.lineTo(spinePts[i].dx, spinePts[i].dy);
-    path.close();
-    canvas.drawPath(path, Paint()..color = finColor.withValues(alpha: 0.5));
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _DorsalDropHighlightPainter old) =>
-      old.startSeg != startSeg;
-}
-
-/// Draws a dorsal fin range with highlight (e.g. when dragging to delete).
-class _DorsalRangeHighlightPainter extends CustomPainter {
-  _DorsalRangeHighlightPainter({
-    required this.startSeg,
-    required this.endSeg,
-    required this.positions,
-    required this.centerX,
-    required this.centerY,
-    required this.cameraX,
-    required this.cameraY,
-    required this.zoom,
-  });
-
-  final int startSeg;
-  final int endSeg;
-  final List<Vector2> positions;
-  final double centerX;
-  final double centerY;
-  final double cameraX;
-  final double cameraY;
-  final double zoom;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (positions.length < 2 || startSeg < 0 || endSeg < startSeg) return;
-    final lastSeg = endSeg.clamp(startSeg, positions.length - 2);
-    double sx(double wx) => centerX + (wx - cameraX) * zoom;
-    double sy(double wy) => centerY + (wy - cameraY) * zoom;
-    const fullH = 14.0;
-    const baseH = fullH * 0.3;
-    final topPts = <Offset>[];
-    final spinePts = <Offset>[];
-    for (var i = startSeg; i <= lastSeg + 1 && i < positions.length; i++) {
-      final p = Offset(sx(positions[i].x), sy(positions[i].y));
-      spinePts.add(p);
-      final idx = i - startSeg;
-      final isEnd = idx == 0 || idx == (lastSeg - startSeg + 1);
-      final h = (isEnd ? baseH : fullH * 0.7) * zoom;
-      final prev = i > startSeg ? positions[i - 1] : positions[i];
-      final dx = positions[i].x - prev.x;
-      final dy = positions[i].y - prev.y;
-      final perp = (dx * dx + dy * dy) > 0 ? h / sqrt(dx * dx + dy * dy) : 0.0;
-      topPts.add(Offset(p.dx - dy * perp, p.dy + dx * perp));
-    }
-    if (topPts.isEmpty || spinePts.isEmpty) return;
-    final path = Path()..moveTo(topPts.first.dx, topPts.first.dy);
-    for (var i = 1; i < topPts.length; i++)
-      path.lineTo(topPts[i].dx, topPts[i].dy);
-    for (var i = spinePts.length - 1; i >= 0; i--)
-      path.lineTo(spinePts[i].dx, spinePts[i].dy);
-    path.close();
-    canvas.drawPath(path, Paint()..color = Colors.red.withValues(alpha: 0.5));
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = Colors.red
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _DorsalRangeHighlightPainter old) =>
-      old.startSeg != startSeg || old.endSeg != endSeg;
-}
-
-/// Draws 3 dorsal adjust nodes (start, end, height) when a fin is selected.
-class _DorsalNodesOverlayPainter extends CustomPainter {
-  _DorsalNodesOverlayPainter({
-    required this.positions,
-    required this.startSeg,
-    required this.endSeg,
-    required this.centerX,
-    required this.centerY,
-    required this.cameraX,
-    required this.cameraY,
-    required this.zoom,
-    this.activeNode,
-  });
-
-  final List<Vector2> positions;
-  final int startSeg;
-  final int endSeg;
-  final double centerX;
-  final double centerY;
-  final double cameraX;
-  final double cameraY;
-  final double zoom;
-  final int? activeNode;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (positions.length < 2 || startSeg < 0 || endSeg >= positions.length)
-      return;
-    double sx(double wx) => centerX + (wx - cameraX) * zoom;
-    double sy(double wy) => centerY + (wy - cameraY) * zoom;
-    final startCx = (positions[startSeg].x + positions[startSeg + 1].x) / 2;
-    final startCy = (positions[startSeg].y + positions[startSeg + 1].y) / 2;
-    final endCx = (positions[endSeg].x + positions[endSeg + 1].x) / 2;
-    final endCy = (positions[endSeg].y + positions[endSeg + 1].y) / 2;
-    final midSeg = (startSeg + endSeg) ~/ 2;
-    final midCx = midSeg + 1 < positions.length
-        ? (positions[midSeg].x + positions[midSeg + 1].x) / 2
-        : (positions[midSeg].x + positions[endSeg].x) / 2;
-    final midCy = midSeg + 1 < positions.length
-        ? (positions[midSeg].y + positions[midSeg + 1].y) / 2
-        : (positions[midSeg].y + positions[endSeg].y) / 2;
-    final sx0 = sx(startCx);
-    final sy0 = sy(startCy);
-    final sx1 = sx(endCx);
-    final sy1 = sy(endCy);
-    final sx2 = sx(midCx);
-    final sy2 = sy(midCy) - 24;
-
-    final points = [Offset(sx0, sy0), Offset(sx1, sy1), Offset(sx2, sy2)];
-    for (var i = 0; i < points.length; i++) {
-      final active = activeNode == i;
-      final stroke = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
-      final fill = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
-      canvas.drawCircle(points[i], 14, fill);
-      canvas.drawCircle(points[i], 14, stroke);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DorsalNodesOverlayPainter old) =>
-      old.startSeg != startSeg ||
-      old.endSeg != endSeg ||
-      old.activeNode != activeNode;
-}
-
-/// Three nodes for tail sizing: root width, max width, length (when creature has tail).
-class _TailNodesOverlayPainter extends CustomPainter {
-  _TailNodesOverlayPainter({
-    required this.tailX,
-    required this.tailY,
-    required this.tailA,
-    required this.rootW,
-    required this.maxW,
-    required this.len,
-    required this.centerX,
-    required this.centerY,
-    required this.cameraX,
-    required this.cameraY,
-    required this.zoom,
-    this.activeNode,
-  });
-
-  final double tailX;
-  final double tailY;
-  final double tailA;
-  final double rootW;
-  final double maxW;
-  final double len;
-  final double centerX;
-  final double centerY;
-  final double cameraX;
-  final double cameraY;
-  final double zoom;
-
-  /// 0=root, 1=max, 2=length; null=none active.
-  final int? activeNode;
-
-  static const double _nodeRadius = 14.0;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    double sx(double wx) => centerX + (wx - cameraX) * zoom;
-    double sy(double wy) => centerY + (wy - cameraY) * zoom;
-    final back = tailA + pi;
-    final leftDirX = sin(tailA);
-    final leftDirY = -cos(tailA);
-    final backDirX = cos(back);
-    final backDirY = sin(back);
-    final rootPx = tailX + leftDirX * rootW;
-    final rootPy = tailY + leftDirY * rootW;
-    final maxPx = tailX + backDirX * len * 0.7 + leftDirX * maxW;
-    final maxPy = tailY + backDirY * len * 0.7 + leftDirY * maxW;
-    final tipPx = tailX + backDirX * len;
-    final tipPy = tailY + backDirY * len;
-    final points = [
-      Offset(sx(rootPx), sy(rootPy)),
-      Offset(sx(maxPx), sy(maxPy)),
-      Offset(sx(tipPx), sy(tipPy)),
-    ];
-    for (var i = 0; i < 3; i++) {
-      final active = activeNode == i;
-      final stroke = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3;
-      final fill = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
-      canvas.drawCircle(points[i], _nodeRadius, fill);
-      canvas.drawCircle(points[i], _nodeRadius, stroke);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _TailNodesOverlayPainter old) =>
-      old.rootW != rootW ||
-      old.maxW != maxW ||
-      old.len != len ||
-      old.activeNode != activeNode;
-}
-
-/// Draws the tail fin in red when dragging to remove (outside bounds).
-class _TailRemoveHighlightPainter extends CustomPainter {
-  _TailRemoveHighlightPainter({
-    required this.creature,
-    required this.positions,
-    required this.segmentAngles,
-    required this.centerX,
-    required this.centerY,
-    required this.cameraX,
-    required this.cameraY,
-    required this.zoom,
-    required this.bodyColor,
-    required this.widthAt,
-  });
-
-  final Creature creature;
-  final List<Vector2> positions;
-  final List<double> segmentAngles;
-  final double centerX;
-  final double centerY;
-  final double cameraX;
-  final double cameraY;
-  final double zoom;
-  final Color bodyColor;
-  final double Function(int i) widthAt;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    paintTailFin(
-      canvas,
-      creature,
-      positions,
-      segmentAngles,
-      centerX,
-      centerY,
-      zoom,
-      cameraX,
-      cameraY,
-      1.0,
-      bodyColor,
-      widthAt,
-      overrideFinColor: Colors.red.withValues(alpha: 0.6),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _TailRemoveHighlightPainter old) => false;
-}
-
-/// Draws the mouth only as preview when dragging a mouth type onto the creature.
-/// Uses same face curve as actual render so preview matches in-game mouth placement.
-class _MouthAddPreviewPainter extends CustomPainter {
-  _MouthAddPreviewPainter({
-    required this.creature,
-    required this.previewMouthType,
-    this.previewMouthCount,
-    required this.positions,
-    required this.segmentAngles,
-    required this.centerX,
-    required this.centerY,
-    required this.cameraX,
-    required this.cameraY,
-    required this.zoom,
-    required this.headWidthWorld,
-    required this.bodyColor,
-    this.faceCurveWorld,
-  });
-
-  final Creature creature;
-  final MouthType previewMouthType;
-  final int? previewMouthCount;
-  final List<Vector2> positions;
-  final List<double> segmentAngles;
-  final double centerX;
-  final double centerY;
-  final double cameraX;
-  final double cameraY;
-  final double zoom;
-  final double headWidthWorld;
-  final Color bodyColor;
-  final List<Offset>? faceCurveWorld;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final previewCreature = Creature(
-      segmentWidths: creature.segmentWidths,
-      color: creature.color,
-      dorsalFins: creature.dorsalFins,
-      finColor: creature.finColor,
-      tail: creature.tail,
-      lateralFins: creature.lateralFins,
-      trophicType: creature.trophicType,
-      mouth: previewMouthType,
-      mouthCount: previewMouthCount,
-      mouthLength: creature.mouthLength ?? MouthParams.lengthDefault,
-      mouthCurve: creature.mouthCurve ?? MouthParams.curveDefault,
-      mouthWobbleAmplitude:
-          creature.mouthWobbleAmplitude ?? MouthParams.wobbleDefault,
-    );
-    paintMouth(
-      canvas,
-      previewCreature,
-      positions,
-      segmentAngles,
-      centerX,
-      centerY,
-      zoom,
-      cameraX,
-      cameraY,
-      1.0,
-      bodyColor,
-      headWidthWorld,
-      0.0,
-      faceCurveWorld: faceCurveWorld,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _MouthAddPreviewPainter old) =>
-      old.previewMouthType != previewMouthType ||
-      old.previewMouthCount != previewMouthCount ||
-      old.positions != positions ||
-      old.segmentAngles != segmentAngles ||
-      old.centerX != centerX ||
-      old.centerY != centerY ||
-      old.zoom != zoom ||
-      old.faceCurveWorld != faceCurveWorld;
-}
-
-/// Red circle at head when dragging mouth off to remove.
-class _MouthRemoveHighlightPainter extends CustomPainter {
-  _MouthRemoveHighlightPainter({
-    required this.headSx,
-    required this.headSy,
-    required this.radius,
-  });
-
-  final double headSx;
-  final double headSy;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.red.withValues(alpha: 0.5)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(headSx, headSy), radius, paint);
-    final stroke = Paint()
-      ..color = Colors.red
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(Offset(headSx, headSy), radius, stroke);
-  }
-
-  @override
-  bool shouldRepaint(covariant _MouthRemoveHighlightPainter old) =>
-      old.headSx != headSx || old.headSy != headSy || old.radius != radius;
-}
-
-/// Preview when dragging + eye onto creature. Same render as CreaturePainter._drawConfigEyes.
-class _EyeAddPreviewPainter extends CustomPainter {
-  _EyeAddPreviewPainter({
-    required this.segment,
-    required this.offsetFromCenter,
-    required this.positions,
-    required this.segmentAngles,
-    required this.centerX,
-    required this.centerY,
-    required this.cameraX,
-    required this.cameraY,
-    required this.zoom,
-    required this.widthAtVertex,
-    required this.creatureColor,
-    this.creatureFinColor,
-    this.pupilFraction = EyeConfig.pupilFractionDefault,
-    this.radiusWorld,
-  });
-
-  final int segment;
-  final double offsetFromCenter;
-  final List<Vector2> positions;
-  final List<double> segmentAngles;
-  final double centerX;
-  final double centerY;
-  final double cameraX;
-  final double cameraY;
-  final double zoom;
-  final double Function(int i) widthAtVertex;
-  final Color creatureColor;
-  final Color? creatureFinColor;
-  final double pupilFraction;
-
-  /// When null, uses default 6.0 (add preview); when set, uses for move preview.
-  final double? radiusWorld;
-
-  static const double _irisFrac = 0.90;
-  static const double _primaryHighlightOffset = 0.2;
-  static const double _primaryHighlightRadiusFrac = 0.3;
-  static const double _secondaryHighlightOffset = 0.26;
-  static const double _secondaryHighlightRadiusFrac = 0.2;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (positions.length < 2 || segmentAngles.isEmpty) return;
-    double sx(double wx) => centerX + (wx - cameraX) * zoom;
-    double sy(double wy) => centerY + (wy - cameraY) * zoom;
-    final seg = segment.clamp(0, positions.length - 2);
-    final cx = (positions[seg].x + positions[seg + 1].x) / 2;
-    final cy = (positions[seg].y + positions[seg + 1].y) / 2;
-    final a = segmentAngles[seg];
-    final halfW = widthAtVertex(seg);
-    final r = radiusWorld ?? 6.0;
-    final rScreen = r * zoom;
-    final strokeW = (rScreen * 0.12).clamp(1.2, 3.0);
-    final isSingle = offsetFromCenter < EyeConfig.singleEyeThreshold;
-    final centers = <Offset>[];
-    if (isSingle) {
-      centers.add(Offset(sx(cx), sy(cy)));
-    } else {
-      final off = offsetFromCenter * halfW;
-      final dx = -sin(a) * off;
-      final dy = cos(a) * off;
-      centers.add(Offset(sx(cx + dx), sy(cy + dy)));
-      centers.add(Offset(sx(cx - dx), sy(cy - dy)));
-    }
-    final finColor = creatureFinColor ?? creatureColor;
-    final pupilFrac = pupilFraction.clamp(
-      EyeConfig.pupilFractionMin,
-      EyeConfig.pupilFractionMax,
-    );
-    for (final center in centers) {
-      final baseFill = Paint()
-        ..color = creatureColor
-        ..style = PaintingStyle.fill;
-      final baseStroke = Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeW * 3 / 4;
-      canvas.drawCircle(center, rScreen, baseFill);
-      canvas.drawCircle(center, rScreen, baseStroke);
-      final irisR = rScreen * _irisFrac;
-      final irisRect = Rect.fromCircle(center: center, radius: irisR);
-      final irisFill = Paint()
-        ..shader = RadialGradient(
-          center: Alignment.center,
-          radius: 0.5,
-          stops: [pupilFrac, 1 - ((1 - pupilFrac) / 2), 1.0],
-          colors: [
-            Color.lerp(creatureColor, Colors.white, 0.3)!,
-            Color.lerp(finColor, creatureColor, 0.5)!,
-            Color.lerp(finColor, Colors.black, 0.8)!,
-          ],
-        ).createShader(irisRect)
-        ..style = PaintingStyle.fill;
-      final irisStroke = Paint()
-        ..color = Color.lerp(finColor, Colors.black, 0.6)!
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeW / 2;
-      canvas.drawCircle(center, irisR, irisFill);
-      canvas.drawCircle(center, irisR, irisStroke);
-      final pupilFill = Paint()
-        ..color = Colors.black
-        ..style = PaintingStyle.fill;
-      final pupilStroke = Paint()
-        ..color = Color.lerp(creatureColor, Colors.white, 0.2)!
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeW;
-      canvas.drawCircle(center, rScreen * pupilFrac, pupilFill);
-      canvas.drawCircle(center, rScreen * pupilFrac, pupilStroke);
-      final primaryHighlight = Paint()
-        ..color = Colors.white.withValues(alpha: 0.4)
-        ..style = PaintingStyle.fill;
-      final secondaryHighlight = Paint()
-        ..color = Colors.white.withValues(alpha: 0.2)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(
-        Offset(
-          center.dx - rScreen * _primaryHighlightOffset,
-          center.dy - rScreen * _primaryHighlightOffset,
-        ),
-        rScreen * _primaryHighlightRadiusFrac,
-        primaryHighlight,
-      );
-      canvas.drawCircle(
-        Offset(
-          center.dx + rScreen * _secondaryHighlightOffset,
-          center.dy + rScreen * _secondaryHighlightOffset,
-        ),
-        rScreen * _secondaryHighlightRadiusFrac,
-        secondaryHighlight,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _EyeAddPreviewPainter old) =>
-      old.segment != segment ||
-      old.offsetFromCenter != offsetFromCenter ||
-      old.radiusWorld != radiusWorld ||
-      old.creatureColor != creatureColor ||
-      old.creatureFinColor != creatureFinColor ||
-      old.pupilFraction != pupilFraction ||
-      old.positions != positions;
-}
-
-/// Mirrored node overlay for eye radius handles (one or two nodes, like lateral fin).
-class _EyeNodeOverlayPainter extends CustomPainter {
-  _EyeNodeOverlayPainter({required this.nodePositions, this.activeNodeIndex});
-
-  final List<Offset> nodePositions;
-  final int? activeNodeIndex;
-
-  static const double radius = 14.0;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (var i = 0; i < nodePositions.length; i++) {
-      final active = activeNodeIndex == i;
-      final pos = nodePositions[i];
-      final fill = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.2)
-        ..style = PaintingStyle.fill;
-      final stroke = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.5)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
-      canvas.drawCircle(pos, radius, fill);
-      canvas.drawCircle(pos, radius, stroke);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _EyeNodeOverlayPainter old) {
-    if (old.nodePositions.length != nodePositions.length ||
-        old.activeNodeIndex != activeNodeIndex)
-      return true;
-    for (var i = 0; i < nodePositions.length; i++) {
-      if (nodePositions[i] != old.nodePositions[i]) return true;
-    }
-    return false;
-  }
-}
-
-/// Draws the tail fin as preview when dragging a new tail type onto the creature.
-class _TailAddPreviewPainter extends CustomPainter {
-  _TailAddPreviewPainter({
-    required this.creature,
-    required this.previewTailFin,
-    required this.positions,
-    required this.segmentAngles,
-    required this.centerX,
-    required this.centerY,
-    required this.cameraX,
-    required this.cameraY,
-    required this.zoom,
-    required this.bodyColor,
-    required this.widthAt,
-  });
-
-  final Creature creature;
-  final CaudalFinType previewTailFin;
-  final List<Vector2> positions;
-  final List<double> segmentAngles;
-  final double centerX;
-  final double centerY;
-  final double cameraX;
-  final double cameraY;
-  final double zoom;
-  final Color bodyColor;
-  final double Function(int i) widthAt;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final previewCreature = Creature(
-      segmentWidths: creature.segmentWidths,
-      color: creature.color,
-      dorsalFins: creature.dorsalFins,
-      finColor: creature.finColor,
-      tail: TailConfig(
-        previewTailFin,
-        rootWidth: creature.tail?.rootWidth ?? 12.0,
-        maxWidth: creature.tail?.maxWidth ?? 20.0,
-        length: creature.tail?.length ?? 90.0,
-      ),
-      lateralFins: creature.lateralFins,
-    );
-    paintTailFin(
-      canvas,
-      previewCreature,
-      positions,
-      segmentAngles,
-      centerX,
-      centerY,
-      zoom,
-      cameraX,
-      cameraY,
-      1.0,
-      bodyColor,
-      widthAt,
-      overrideFinColor: Colors.white.withValues(alpha: 0.55),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _TailAddPreviewPainter old) =>
-      old.previewTailFin != previewTailFin;
-}
-
-/// Tail node OUTSIDE creature (after tail) for extend/contract.
-class _BodyNodesOverlayPainter extends CustomPainter {
-  _BodyNodesOverlayPainter({
-    required this.positions,
-    required this.centerX,
-    required this.centerY,
-    required this.cameraX,
-    required this.cameraY,
-    required this.zoom,
-    this.activeNode,
-  });
-
-  final List<Vector2> positions;
-  final double centerX;
-  final double centerY;
-  final double cameraX;
-  final double cameraY;
-  final double zoom;
-
-  /// 0 = tail; null = none active (inactive look).
-  final int? activeNode;
-
-  static const double _outsideOffset = 48.0;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (positions.length < 2) return;
-    final tail = positions.first;
-    final second = positions[1];
-    double dx = tail.x - second.x;
-    double dy = tail.y - second.y;
-    var len = sqrt(dx * dx + dy * dy);
-    if (len < 1e-6) len = 1.0;
-    final tailOutX = tail.x + dx / len * _outsideOffset;
-    final tailOutY = tail.y + dy / len * _outsideOffset;
-    final sx0 = centerX + (tailOutX - cameraX) * zoom;
-    final sy0 = centerY + (tailOutY - cameraY) * zoom;
-    const r = 24.0;
-    final active = activeNode == 0;
-    final stroke = Paint()
-      ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    final fill = Paint()
-      ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
-    canvas.drawCircle(Offset(sx0, sy0), r, fill);
-    canvas.drawCircle(Offset(sx0, sy0), r, stroke);
-  }
-
-  @override
-  bool shouldRepaint(covariant _BodyNodesOverlayPainter old) =>
-      old.activeNode != activeNode;
-}
-
-/// One node per spine segment for width edit: drag up = grow, down = shrink.
-class _SegmentWidthNodesOverlayPainter extends CustomPainter {
-  _SegmentWidthNodesOverlayPainter({
-    required this.positions,
-    required this.centerX,
-    required this.centerY,
-    required this.cameraX,
-    required this.cameraY,
-    required this.zoom,
-    this.activeSegment,
-  });
-
-  final List<Vector2> positions;
-  final double centerX;
-  final double centerY;
-  final double cameraX;
-  final double cameraY;
-  final double zoom;
-  final int? activeSegment;
-
-  static const double nodeRadius = 18.0;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (positions.length < 2) return;
-    final n = positions.length - 1;
-    for (var seg = 0; seg < n; seg++) {
-      final cx = (positions[seg].x + positions[seg + 1].x) / 2;
-      final cy = (positions[seg].y + positions[seg + 1].y) / 2;
-      final sx = centerX + (cx - cameraX) * zoom;
-      final sy = centerY + (cy - cameraY) * zoom;
-      final active = activeSegment == seg;
-      final stroke = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5;
-      final fill = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
-      canvas.drawCircle(Offset(sx, sy), nodeRadius, fill);
-      canvas.drawCircle(Offset(sx, sy), nodeRadius, stroke);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _SegmentWidthNodesOverlayPainter old) =>
-      old.activeSegment != activeSegment ||
-      old.positions.length != positions.length;
-}
-
-/// Four nodes for selected lateral fin (mirrored left/right): 0,2 = length; 1,3 = width. activeNode = raw index 0..3.
-class _LateralNodesOverlayPainter extends CustomPainter {
-  _LateralNodesOverlayPainter({required this.positions, this.activeNode});
-
-  final List<Offset> positions;
-  final int? activeNode;
-
-  static const double nodeRadius = 14.0;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (var i = 0; i < positions.length; i++) {
-      final active = activeNode == i;
-      final stroke = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5;
-      final fill = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
-      canvas.drawCircle(positions[i], nodeRadius, fill);
-      canvas.drawCircle(positions[i], nodeRadius, stroke);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _LateralNodesOverlayPainter old) =>
-      old.activeNode != activeNode || old.positions.length != positions.length;
-}
-
-class _MouthNodesOverlayPainter extends CustomPainter {
-  _MouthNodesOverlayPainter({required this.positions, this.activeNode});
-
-  final List<Offset> positions;
-  final int? activeNode;
-
-  static const double nodeRadius = 14.0;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (var i = 0; i < positions.length; i++) {
-      final active = activeNode == i;
-      final stroke = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 1.0 : 0.35)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5;
-      final fill = Paint()
-        ..color = Colors.white.withValues(alpha: active ? 0.5 : 0.15);
-      canvas.drawCircle(positions[i], nodeRadius, fill);
-      canvas.drawCircle(positions[i], nodeRadius, stroke);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _MouthNodesOverlayPainter old) =>
-      old.activeNode != activeNode || old.positions.length != positions.length;
-}
 
 /// Preview: creature centered, draggable target, zoom. Optional viewport fin editing.
 class EditorPreview extends StatefulWidget {
@@ -1195,7 +195,7 @@ class _EditorPreviewState extends State<EditorPreview>
     final headToTailLen = sqrt(
       headToTailX * headToTailX + headToTailY * headToTailY,
     );
-    const nodeOffset = _BodyNodesOverlayPainter._outsideOffset;
+    const nodeOffset = BodyNodePainter.outsideOffset;
     final projectedDist = headToTailLen > 1e-6
         ? (headToDropX * headToTailX + headToDropY * headToTailY) /
               headToTailLen
@@ -1891,9 +891,7 @@ class _EditorPreviewState extends State<EditorPreview>
         int? _hitSegmentWidthNode(double px, double py) {
           if (positions.length < 2 || widget.onSegmentWidthDelta == null)
             return null;
-          final r2 =
-              _SegmentWidthNodesOverlayPainter.nodeRadius *
-              _SegmentWidthNodesOverlayPainter.nodeRadius;
+          final r2 = SpineNodePainter.nodeRadius * SpineNodePainter.nodeRadius;
           final n = positions.length - 1;
           for (var seg = 0; seg < n; seg++) {
             final cx = (positions[seg].x + positions[seg + 1].x) / 2;
@@ -1907,7 +905,7 @@ class _EditorPreviewState extends State<EditorPreview>
 
         int? _hitBodyNode(double px, double py) {
           if (positions.length < 2) return null;
-          const out = _BodyNodesOverlayPainter._outsideOffset;
+          const out = BodyNodePainter.outsideOffset;
           final tail = positions.first;
           final second = positions[1];
           double dx = tail.x - second.x, dy = tail.y - second.y;
@@ -1962,9 +960,7 @@ class _EditorPreviewState extends State<EditorPreview>
           final len = _effectiveTailLen();
           double sx(double wx) => centerX + (wx - cameraX) * _zoom;
           double sy(double wy) => centerY + (wy - cameraY) * _zoom;
-          final r2 =
-              _TailNodesOverlayPainter._nodeRadius *
-              _TailNodesOverlayPainter._nodeRadius;
+          final r2 = TailNodePainter.nodeRadius * TailNodePainter.nodeRadius;
           final rootPx = tail.x + leftDirX * rootW,
               rootPy = tail.y + leftDirY * rootW;
           if ((px - sx(rootPx)) * (px - sx(rootPx)) +
@@ -2895,7 +1891,7 @@ class _EditorPreviewState extends State<EditorPreview>
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _BodyNodesOverlayPainter(
+                    painter: BodyNodePainter(
                       positions: positions,
                       centerX: centerX,
                       centerY: centerY,
@@ -2912,7 +1908,7 @@ class _EditorPreviewState extends State<EditorPreview>
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _SegmentWidthNodesOverlayPainter(
+                    painter: SpineNodePainter(
                       positions: positions,
                       centerX: centerX,
                       centerY: centerY,
@@ -2930,7 +1926,7 @@ class _EditorPreviewState extends State<EditorPreview>
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _LateralNodesOverlayPainter(
+                    painter: PecFinNodePainter(
                       positions: _lateralNodePositions()!,
                       activeNode: _lateralDraggingNode,
                     ),
@@ -2942,7 +1938,7 @@ class _EditorPreviewState extends State<EditorPreview>
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _MouthNodesOverlayPainter(
+                    painter: MouthNodePainter(
                       positions: _mouthNodePositions()!,
                       activeNode: _mouthDraggingNode,
                     ),
@@ -2954,7 +1950,7 @@ class _EditorPreviewState extends State<EditorPreview>
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _EyeNodeOverlayPainter(
+                    painter: EyeNodePainter(
                       nodePositions: _eyeNodePositions()!,
                       activeNodeIndex: _eyeDraggingNode,
                     ),
@@ -2966,7 +1962,7 @@ class _EditorPreviewState extends State<EditorPreview>
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _TailNodesOverlayPainter(
+                    painter: TailNodePainter(
                       tailX: positions.first.x,
                       tailY: positions.first.y,
                       tailA: _spine.segmentAngles[0],
@@ -2990,7 +1986,7 @@ class _EditorPreviewState extends State<EditorPreview>
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _TailRemoveHighlightPainter(
+                    painter: RemoveTailPainter(
                       creature: widget.creature,
                       positions: positions,
                       segmentAngles: _spine.segmentAngles,
@@ -3013,7 +2009,7 @@ class _EditorPreviewState extends State<EditorPreview>
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _MouthRemoveHighlightPainter(
+                    painter: RemoveMouthPainter(
                       headSx: centerX + (positions.last.x - cameraX) * _zoom,
                       headSy: centerY + (positions.last.y - cameraY) * _zoom,
                       radius:
@@ -3036,7 +2032,7 @@ class _EditorPreviewState extends State<EditorPreview>
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _TailAddPreviewPainter(
+                    painter: TailPreviewPainter(
                       creature: widget.creature,
                       previewTailFin: _tailAddDragPayload!.tailFin!,
                       positions: positions,
@@ -3063,7 +2059,7 @@ class _EditorPreviewState extends State<EditorPreview>
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _MouthAddPreviewPainter(
+                    painter: MouthPreviewPainter(
                       creature: widget.creature,
                       previewMouthType: _mouthAddDragPayload!.mouthType,
                       positions: positions,
@@ -3110,7 +2106,7 @@ class _EditorPreviewState extends State<EditorPreview>
                         _eyeAddDragLocal!.dy,
                       );
                       return CustomPaint(
-                        painter: _EyeAddPreviewPainter(
+                        painter: EyePreviewPainter(
                           segment: seg,
                           offsetFromCenter: offset,
                           positions: positions,
@@ -3151,7 +2147,7 @@ class _EditorPreviewState extends State<EditorPreview>
                       final pupilFraction =
                           eye?.pupilFraction ?? EyeConfig.pupilFractionDefault;
                       return CustomPaint(
-                        painter: _EyeAddPreviewPainter(
+                        painter: EyePreviewPainter(
                           segment: seg,
                           offsetFromCenter: offset,
                           positions: positions,
@@ -3190,7 +2186,7 @@ class _EditorPreviewState extends State<EditorPreview>
                   return Positioned.fill(
                     child: IgnorePointer(
                       child: CustomPaint(
-                        painter: _DorsalRangeHighlightPainter(
+                        painter: RemoveDorsalPainter(
                           startSeg: startSeg,
                           endSeg: endSeg,
                           positions: positions,
@@ -3220,7 +2216,7 @@ class _EditorPreviewState extends State<EditorPreview>
                   return Positioned.fill(
                     child: IgnorePointer(
                       child: CustomPaint(
-                        painter: _DorsalNodesOverlayPainter(
+                        painter: DorsalNodePainter(
                           positions: positions,
                           startSeg: startSeg,
                           endSeg: endSeg,
@@ -3242,7 +2238,7 @@ class _EditorPreviewState extends State<EditorPreview>
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _DorsalDropHighlightPainter(
+                    painter: DorsalPreviewPainter(
                       startSeg: _segmentAtLocal(
                         _dorsalAddDragLocal!.dx,
                         _dorsalAddDragLocal!.dy,
@@ -3269,7 +2265,7 @@ class _EditorPreviewState extends State<EditorPreview>
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _LateralFinAtSegmentPainter(
+                    painter: PecFinSegmentPainter(
                       segment: segmentAtScreen(
                         _lateralAddDragLocal!.dx,
                         _lateralAddDragLocal!.dy,
@@ -3314,7 +2310,7 @@ class _EditorPreviewState extends State<EditorPreview>
                 Positioned.fill(
                   child: IgnorePointer(
                     child: CustomPaint(
-                      painter: _LateralFinAtSegmentPainter(
+                      painter: PecFinSegmentPainter(
                         segment: segmentAtScreen(
                           _lastPanX,
                           _lastPanY,
@@ -3381,7 +2377,7 @@ class _EditorPreviewState extends State<EditorPreview>
                 Positioned.fill(
                   child: IgnorePointer(
                     child: CustomPaint(
-                      painter: _LateralFinAtSegmentPainter(
+                      painter: PecFinSegmentPainter(
                         segment:
                             _lateralDragFromIndex! <
                                 (widget.creature.lateralFins?.length ?? 0)

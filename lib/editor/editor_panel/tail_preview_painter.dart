@@ -6,8 +6,8 @@ import 'package:creature_bio_sim/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
 /// Paints tail using shared [paintTailFin]; horizontal in box, centered.
-class TailPreviewPainter extends CustomPainter {
-  TailPreviewPainter({required this.creature, required this.tailFin});
+class TailPreviewPainter2 extends CustomPainter {
+  TailPreviewPainter2({required this.creature, required this.tailFin});
 
   final Creature creature;
   final CaudalFinType? tailFin;
@@ -63,7 +63,7 @@ class TailPreviewPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant TailPreviewPainter old) =>
+  bool shouldRepaint(covariant TailPreviewPainter2 old) =>
       old.creature.color != creature.color ||
       old.creature.finColor != creature.finColor ||
       old.tailFin != tailFin;

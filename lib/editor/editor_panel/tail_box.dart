@@ -33,7 +33,7 @@ class TailBox extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(EditorStyle.radius),
         child: CustomPaint(
-          painter: TailPreviewPainter(creature: creature, tailFin: tailFin),
+          painter: TailPreviewPainter2(creature: creature, tailFin: tailFin),
           size: const Size(_boxW, _boxH),
         ),
       ),

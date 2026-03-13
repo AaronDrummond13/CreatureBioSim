@@ -911,7 +911,7 @@ Widget _draggableTailBox(Creature c, CaudalFinType tailFin) {
         width: boxW,
         height: boxH,
         child: CustomPaint(
-          painter: TailPreviewPainter(creature: c, tailFin: tailFin),
+          painter: TailPreviewPainter2(creature: c, tailFin: tailFin),
           size: const Size(boxW, boxH),
         ),
       ),
