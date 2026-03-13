@@ -164,7 +164,15 @@ class EditorScreenState extends State<EditorScreen> {
                 const SizedBox(height: 8),
                 _editorTopButton(
                   label: _panelClosed ? 'Edit' : 'Test',
-                  onTap: () => setState(() => _panelClosed = !_panelClosed),
+                  onTap: () => setState(() {
+                    _panelClosed = !_panelClosed;
+                    if (_panelClosed) {
+                      _selectedDorsalFinIndex = null;
+                      _selectedLateralFinIndex = null;
+                      _selectedEyeIndex = null;
+                      _selectedMouth = false;
+                    }
+                  }),
                   selected: !_panelClosed,
                 ),
               ],

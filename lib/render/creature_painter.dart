@@ -446,6 +446,9 @@ class CreaturePainter extends CustomPainter {
   }
 
   /// Draw eyes from [creature.eyes]: full iris (no sclera) + pupil, with bubble-style highlight; single eye when offset < threshold.
+  /// Max perpendicular shift as fraction of halfWidth when body bends.
+  static const double _eyeBendShiftFrac = .5;
+
   void _drawConfigEyes(Canvas canvas) {
     final eyes = creature.eyes!;
     final positions = _paintPositions;
@@ -458,7 +461,8 @@ class CreaturePainter extends CustomPainter {
     const primaryHighlightRadiusFrac = 0.3;
     const secondaryHighlightOffset = 0.26;
     const secondaryHighlightRadiusFrac = 0.2;
-    for (final eye in eyes) {
+    for (var eyeIdx = 0; eyeIdx < eyes.length; eyeIdx++) {
+      final eye = eyes[eyeIdx];
       final seg = eye.segment;
       if (seg < 0 || seg >= segmentAngles.length || seg + 1 >= positions.length)
         continue;
@@ -470,15 +474,42 @@ class CreaturePainter extends CustomPainter {
       final rScreen = rWorld * _paintZ;
       final strokeW = (rScreen * 0.12).clamp(1.2, 3.0);
       final isSingle = eye.offsetFromCenter < EyeConfig.singleEyeThreshold;
-      final centers = <Offset>[];
+
+      // Bend: signed angle difference to adjacent segment. Positive = curving one way, negative = other.
+      double bend = 0.0;
+      if (!isSingle && segmentAngles.length > 1) {
+        if (seg + 1 < segmentAngles.length) {
+          bend = segmentAngles[seg + 1] - segmentAngles[seg];
+        } else if (seg > 0) {
+          bend = segmentAngles[seg] - segmentAngles[seg - 1];
+        }
+        // Normalise to [-pi, pi].
+        while (bend > pi) bend -= 2 * pi;
+        while (bend < -pi) bend += 2 * pi;
+      }
+
+      // Perpendicular shift: bend pulls eyes toward concave side.
+      // perpDir is (-sin(a), cos(a)) — same direction as offset. Positive bend = eyes shift in +perpDir.
+      final bendShift = !isSingle
+          ? -bend.clamp(-1.0, 1.0) * _eyeBendShiftFrac * halfW
+          : 0.0;
+      final perpDx = -sin(a) * bendShift;
+      final perpDy = cos(a) * bendShift;
+
+      final anchorPairs = <(double, double)>[];
       if (isSingle) {
-        centers.add(Offset(sx(cx), sy(cy)));
+        anchorPairs.add((cx, cy));
       } else {
         final off = eye.offsetFromCenter * halfW;
         final dx = -sin(a) * off;
         final dy = cos(a) * off;
-        centers.add(Offset(sx(cx + dx), sy(cy + dy)));
-        centers.add(Offset(sx(cx - dx), sy(cy - dy)));
+        anchorPairs.add((cx + dx + perpDx, cy + dy + perpDy));
+        anchorPairs.add((cx - dx + perpDx, cy - dy + perpDy));
+      }
+
+      final centers = <Offset>[];
+      for (final (ax, ay) in anchorPairs) {
+        centers.add(Offset(sx(ax), sy(ay)));
       }
       final pupilFrac = eye.pupilFraction;
       for (final center in centers) {

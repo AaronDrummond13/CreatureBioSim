@@ -25,7 +25,7 @@ enum CaudalFinType {
 /// Eye placement: segment index, offset from spine (0 = single centre eye, (0,1] = symmetric pair at that fraction of half-width), radius in world units.
 class EyeConfig {
   static const double offsetMin = 0.0;
-  static const double offsetMax = 1.0;
+  static const double offsetMax = 0.8;
   static const double radiusMin = 3.0;
   static const double radiusMax = 17.0;
   static const double radiusDefault = 8.0;

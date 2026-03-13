@@ -1213,7 +1213,7 @@ class _EditorPreviewState extends State<EditorPreview>
     return best.clamp(0, _spine.segmentCount - 1);
   }
 
-  /// Returns (segment, offsetFromCenter 0..1). offsetFromCenter 0 = on spine (single eye), (0,1] = symmetric pair.
+  /// Returns (segment, offsetFromCenter 0..offsetMax). 0 = on spine (single eye), (0, offsetMax] = symmetric pair.
   (int, double) _segmentAndOffsetAtLocal(double sx, double sy) {
     if (_lastPreviewSize.width <= 0 || _lastPreviewSize.height <= 0) return (0, 0.0);
     final centerX = _lastPreviewSize.width / 2;
@@ -1240,7 +1240,7 @@ class _EditorPreviewState extends State<EditorPreview>
     final perpDist = -(wx - cx) * sin(a) + (wy - cy) * cos(a);
     final halfW = widget.creature.widthAtVertex(seg);
     if (halfW <= 0) return (seg, 0.0);
-    var offset = (perpDist.abs() / halfW).clamp(0.0, 1.0);
+    var offset = (perpDist.abs() / halfW).clamp(0.0, EyeConfig.offsetMax);
     if (offset < EyeConfig.singleEyeThreshold) offset = 0.0;
     return (seg, offset);
   }

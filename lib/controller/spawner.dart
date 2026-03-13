@@ -130,7 +130,7 @@ class Spawner {
     final list = <EyeConfig>[];
     for (var i = 0; i < n; i++) {
       final seg = _rng.nextInt(segmentCount);
-      final offset = _rng.nextDouble(); // 0 = single centre, (0,1] = pair
+      final offset = _rng.nextDouble() * EyeConfig.offsetMax;
       final radius = _inRange(EyeConfig.radiusMin, EyeConfig.radiusMax);
       list.add(EyeConfig(
         seg,
