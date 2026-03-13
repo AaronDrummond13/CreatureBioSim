@@ -194,9 +194,9 @@ class MouthParams {
 /// Creature definition: identity and appearance, outside engine and renderer.
 /// Spine length is implied by [segmentWidths] (segmentCount = segmentWidths.length). Capped at [maxSegmentCount].
 class Creature {
-  static const double minVertexWidth = 10.0;
-  static const double maxVertexWidth = 50.0;
-  static const int maxSegmentCount = 15;
+  static const double minVertexWidth = 12.0;
+  static const double maxVertexWidth = 36.0;
+  static const int maxSegmentCount = 16;
 
   /// Fill colour as 0xAARRGGBB. Renderer uses this when drawing.
   final int color;

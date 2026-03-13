@@ -146,11 +146,16 @@ class _LateralFinAtSegmentPainter extends CustomPainter {
         c.drawPath(path, fillPaint);
         c.drawPath(path, strokePaint);
       } else {
-        final rect = Rect.fromCenter(center: Offset.zero, width: lS, height: wS);
+        final rect = Rect.fromCenter(
+          center: Offset.zero,
+          width: lS,
+          height: wS,
+        );
         c.drawOval(rect, fillPaint);
         c.drawOval(rect, strokePaint);
       }
     }
+
     canvas.save();
     canvas.translate(sx(leftCx), sy(leftCy));
     canvas.rotate(leftAngle);
@@ -199,7 +204,10 @@ class _DorsalDropHighlightPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (positions.length < 2 || startSeg < 0) return;
-    final endSeg = (startSeg + dorsalFinMinSegments - 1).clamp(startSeg, positions.length - 2);
+    final endSeg = (startSeg + dorsalFinMinSegments - 1).clamp(
+      startSeg,
+      positions.length - 2,
+    );
     double sx(double wx) => centerX + (wx - cameraX) * zoom;
     double sy(double wy) => centerY + (wy - cameraY) * zoom;
     const fullH = 14.0;
@@ -546,7 +554,8 @@ class _MouthAddPreviewPainter extends CustomPainter {
       mouthCount: previewMouthCount,
       mouthLength: creature.mouthLength ?? MouthParams.lengthDefault,
       mouthCurve: creature.mouthCurve ?? MouthParams.curveDefault,
-      mouthWobbleAmplitude: creature.mouthWobbleAmplitude ?? MouthParams.wobbleDefault,
+      mouthWobbleAmplitude:
+          creature.mouthWobbleAmplitude ?? MouthParams.wobbleDefault,
     );
     paintMouth(
       canvas,
@@ -640,6 +649,7 @@ class _EyeAddPreviewPainter extends CustomPainter {
   final Color creatureColor;
   final Color? creatureFinColor;
   final double pupilFraction;
+
   /// When null, uses default 6.0 (add preview); when set, uses for move preview.
   final double? radiusWorld;
 
@@ -674,9 +684,14 @@ class _EyeAddPreviewPainter extends CustomPainter {
       centers.add(Offset(sx(cx - dx), sy(cy - dy)));
     }
     final finColor = creatureFinColor ?? creatureColor;
-    final pupilFrac = pupilFraction.clamp(EyeConfig.pupilFractionMin, EyeConfig.pupilFractionMax);
+    final pupilFrac = pupilFraction.clamp(
+      EyeConfig.pupilFractionMin,
+      EyeConfig.pupilFractionMax,
+    );
     for (final center in centers) {
-      final baseFill = Paint()..color = creatureColor..style = PaintingStyle.fill;
+      final baseFill = Paint()
+        ..color = creatureColor
+        ..style = PaintingStyle.fill;
       final baseStroke = Paint()
         ..color = Colors.white
         ..style = PaintingStyle.stroke
@@ -703,7 +718,9 @@ class _EyeAddPreviewPainter extends CustomPainter {
         ..strokeWidth = strokeW / 2;
       canvas.drawCircle(center, irisR, irisFill);
       canvas.drawCircle(center, irisR, irisStroke);
-      final pupilFill = Paint()..color = Colors.black..style = PaintingStyle.fill;
+      final pupilFill = Paint()
+        ..color = Colors.black
+        ..style = PaintingStyle.fill;
       final pupilStroke = Paint()
         ..color = Color.lerp(creatureColor, Colors.white, 0.2)!
         ..style = PaintingStyle.stroke
@@ -748,10 +765,7 @@ class _EyeAddPreviewPainter extends CustomPainter {
 
 /// Mirrored node overlay for eye radius handles (one or two nodes, like lateral fin).
 class _EyeNodeOverlayPainter extends CustomPainter {
-  _EyeNodeOverlayPainter({
-    required this.nodePositions,
-    this.activeNodeIndex,
-  });
+  _EyeNodeOverlayPainter({required this.nodePositions, this.activeNodeIndex});
 
   final List<Offset> nodePositions;
   final int? activeNodeIndex;
@@ -778,7 +792,8 @@ class _EyeNodeOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _EyeNodeOverlayPainter old) {
     if (old.nodePositions.length != nodePositions.length ||
-        old.activeNodeIndex != activeNodeIndex) return true;
+        old.activeNodeIndex != activeNodeIndex)
+      return true;
     for (var i = 0; i < nodePositions.length; i++) {
       if (nodePositions[i] != old.nodePositions[i]) return true;
     }
@@ -1092,9 +1107,11 @@ class EditorPreview extends StatefulWidget {
   final void Function(int? index)? onEyeSelected;
   final void Function(int segment, double offsetFromCenter)? onEyeAdded;
   final void Function(int index)? onEyeRemoved;
-  final void Function(int index, int segment, double offsetFromCenter)? onEyeMoved;
+  final void Function(int index, int segment, double offsetFromCenter)?
+  onEyeMoved;
   final void Function(int index, double value)? onEyeRadiusChanged;
-  final void Function(int index, double pupilFraction)? onEyePupilFractionChanged;
+  final void Function(int index, double pupilFraction)?
+  onEyePupilFractionChanged;
 
   @override
   State<EditorPreview> createState() => _EditorPreviewState();
@@ -1128,7 +1145,8 @@ class _EditorPreviewState extends State<EditorPreview>
   int? _eyeDraggingNode; // 0 = radius node
   int? _lateralDragFromIndex;
   int? _lateralPanStartIndex;
-  int? _lateralDraggingNode; // 0=lengthLeft, 1=widthLeft, 2=lengthRight, 3=widthRight
+  int?
+  _lateralDraggingNode; // 0=lengthLeft, 1=widthLeft, 2=lengthRight, 3=widthRight
   double _lastPanX = 0;
   double _lastPanY = 0;
   double _panStartX = 0;
@@ -1215,7 +1233,8 @@ class _EditorPreviewState extends State<EditorPreview>
 
   /// Returns (segment, offsetFromCenter 0..offsetMax). 0 = on spine (single eye), (0, offsetMax] = symmetric pair.
   (int, double) _segmentAndOffsetAtLocal(double sx, double sy) {
-    if (_lastPreviewSize.width <= 0 || _lastPreviewSize.height <= 0) return (0, 0.0);
+    if (_lastPreviewSize.width <= 0 || _lastPreviewSize.height <= 0)
+      return (0, 0.0);
     final centerX = _lastPreviewSize.width / 2;
     final centerY = _lastPreviewSize.height / 2;
     final positions = _spine.positions;
@@ -1606,15 +1625,19 @@ class _EditorPreviewState extends State<EditorPreview>
         }
 
         const double _mouthNodeRadius = 14.0;
+
         /// Match mouth_painter: headSizeRef 30, sizeScale = headW/30; spikes extend length*sizeScale in world.
         const double _mouthHeadSizeRef = 30.0;
+
         /// Extra forward offset so nodes sit clearly in front of the drawn spikes (world units).
         const double _mouthNodeForwardOffset = 14.0;
+
         /// Two nodes when creature has teeth or tentacle: [length, width]. Length = end of spikes + offset; width = middle + offset.
         List<Offset>? _mouthNodePositions() {
           if (positions.length < 2 || _spine.segmentAngles.isEmpty) return null;
           final mouth = widget.creature.mouth;
-          if (mouth != MouthType.teeth && mouth != MouthType.tentacle) return null;
+          if (mouth != MouthType.teeth && mouth != MouthType.tentacle)
+            return null;
           double sx(double wx) => centerX + (wx - cameraX) * _zoom;
           double sy(double wy) => centerY + (wy - cameraY) * _zoom;
           final head = positions.last;
@@ -1626,18 +1649,24 @@ class _EditorPreviewState extends State<EditorPreview>
           final headSeg = (positions.length - 2).clamp(0, positions.length - 1);
           final headW = widthAtSegment(headSeg);
           final sizeScale = headW / _mouthHeadSizeRef;
-          final length = widget.creature.mouthLength ?? MouthParams.lengthDefault;
+          final length =
+              widget.creature.mouthLength ?? MouthParams.lengthDefault;
           final spikeLengthWorld = length * sizeScale;
-          final lengthNodeX = head.x + forwardX * (spikeLengthWorld + _mouthNodeForwardOffset);
-          final lengthNodeY = head.y + forwardY * (spikeLengthWorld + _mouthNodeForwardOffset);
+          final lengthNodeX =
+              head.x + forwardX * (spikeLengthWorld + _mouthNodeForwardOffset);
+          final lengthNodeY =
+              head.y + forwardY * (spikeLengthWorld + _mouthNodeForwardOffset);
           final midForward = spikeLengthWorld * 0.5 + _mouthNodeForwardOffset;
-          final widthNodeX = head.x + forwardX * midForward + perpX * (headW * 0.6);
-          final widthNodeY = head.y + forwardY * midForward + perpY * (headW * 0.6);
+          final widthNodeX =
+              head.x + forwardX * midForward + perpX * (headW * 0.6);
+          final widthNodeY =
+              head.y + forwardY * midForward + perpY * (headW * 0.6);
           return [
             Offset(sx(lengthNodeX), sy(lengthNodeY)),
             Offset(sx(widthNodeX), sy(widthNodeY)),
           ];
         }
+
         int? _hitMouthNode(double px, double py) {
           final nodes = _mouthNodePositions();
           if (nodes == null) return null;
@@ -1652,6 +1681,7 @@ class _EditorPreviewState extends State<EditorPreview>
 
         const double _eyeGrabRadius = 18.0;
         const double _eyeNodeRadius = 14.0;
+
         /// Screen positions for one eye config (1 or 2 circles).
         List<Offset> _eyeScreenPositions(EyeConfig eye) {
           if (positions.length < 2 || _spine.segmentAngles.isEmpty) return [];
@@ -1672,22 +1702,30 @@ class _EditorPreviewState extends State<EditorPreview>
             Offset(sx(cx - dx), sy(cy - dy)),
           ];
         }
+
         int? _eyeIndexAtScreen(double px, double py) {
           final eyes = widget.creature.eyes ?? [];
           final r2 = _eyeGrabRadius * _eyeGrabRadius;
           for (var i = 0; i < eyes.length; i++) {
             for (final pos in _eyeScreenPositions(eyes[i])) {
-              if ((px - pos.dx) * (px - pos.dx) + (py - pos.dy) * (py - pos.dy) <= r2)
+              if ((px - pos.dx) * (px - pos.dx) +
+                      (py - pos.dy) * (py - pos.dy) <=
+                  r2)
                 return i;
             }
           }
           return null;
         }
+
         /// Radius and pupil handles. Pupil node is at 90° to radius node. Single: [radius, pupil]. Pair: [leftRadius, rightRadius, leftPupil, rightPupil].
         List<Offset>? _eyeNodePositions() {
           final eyes = widget.creature.eyes ?? [];
           final idx = widget.selectedEyeIndex;
-          if (idx == null || idx >= eyes.length || positions.length < 2 || _spine.segmentAngles.isEmpty) return null;
+          if (idx == null ||
+              idx >= eyes.length ||
+              positions.length < 2 ||
+              _spine.segmentAngles.isEmpty)
+            return null;
           final eye = eyes[idx];
           final seg = eye.segment.clamp(0, positions.length - 2);
           final cx = (positions[seg].x + positions[seg + 1].x) / 2;
@@ -1717,22 +1755,37 @@ class _EditorPreviewState extends State<EditorPreview>
           final rightCx = cx - dx;
           final rightCy = cy - dy;
           return [
-            Offset(sx(leftCx + (-sin(a)) * eye.radius), sy(leftCy + cos(a) * eye.radius)),
-            Offset(sx(rightCx + sin(a) * eye.radius), sy(rightCy + (-cos(a)) * eye.radius)),
-            Offset(sx(leftCx + cos(a) * pupilDist), sy(leftCy + sin(a) * pupilDist)),
-            Offset(sx(rightCx + cos(a) * pupilDist), sy(rightCy + sin(a) * pupilDist)),
+            Offset(
+              sx(leftCx + (-sin(a)) * eye.radius),
+              sy(leftCy + cos(a) * eye.radius),
+            ),
+            Offset(
+              sx(rightCx + sin(a) * eye.radius),
+              sy(rightCy + (-cos(a)) * eye.radius),
+            ),
+            Offset(
+              sx(leftCx + cos(a) * pupilDist),
+              sy(leftCy + sin(a) * pupilDist),
+            ),
+            Offset(
+              sx(rightCx + cos(a) * pupilDist),
+              sy(rightCy + sin(a) * pupilDist),
+            ),
           ];
         }
+
         int? _hitEyeNode(double px, double py) {
           final positions = _eyeNodePositions();
           if (positions == null) return null;
           final r2 = _eyeNodeRadius * _eyeNodeRadius;
           for (var i = 0; i < positions.length; i++) {
             final o = positions[i];
-            if ((px - o.dx) * (px - o.dx) + (py - o.dy) * (py - o.dy) <= r2) return i;
+            if ((px - o.dx) * (px - o.dx) + (py - o.dy) * (py - o.dy) <= r2)
+              return i;
           }
           return null;
         }
+
         const double _dorsalNodeRadius = 14.0;
         List<Offset>? _dorsalNodePositions() {
           final fins = widget.creature.dorsalFins ?? [];
@@ -2107,80 +2160,97 @@ class _EditorPreviewState extends State<EditorPreview>
                               _eyeDragFromCreature = true;
                             });
                           } else {
-                          // Prioritise lateral nodes (when a lateral is selected) then lateral fin body over pan.
-                          final lateralNodeHit =
-                              widget.selectedLateralFinIndex != null
-                              ? _hitLateralNode(lx, ly)
-                              : null;
-                          if (lateralNodeHit != null &&
-                              ((lateralNodeHit <= 3 &&
-                                    widget.onLateralLengthChanged != null &&
-                                    widget.onLateralWidthChanged != null) ||
-                                  (lateralNodeHit >= 4 &&
-                                    widget.onLateralAngleChanged != null))) {
-                            _lateralDraggingNode = lateralNodeHit;
-                          } else {
-                            final lateralIdx = _lateralIndexNearScreen(lx, ly);
-                            if (lateralIdx != null) {
-                              _lateralPanStartIndex = lateralIdx;
+                            // Prioritise lateral nodes (when a lateral is selected) then lateral fin body over pan.
+                            final lateralNodeHit =
+                                widget.selectedLateralFinIndex != null
+                                ? _hitLateralNode(lx, ly)
+                                : null;
+                            if (lateralNodeHit != null &&
+                                ((lateralNodeHit <= 3 &&
+                                        widget.onLateralLengthChanged != null &&
+                                        widget.onLateralWidthChanged != null) ||
+                                    (lateralNodeHit >= 4 &&
+                                        widget.onLateralAngleChanged !=
+                                            null))) {
+                              _lateralDraggingNode = lateralNodeHit;
                             } else {
-                              final mouthNodeHit = widget.selectedMouth ? _hitMouthNode(lx, ly) : null;
-                              if (mouthNodeHit != null &&
-                                  (mouthNodeHit == 0 && widget.onMouthLengthChanged != null ||
-                                   mouthNodeHit == 1 && (widget.onMouthCurveChanged != null || widget.onMouthWobbleAmplitudeChanged != null))) {
-                                setState(() => _mouthDraggingNode = mouthNodeHit);
-                              } else if (_isPointOnMouth(lx, ly) &&
-                                  widget.creature.mouth != null &&
-                                  widget.onMouthRemoved != null) {
-                                widget.onDorsalFinSelected?.call(null);
-                                widget.onLateralFinSelected?.call(null);
-                                widget.onEyeSelected?.call(null);
-                                widget.onMouthSelected?.call(true);
-                                setState(() {
-                                  _tailSelected = false;
-                                  _mouthDragFromCreature = true;
-                                });
+                              final lateralIdx = _lateralIndexNearScreen(
+                                lx,
+                                ly,
+                              );
+                              if (lateralIdx != null) {
+                                _lateralPanStartIndex = lateralIdx;
                               } else {
-                              final tailNode = _hitTailNode(lx, ly);
-                              if (tailNode != null &&
-                                  _tailSelected &&
-                                  (widget.onTailRootWidthChanged != null ||
-                                      widget.onTailMaxWidthChanged != null ||
-                                      widget.onTailLengthChanged != null)) {
-                                _tailDraggingNode = tailNode;
-                                _tailDragStartValue = tailNode == 0
-                                    ? _effectiveTailRoot()
-                                    : (tailNode == 1
-                                          ? _effectiveTailMax()
-                                          : _effectiveTailLen());
-                              } else if (tailNode == null &&
-                                  _isPointOnTail(lx, ly) &&
-                                  widget.creature.tail != null &&
-                                  widget.onTailRemoved != null) {
-                                widget.onDorsalFinSelected?.call(null);
-                                widget.onLateralFinSelected?.call(null);
-                                widget.onEyeSelected?.call(null);
-                                widget.onMouthSelected?.call(false);
-                                setState(() {
-                                  _tailSelected = true;
-                                  _tailDragFromCreature = true;
-                                });
-                              } else if (widget.panelClosed) {
-                                final worldX = (lx - centerX) / _zoom + cameraX;
-                                final worldY = (ly - centerY) / _zoom + cameraY;
-                                widget.onMouthSelected?.call(false);
-                                setState(() {
-                                  _dragTargetX = worldX;
-                                  _dragTargetY = worldY;
-                                });
-                              } else {
-                                widget.onMouthSelected?.call(false);
-                                setState(() => _editorPotentialPan = true);
+                                final mouthNodeHit = widget.selectedMouth
+                                    ? _hitMouthNode(lx, ly)
+                                    : null;
+                                if (mouthNodeHit != null &&
+                                    (mouthNodeHit == 0 &&
+                                            widget.onMouthLengthChanged !=
+                                                null ||
+                                        mouthNodeHit == 1 &&
+                                            (widget.onMouthCurveChanged !=
+                                                    null ||
+                                                widget.onMouthWobbleAmplitudeChanged !=
+                                                    null))) {
+                                  setState(
+                                    () => _mouthDraggingNode = mouthNodeHit,
+                                  );
+                                } else if (_isPointOnMouth(lx, ly) &&
+                                    widget.creature.mouth != null &&
+                                    widget.onMouthRemoved != null) {
+                                  widget.onDorsalFinSelected?.call(null);
+                                  widget.onLateralFinSelected?.call(null);
+                                  widget.onEyeSelected?.call(null);
+                                  widget.onMouthSelected?.call(true);
+                                  setState(() {
+                                    _tailSelected = false;
+                                    _mouthDragFromCreature = true;
+                                  });
+                                } else {
+                                  final tailNode = _hitTailNode(lx, ly);
+                                  if (tailNode != null &&
+                                      _tailSelected &&
+                                      (widget.onTailRootWidthChanged != null ||
+                                          widget.onTailMaxWidthChanged !=
+                                              null ||
+                                          widget.onTailLengthChanged != null)) {
+                                    _tailDraggingNode = tailNode;
+                                    _tailDragStartValue = tailNode == 0
+                                        ? _effectiveTailRoot()
+                                        : (tailNode == 1
+                                              ? _effectiveTailMax()
+                                              : _effectiveTailLen());
+                                  } else if (tailNode == null &&
+                                      _isPointOnTail(lx, ly) &&
+                                      widget.creature.tail != null &&
+                                      widget.onTailRemoved != null) {
+                                    widget.onDorsalFinSelected?.call(null);
+                                    widget.onLateralFinSelected?.call(null);
+                                    widget.onEyeSelected?.call(null);
+                                    widget.onMouthSelected?.call(false);
+                                    setState(() {
+                                      _tailSelected = true;
+                                      _tailDragFromCreature = true;
+                                    });
+                                  } else if (widget.panelClosed) {
+                                    final worldX =
+                                        (lx - centerX) / _zoom + cameraX;
+                                    final worldY =
+                                        (ly - centerY) / _zoom + cameraY;
+                                    widget.onMouthSelected?.call(false);
+                                    setState(() {
+                                      _dragTargetX = worldX;
+                                      _dragTargetY = worldY;
+                                    });
+                                  } else {
+                                    widget.onMouthSelected?.call(false);
+                                    setState(() => _editorPotentialPan = true);
+                                  }
+                                }
                               }
                             }
                           }
-                          }
-                        }
                         }
                       } else if (widget.panelClosed) {
                         final worldX = (lx - centerX) / _zoom + cameraX;
@@ -2254,30 +2324,41 @@ class _EditorPreviewState extends State<EditorPreview>
                       final idx = widget.selectedLateralFinIndex!;
                       final rawDelta = (ly - _lastPanY) * scale;
                       // Only left length node (0) has inverted drag; negate delta for that node only.
-                      final delta = _lateralDraggingNode! == 0 ? -rawDelta : rawDelta;
+                      final delta = _lateralDraggingNode! == 0
+                          ? -rawDelta
+                          : rawDelta;
                       final laterals = widget.creature.lateralFins!;
                       if (idx < laterals.length) {
-                        if ((_lateralDraggingNode == 0 || _lateralDraggingNode == 2) &&
+                        if ((_lateralDraggingNode == 0 ||
+                                _lateralDraggingNode == 2) &&
                             widget.onLateralLengthChanged != null) {
                           final v = (laterals[idx].length + delta).clamp(
                             LateralFinConfig.lengthMin,
                             LateralFinConfig.lengthMax,
                           );
                           widget.onLateralLengthChanged!(idx, v);
-                        } else if ((_lateralDraggingNode == 1 || _lateralDraggingNode == 3) &&
+                        } else if ((_lateralDraggingNode == 1 ||
+                                _lateralDraggingNode == 3) &&
                             widget.onLateralWidthChanged != null) {
                           final v = (laterals[idx].width + delta).clamp(
                             LateralFinConfig.widthMin,
                             LateralFinConfig.widthMax,
                           );
                           widget.onLateralWidthChanged!(idx, v);
-                        } else if ((_lateralDraggingNode == 4 || _lateralDraggingNode == 5) &&
+                        } else if ((_lateralDraggingNode == 4 ||
+                                _lateralDraggingNode == 5) &&
                             widget.onLateralAngleChanged != null) {
                           final config = laterals[idx];
-                          final seg = config.segment.clamp(0, positions.length - 1);
+                          final seg = config.segment.clamp(
+                            0,
+                            positions.length - 1,
+                          );
                           if (seg < _spine.segmentAngles.length) {
                             final aAttach = _spine.segmentAngles[seg];
-                            final segHead = seg + 1 < _spine.segmentAngles.length ? seg + 1 : seg;
+                            final segHead =
+                                seg + 1 < _spine.segmentAngles.length
+                                ? seg + 1
+                                : seg;
                             final aLock = _spine.segmentAngles[segHead];
                             final halfW = widthAtVertex(seg);
                             final pxW = positions[seg].x;
@@ -2288,18 +2369,26 @@ class _EditorPreviewState extends State<EditorPreview>
                             final rightCy = pyW + cos(aAttach) * halfW;
                             final wx = (lx - centerX) / _zoom + cameraX;
                             final wy = (ly - centerY) / _zoom + cameraY;
-                            final cx = _lateralDraggingNode == 4 ? leftCx : rightCx;
-                            final cy = _lateralDraggingNode == 4 ? leftCy : rightCy;
+                            final cx = _lateralDraggingNode == 4
+                                ? leftCx
+                                : rightCx;
+                            final cy = _lateralDraggingNode == 4
+                                ? leftCy
+                                : rightCy;
                             final ptrAngle = atan2(wy - cy, wx - cx);
                             // Mirror across spine + 180° so drag sensor is in same quadrant as fin (was 180° off).
                             final effectivePtr = 2.0 * aLock - ptrAngle + pi;
                             var flareRad = _lateralDraggingNode == 4
-                                ? -effectivePtr - aLock   // left: aLock + flare = -ptr
-                                : effectivePtr + aLock;   // right: aLock - flare = -ptr
+                                ? -effectivePtr -
+                                      aLock // left: aLock + flare = -ptr
+                                : effectivePtr +
+                                      aLock; // right: aLock - flare = -ptr
                             while (flareRad > pi) flareRad -= 2 * pi;
                             while (flareRad < -pi) flareRad += 2 * pi;
-                            final flareDeg = (flareRad * 180.0 / pi)
-                                .clamp(LateralFinConfig.angleDegreesMin, LateralFinConfig.angleDegreesMax);
+                            final flareDeg = (flareRad * 180.0 / pi).clamp(
+                              LateralFinConfig.angleDegreesMin,
+                              LateralFinConfig.angleDegreesMax,
+                            );
                             widget.onLateralAngleChanged!(idx, flareDeg);
                           }
                         }
@@ -2311,29 +2400,54 @@ class _EditorPreviewState extends State<EditorPreview>
                     }
                     if (_mouthDraggingNode != null) {
                       final head = positions.last;
-                      if (_mouthDraggingNode == 0 && widget.onMouthLengthChanged != null) {
+                      if (_mouthDraggingNode == 0 &&
+                          widget.onMouthLengthChanged != null) {
                         final worldX = (lx - centerX) / _zoom + cameraX;
                         final worldY = (ly - centerY) / _zoom + cameraY;
                         final headA = _spine.segmentAngles.last;
                         final forwardX = cos(headA);
                         final forwardY = sin(headA);
-                        final signedDist = (worldX - head.x) * forwardX + (worldY - head.y) * forwardY;
-                        final headSeg = (positions.length - 2).clamp(0, positions.length - 1);
+                        final signedDist =
+                            (worldX - head.x) * forwardX +
+                            (worldY - head.y) * forwardY;
+                        final headSeg = (positions.length - 2).clamp(
+                          0,
+                          positions.length - 1,
+                        );
                         final headW = widthAtSegment(headSeg);
-                        final sizeScale = (headW / _mouthHeadSizeRef).clamp(0.1, 10.0);
+                        final sizeScale = (headW / _mouthHeadSizeRef).clamp(
+                          0.1,
+                          10.0,
+                        );
                         final logicalLength = signedDist / sizeScale;
-                        final v = logicalLength.clamp(MouthParams.lengthMin, MouthParams.lengthMax);
+                        final v = logicalLength.clamp(
+                          MouthParams.lengthMin,
+                          MouthParams.lengthMax,
+                        );
                         widget.onMouthLengthChanged!(v);
                       } else if (_mouthDraggingNode == 1) {
                         const sense = 0.025;
                         final delta = (ly - _lastPanY) * sense;
-                        if (widget.creature.mouth == MouthType.teeth && widget.onMouthCurveChanged != null) {
-                          final cur = widget.creature.mouthCurve ?? MouthParams.curveDefault;
-                          final v = (cur + delta).clamp(MouthParams.curveMin, MouthParams.curveMax);
+                        if (widget.creature.mouth == MouthType.teeth &&
+                            widget.onMouthCurveChanged != null) {
+                          final cur =
+                              widget.creature.mouthCurve ??
+                              MouthParams.curveDefault;
+                          final v = (cur + delta).clamp(
+                            MouthParams.curveMin,
+                            MouthParams.curveMax,
+                          );
                           widget.onMouthCurveChanged!(v);
-                        } else if (widget.creature.mouth == MouthType.tentacle && widget.onMouthWobbleAmplitudeChanged != null) {
-                          final cur = widget.creature.mouthWobbleAmplitude ?? MouthParams.wobbleDefault;
-                          final v = (cur + delta).clamp(MouthParams.wobbleMin, MouthParams.wobbleMax);
+                        } else if (widget.creature.mouth ==
+                                MouthType.tentacle &&
+                            widget.onMouthWobbleAmplitudeChanged != null) {
+                          final cur =
+                              widget.creature.mouthWobbleAmplitude ??
+                              MouthParams.wobbleDefault;
+                          final v = (cur + delta).clamp(
+                            MouthParams.wobbleMin,
+                            MouthParams.wobbleMax,
+                          );
                           widget.onMouthWobbleAmplitudeChanged!(v);
                         }
                       }
@@ -2470,55 +2584,89 @@ class _EditorPreviewState extends State<EditorPreview>
                       if (idx < eyes.length) {
                         final eye = eyes[idx];
                         final seg = eye.segment.clamp(0, positions.length - 2);
-                        final cx = (positions[seg].x + positions[seg + 1].x) / 2;
-                        final cy = (positions[seg].y + positions[seg + 1].y) / 2;
+                        final cx =
+                            (positions[seg].x + positions[seg + 1].x) / 2;
+                        final cy =
+                            (positions[seg].y + positions[seg + 1].y) / 2;
                         final a = _spine.segmentAngles[seg];
                         final halfW = widthAtVertex(seg);
-                        final isSingle = eye.offsetFromCenter < EyeConfig.singleEyeThreshold;
-                        final isRadiusNode = isSingle ? (nodeIndex == 0) : (nodeIndex < 2);
-                        final isPupilNode = isSingle ? (nodeIndex == 1) : (nodeIndex >= 2);
+                        final isSingle =
+                            eye.offsetFromCenter < EyeConfig.singleEyeThreshold;
+                        final isRadiusNode = isSingle
+                            ? (nodeIndex == 0)
+                            : (nodeIndex < 2);
+                        final isPupilNode = isSingle
+                            ? (nodeIndex == 1)
+                            : (nodeIndex >= 2);
                         if (isRadiusNode && widget.onEyeRadiusChanged != null) {
                           final nodeSide = isSingle ? 0 : nodeIndex;
-                          final off = isSingle ? 0.0 : eye.offsetFromCenter * halfW;
+                          final off = isSingle
+                              ? 0.0
+                              : eye.offsetFromCenter * halfW;
                           final dx = -sin(a) * off;
                           final dy = cos(a) * off;
-                          final eyeCenterWx = isSingle ? cx : (nodeSide == 0 ? cx + dx : cx - dx);
-                          final eyeCenterWy = isSingle ? cy : (nodeSide == 0 ? cy + dy : cy - dy);
+                          final eyeCenterWx = isSingle
+                              ? cx
+                              : (nodeSide == 0 ? cx + dx : cx - dx);
+                          final eyeCenterWy = isSingle
+                              ? cy
+                              : (nodeSide == 0 ? cy + dy : cy - dy);
                           final wx = (lx - centerX) / _zoom + cameraX;
                           final wy = (ly - centerY) / _zoom + cameraY;
                           final dist = sqrt(
                             (wx - eyeCenterWx) * (wx - eyeCenterWx) +
-                            (wy - eyeCenterWy) * (wy - eyeCenterWy),
+                                (wy - eyeCenterWy) * (wy - eyeCenterWy),
                           );
-                          final r = dist.clamp(EyeConfig.radiusMin, EyeConfig.radiusMax);
+                          final r = dist.clamp(
+                            EyeConfig.radiusMin,
+                            EyeConfig.radiusMax,
+                          );
                           final atMin = eye.radius <= EyeConfig.radiusMin;
                           final wouldGrow = r > EyeConfig.radiusMin;
                           final outX = nodeSide == 0 ? -sin(a) : sin(a);
                           final outY = nodeSide == 0 ? cos(a) : -cos(a);
-                          final correctSide = (wx - eyeCenterWx) * outX + (wy - eyeCenterWy) * outY > 0;
+                          final correctSide =
+                              (wx - eyeCenterWx) * outX +
+                                  (wy - eyeCenterWy) * outY >
+                              0;
                           final rToApply = (atMin && wouldGrow && !correctSide)
                               ? EyeConfig.radiusMin
                               : r;
                           widget.onEyeRadiusChanged!(idx, rToApply);
-                        } else if (isPupilNode && widget.onEyePupilFractionChanged != null) {
-                          final off = isSingle ? 0.0 : eye.offsetFromCenter * halfW;
+                        } else if (isPupilNode &&
+                            widget.onEyePupilFractionChanged != null) {
+                          final off = isSingle
+                              ? 0.0
+                              : eye.offsetFromCenter * halfW;
                           final dx = -sin(a) * off;
                           final dy = cos(a) * off;
-                          final eyeCenterWx = isSingle ? cx : (nodeIndex == 2 ? cx + dx : cx - dx);
-                          final eyeCenterWy = isSingle ? cy : (nodeIndex == 2 ? cy + dy : cy - dy);
+                          final eyeCenterWx = isSingle
+                              ? cx
+                              : (nodeIndex == 2 ? cx + dx : cx - dx);
+                          final eyeCenterWy = isSingle
+                              ? cy
+                              : (nodeIndex == 2 ? cy + dy : cy - dy);
                           final wx = (lx - centerX) / _zoom + cameraX;
                           final wy = (ly - centerY) / _zoom + cameraY;
                           final dist = sqrt(
                             (wx - eyeCenterWx) * (wx - eyeCenterWx) +
-                            (wy - eyeCenterWy) * (wy - eyeCenterWy),
+                                (wy - eyeCenterWy) * (wy - eyeCenterWy),
                           );
-                          final rawFrac = (dist / eye.radius).clamp(EyeConfig.pupilFractionMin, EyeConfig.pupilFractionMax);
-                          final atMin = eye.pupilFraction <= EyeConfig.pupilFractionMin;
-                          final wouldGrow = rawFrac > EyeConfig.pupilFractionMin;
+                          final rawFrac = (dist / eye.radius).clamp(
+                            EyeConfig.pupilFractionMin,
+                            EyeConfig.pupilFractionMax,
+                          );
+                          final atMin =
+                              eye.pupilFraction <= EyeConfig.pupilFractionMin;
+                          final wouldGrow =
+                              rawFrac > EyeConfig.pupilFractionMin;
                           // Outward from center toward pupil node = (cos(a), sin(a)); only allow growing if drag is on that side.
                           final outX = cos(a);
                           final outY = sin(a);
-                          final correctSide = (wx - eyeCenterWx) * outX + (wy - eyeCenterWy) * outY > 0;
+                          final correctSide =
+                              (wx - eyeCenterWx) * outX +
+                                  (wy - eyeCenterWy) * outY >
+                              0;
                           final pupilFrac = (atMin && wouldGrow && !correctSide)
                               ? EyeConfig.pupilFractionMin
                               : rawFrac;
@@ -2560,10 +2708,19 @@ class _EditorPreviewState extends State<EditorPreview>
                     }
                     if (_eyeDragFromCreature &&
                         widget.selectedEyeIndex != null) {
-                      final inside = _finRemoveBounds().contains(Offset(_lastPanX, _lastPanY));
+                      final inside = _finRemoveBounds().contains(
+                        Offset(_lastPanX, _lastPanY),
+                      );
                       if (inside && widget.onEyeMoved != null) {
-                        final (seg, offset) = _segmentAndOffsetAtLocal(_lastPanX, _lastPanY);
-                        widget.onEyeMoved!(widget.selectedEyeIndex!, seg, offset);
+                        final (seg, offset) = _segmentAndOffsetAtLocal(
+                          _lastPanX,
+                          _lastPanY,
+                        );
+                        widget.onEyeMoved!(
+                          widget.selectedEyeIndex!,
+                          seg,
+                          offset,
+                        );
                       } else if (!inside && widget.onEyeRemoved != null) {
                         widget.onEyeRemoved!(widget.selectedEyeIndex!);
                       }
@@ -2929,16 +3086,18 @@ class _EditorPreviewState extends State<EditorPreview>
                         (positions.length - 2).clamp(0, positions.length - 1),
                       ),
                       bodyColor: Color(widget.creature.color),
-                      faceCurveWorld: CreaturePainter.computeHeadCapFaceCurveWorld(
-                        positions: positions,
-                        segmentAngles: _spine.segmentAngles,
-                        widthAtWorld: (i) => widget.creature.widthAtVertex(i),
-                        centerX: centerX,
-                        centerY: centerY,
-                        zoom: _zoom,
-                        cameraX: cameraX,
-                        cameraY: cameraY,
-                      ),
+                      faceCurveWorld:
+                          CreaturePainter.computeHeadCapFaceCurveWorld(
+                            positions: positions,
+                            segmentAngles: _spine.segmentAngles,
+                            widthAtWorld: (i) =>
+                                widget.creature.widthAtVertex(i),
+                            centerX: centerX,
+                            centerY: centerY,
+                            zoom: _zoom,
+                            cameraX: cameraX,
+                            cameraY: cameraY,
+                          ),
                       previewMouthCount: _mouthAddDragPayload?.mouthCount,
                     ),
                     size: Size(w, h),
@@ -2946,7 +3105,9 @@ class _EditorPreviewState extends State<EditorPreview>
                 ),
               ),
             if (_eyeAddDragLocal != null &&
-                creatureScreenBounds().inflate(40).contains(_eyeAddDragLocal!) &&
+                creatureScreenBounds()
+                    .inflate(40)
+                    .contains(_eyeAddDragLocal!) &&
                 positions.length >= 2 &&
                 _spine.segmentAngles.isNotEmpty)
               Positioned.fill(
@@ -2970,7 +3131,9 @@ class _EditorPreviewState extends State<EditorPreview>
                           zoom: _zoom,
                           widthAtVertex: (i) => widthAtVertex(i),
                           creatureColor: Color(widget.creature.color),
-                          creatureFinColor: widget.creature.finColor != null ? Color(widget.creature.finColor!) : null,
+                          creatureFinColor: widget.creature.finColor != null
+                              ? Color(widget.creature.finColor!)
+                              : null,
                         ),
                         size: Size(w, h),
                       );
@@ -2994,7 +3157,8 @@ class _EditorPreviewState extends State<EditorPreview>
                       final idx = widget.selectedEyeIndex!;
                       final eye = idx < eyes.length ? eyes[idx] : null;
                       final radiusWorld = eye?.radius;
-                      final pupilFraction = eye?.pupilFraction ?? EyeConfig.pupilFractionDefault;
+                      final pupilFraction =
+                          eye?.pupilFraction ?? EyeConfig.pupilFractionDefault;
                       return CustomPaint(
                         painter: _EyeAddPreviewPainter(
                           segment: seg,
@@ -3008,7 +3172,9 @@ class _EditorPreviewState extends State<EditorPreview>
                           zoom: _zoom,
                           widthAtVertex: (i) => widthAtVertex(i),
                           creatureColor: Color(widget.creature.color),
-                          creatureFinColor: widget.creature.finColor != null ? Color(widget.creature.finColor!) : null,
+                          creatureFinColor: widget.creature.finColor != null
+                              ? Color(widget.creature.finColor!)
+                              : null,
                           pupilFraction: pupilFraction,
                           radiusWorld: radiusWorld,
                         ),
@@ -3119,7 +3285,9 @@ class _EditorPreviewState extends State<EditorPreview>
                       ),
                       length: LateralFinConfig.lengthDefault,
                       width: LateralFinConfig.widthDefault,
-                      wingType: _lateralAddDragPayload?.wingType ?? LateralWingType.ellipse,
+                      wingType:
+                          _lateralAddDragPayload?.wingType ??
+                          LateralWingType.ellipse,
                       positions: positions,
                       segmentAngles: _spine.segmentAngles,
                       centerX: centerX,
@@ -3178,18 +3346,20 @@ class _EditorPreviewState extends State<EditorPreview>
                             : LateralFinConfig.widthDefault,
                         angleDegrees:
                             _lateralDragFromIndex! <
-                                    (widget.creature.lateralFins?.length ?? 0)
-                                ? widget.creature
-                                    .lateralFins![_lateralDragFromIndex!]
-                                    .angleDegrees
-                                : LateralFinConfig.angleDegreesDefault,
+                                (widget.creature.lateralFins?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .lateralFins![_lateralDragFromIndex!]
+                                  .angleDegrees
+                            : LateralFinConfig.angleDegreesDefault,
                         wingType:
                             _lateralDragFromIndex! <
-                                    (widget.creature.lateralFins?.length ?? 0)
-                                ? widget.creature
-                                    .lateralFins![_lateralDragFromIndex!]
-                                    .wingType
-                                : LateralWingType.ellipse,
+                                (widget.creature.lateralFins?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .lateralFins![_lateralDragFromIndex!]
+                                  .wingType
+                            : LateralWingType.ellipse,
                         positions: positions,
                         segmentAngles: _spine.segmentAngles,
                         centerX: centerX,
@@ -3247,18 +3417,20 @@ class _EditorPreviewState extends State<EditorPreview>
                             : LateralFinConfig.widthDefault,
                         angleDegrees:
                             _lateralDragFromIndex! <
-                                    (widget.creature.lateralFins?.length ?? 0)
-                                ? widget.creature
-                                    .lateralFins![_lateralDragFromIndex!]
-                                    .angleDegrees
-                                : LateralFinConfig.angleDegreesDefault,
+                                (widget.creature.lateralFins?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .lateralFins![_lateralDragFromIndex!]
+                                  .angleDegrees
+                            : LateralFinConfig.angleDegreesDefault,
                         wingType:
                             _lateralDragFromIndex! <
-                                    (widget.creature.lateralFins?.length ?? 0)
-                                ? widget.creature
-                                    .lateralFins![_lateralDragFromIndex!]
-                                    .wingType
-                                : LateralWingType.ellipse,
+                                (widget.creature.lateralFins?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .lateralFins![_lateralDragFromIndex!]
+                                  .wingType
+                            : LateralWingType.ellipse,
                         positions: positions,
                         segmentAngles: _spine.segmentAngles,
                         centerX: centerX,
@@ -3381,7 +3553,10 @@ class _EditorPreviewState extends State<EditorPreview>
               if (box != null && box.hasSize) {
                 final local = box.globalToLocal(d.offset);
                 if (creatureScreenBounds().inflate(40).contains(local)) {
-                  final (seg, offset) = _segmentAndOffsetAtLocal(local.dx, local.dy);
+                  final (seg, offset) = _segmentAndOffsetAtLocal(
+                    local.dx,
+                    local.dy,
+                  );
                   widget.onEyeAdded!(seg, offset);
                 }
               }
