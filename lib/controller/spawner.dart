@@ -3,6 +3,7 @@ import 'dart:math' show Random;
 import 'package:creature_bio_sim/creature.dart';
 import 'package:creature_bio_sim/dorsal_fin_rules.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
+import 'package:flutter/material.dart';
 
 /// Factory for random creatures and spines. Use with [CreatureStore] for chunk-based spawning.
 class Spawner {
@@ -18,9 +19,16 @@ class Spawner {
   final Random _rng;
 
   /// Creates a random creature and spine positioned at [headX], [headY].
-  (Creature, Spine) createRandomAt(double headX, double headY, {double turnAgility = Spine.defaultTurnAgility}) {
+  (Creature, Spine) createRandomAt(
+    double headX,
+    double headY, {
+    double turnAgility = Spine.defaultTurnAgility,
+  }) {
     final creature = _randomCreature();
-    final spine = Spine(segmentCount: creature.segmentCount, turnAgility: turnAgility);
+    final spine = Spine(
+      segmentCount: creature.segmentCount,
+      turnAgility: turnAgility,
+    );
     _positionSpineHeadAt(spine, headX, headY);
     return (creature, spine);
   }
@@ -36,7 +44,10 @@ class Spawner {
     const spread = 60.0;
     final list = <(Spine, bool)>[];
     for (var i = 0; i < babyFlags.length; i++) {
-      final spine = Spine(segmentCount: creature.segmentCount, turnAgility: turnAgility);
+      final spine = Spine(
+        segmentCount: creature.segmentCount,
+        turnAgility: turnAgility,
+      );
       final x = centerX + (_rng.nextDouble() * 2 - 1) * spread;
       final y = centerY + (_rng.nextDouble() * 2 - 1) * spread;
       _positionSpineHeadAt(spine, x, y);
@@ -72,28 +83,46 @@ class Spawner {
   Creature _randomCreature() {
     final segmentCount = 1 + _rng.nextInt(Creature.maxSegmentCount);
     final widths = _smoothSegmentWidths(segmentCount);
-    final color = 0xFF000000 | _rng.nextInt(0xFFFFFF);
+    final hue = _rng.nextDouble() * 360;
+
+    final base = HSVColor.fromAHSV(1, hue, 0.6, 0.8);
+    final fin = HSVColor.fromAHSV(
+      1,
+      (hue + 20 + _rng.nextDouble() * 20) % 360,
+      0.6,
+      0.8,
+    );
+    final color = base.toColor().toARGB32();
+    final finColor = fin.toColor().toARGB32();
+
     final dorsalFins = _randomDorsalFins(segmentCount);
     final tailFin = _randomTailFin();
     final lateralFins = _randomLateralFins(segmentCount);
     final tail = tailFin != null
         ? TailConfig(
             tailFin,
-            rootWidth: _inRange(TailConfig.rootWidthMin, TailConfig.rootWidthMax),
+            rootWidth: _inRange(
+              TailConfig.rootWidthMin,
+              TailConfig.rootWidthMax,
+            ),
             maxWidth: _inRange(TailConfig.maxWidthMin, TailConfig.maxWidthMax),
             length: _inRange(TailConfig.lengthMin, TailConfig.lengthMax),
           )
         : null;
-    final trophicType = _spawnableTrophic[_rng.nextInt(_spawnableTrophic.length)];
+    final trophicType =
+        _spawnableTrophic[_rng.nextInt(_spawnableTrophic.length)];
     final mouth = trophicType == TrophicType.herbivore
         ? MouthType.tentacle
-        : (trophicType == TrophicType.carnivore ? MouthType.teeth : MouthType.mandible);
+        : (trophicType == TrophicType.carnivore
+              ? MouthType.teeth
+              : MouthType.mandible);
     final mouthCount = mouth == MouthType.teeth
         ? teethCountOptions[_rng.nextInt(teethCountOptions.length)]
         : (mouth == MouthType.tentacle
-            ? tentacleCountOptions[_rng.nextInt(tentacleCountOptions.length)]
-            : null);
-    final mouthLength = (mouth == MouthType.teeth || mouth == MouthType.tentacle)
+              ? tentacleCountOptions[_rng.nextInt(tentacleCountOptions.length)]
+              : null);
+    final mouthLength =
+        (mouth == MouthType.teeth || mouth == MouthType.tentacle)
         ? _inRange(MouthParams.lengthMin, MouthParams.lengthMax)
         : null;
     final mouthCurve = mouth == MouthType.teeth
@@ -106,6 +135,7 @@ class Spawner {
     return Creature(
       segmentWidths: widths,
       color: color,
+      finColor: finColor,
       dorsalFins: (dorsalFins == null || dorsalFins.isEmpty)
           ? null
           : dorsalFins,
@@ -133,18 +163,24 @@ class Spawner {
       final seg = _rng.nextInt(segmentCount);
       final offset = _rng.nextDouble() * EyeConfig.offsetMax;
       final radius = _inRange(EyeConfig.radiusMin, EyeConfig.radiusMax);
-      list.add(EyeConfig(
-        seg,
-        offsetFromCenter: offset,
-        radius: radius,
-        pupilFraction: _inRange(EyeConfig.pupilFractionMin, EyeConfig.pupilFractionMax),
-      ));
+      list.add(
+        EyeConfig(
+          seg,
+          offsetFromCenter: offset,
+          radius: radius,
+          pupilFraction: _inRange(
+            EyeConfig.pupilFractionMin,
+            EyeConfig.pupilFractionMax,
+          ),
+        ),
+      );
     }
     list.sort((a, b) => a.segment.compareTo(b.segment));
     return list;
   }
 
-  double _inRange(double min, double max) => min + _rng.nextDouble() * (max - min);
+  double _inRange(double min, double max) =>
+      min + _rng.nextDouble() * (max - min);
 
   /// ~1/6 chance per segment (excluding head) to get a lateral fin with random size and wing type.
   List<LateralFinConfig>? _randomLateralFins(int segmentCount) {
@@ -154,10 +190,23 @@ class Spawner {
     final list = <LateralFinConfig>[];
     for (var seg = 0; seg < n; seg++) {
       if (_rng.nextDouble() < 1 / 6) {
-        final length = _inRange(LateralFinConfig.lengthMin, LateralFinConfig.lengthMax);
-        final width = _inRange(LateralFinConfig.widthMin, LateralFinConfig.widthMax);
+        final length = _inRange(
+          LateralFinConfig.lengthMin,
+          LateralFinConfig.lengthMax,
+        );
+        final width = _inRange(
+          LateralFinConfig.widthMin,
+          LateralFinConfig.widthMax,
+        );
         final wingType = types[_rng.nextInt(types.length)];
-        list.add(LateralFinConfig(seg, length: length, width: width, wingType: wingType));
+        list.add(
+          LateralFinConfig(
+            seg,
+            length: length,
+            width: width,
+            wingType: wingType,
+          ),
+        );
       }
     }
     return list.isEmpty ? null : list;
@@ -213,7 +262,9 @@ class Spawner {
     final used = <int>{};
 
     for (var f = 0; f < numFins; f++) {
-      final len = dorsalFinMinSegments + _rng.nextInt((segmentCount - dorsalFinMinSegments).clamp(1, 5));
+      final len =
+          dorsalFinMinSegments +
+          _rng.nextInt((segmentCount - dorsalFinMinSegments).clamp(1, 5));
       final candidates = <int>[];
       for (var start = 0; start <= segmentCount - len; start++) {
         var overlap = false;

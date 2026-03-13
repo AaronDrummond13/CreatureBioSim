@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:creature_bio_sim/creature.dart';
+import 'package:creature_bio_sim/render/pec_painter.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
@@ -19,6 +20,7 @@ class PecFinSegmentPainter extends CustomPainter {
     required this.cameraY,
     required this.zoom,
     required this.segWidth,
+    required this.creatureColor,
     required this.finColor,
     this.highlight = false,
     this.highlightForRemove = false,
@@ -37,6 +39,7 @@ class PecFinSegmentPainter extends CustomPainter {
   final double cameraY;
   final double zoom;
   final double segWidth;
+  final Color creatureColor;
   final Color finColor;
   final bool highlight;
   final bool highlightForRemove;
@@ -54,8 +57,6 @@ class PecFinSegmentPainter extends CustomPainter {
     final lenScreen = len * zoom;
     final widScreen = wid * zoom;
     final aAttach = segmentAngles[segment];
-    final segHead = segment + 1 < segmentAngles.length ? segment + 1 : segment;
-    final aLock = segmentAngles[segHead];
     final halfW = segWidth;
     final px = positions[segment].x;
     final py = positions[segment].y;
@@ -63,98 +64,85 @@ class PecFinSegmentPainter extends CustomPainter {
         leftCy = py - cos(aAttach) * halfW;
     final rightCx = px - sin(aAttach) * halfW,
         rightCy = py + cos(aAttach) * halfW;
-    final leftAngle = aLock + flareRad, rightAngle = aLock - flareRad;
-    final fillColor = highlightForRemove
-        ? Colors.red.withValues(alpha: 0.5)
-        : (highlight
-              ? Colors.white.withValues(alpha: 0.6)
-              : finColor.withValues(alpha: 0.9));
     final strokeColor = highlightForRemove
         ? Colors.red
         : (highlight ? Colors.amber : Colors.white);
-    final fillPaint = Paint()
-      ..color = fillColor
+    final fillPaintL = Paint()
+      ..shader =
+          LinearGradient(
+            transform: GradientRotation(pi / 2 - flareRad),
+            colors: highlightForRemove
+                ? [Colors.red.withValues(alpha: 0.5)]
+                : [finColor, creatureColor, creatureColor],
+          ).createShader(
+            Rect.fromCenter(
+              center: Offset.zero,
+              width: lenScreen / 2,
+              height: lenScreen / 2,
+            ),
+          )
+      ..style = PaintingStyle.fill;
+    final fillPaintR = Paint()
+      ..shader =
+          LinearGradient(
+            transform: GradientRotation(-pi / 2 + flareRad),
+            colors: highlightForRemove
+                ? [Colors.red.withValues(alpha: 0.5)]
+                : [finColor, creatureColor, creatureColor],
+          ).createShader(
+            Rect.fromCenter(
+              center: Offset.zero,
+              width: lenScreen / 2,
+              height: lenScreen / 2,
+            ),
+          )
       ..style = PaintingStyle.fill;
     final strokePaint = Paint()
       ..color = strokeColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = (2.0 * zoom).clamp(1.0, 2.0);
-    void drawWing(Canvas c, double lS, double wS, {bool isLeft = true}) {
-      if (wingType == LateralWingType.sharkWing) {
-        final hLen = lS / 2, hWid = wS / 2;
-        final path = Path()
-          ..moveTo(hLen, -hWid)
-          ..quadraticBezierTo(0.0, -hWid, -hLen, 0.0)
-          ..quadraticBezierTo(0.0, hWid, hLen, hWid)
-          ..close();
-        c.drawPath(path, fillPaint);
-        c.drawPath(path, strokePaint);
-      } else if (wingType == LateralWingType.sharkConcave) {
-        final hLen = lS / 2, hWid = wS / 2;
-        final path = Path();
-        if (isLeft) {
-          path
-            ..moveTo(hLen, -hWid)
-            ..quadraticBezierTo(0.0, -hWid, -hLen, 0.0)
-            ..quadraticBezierTo(0.0, 0.0, hLen, hWid)
-            ..close();
-        } else {
-          path
-            ..moveTo(hLen, -hWid)
-            ..quadraticBezierTo(0.0, 0.0, -hLen, 0.0)
-            ..quadraticBezierTo(0.0, hWid, hLen, hWid)
-            ..close();
-        }
-        c.drawPath(path, fillPaint);
-        c.drawPath(path, strokePaint);
-      } else if (wingType == LateralWingType.paddle) {
-        final hLen = lS / 2, hWid = wS / 2;
-        final path = Path()
-          ..moveTo(-hLen, -hWid)
-          ..quadraticBezierTo(0.0, -hWid, hLen, 0.0)
-          ..quadraticBezierTo(0.0, hWid, -hLen, hWid)
-          ..close();
-        c.drawPath(path, fillPaint);
-        c.drawPath(path, strokePaint);
-      } else if (wingType == LateralWingType.paddleConcave) {
-        final hLen = lS / 2, hWid = wS / 2;
-        final path = Path();
-        if (isLeft) {
-          path
-            ..moveTo(-hLen, -hWid)
-            ..quadraticBezierTo(0.0, -hWid, hLen, 0.0)
-            ..quadraticBezierTo(0.0, 0.0, -hLen, hWid)
-            ..close();
-        } else {
-          path
-            ..moveTo(-hLen, -hWid)
-            ..quadraticBezierTo(0.0, 0.0, hLen, 0.0)
-            ..quadraticBezierTo(0.0, hWid, -hLen, hWid)
-            ..close();
-        }
-        c.drawPath(path, fillPaint);
-        c.drawPath(path, strokePaint);
-      } else {
-        final rect = Rect.fromCenter(
-          center: Offset.zero,
-          width: lS,
-          height: wS,
-        );
-        c.drawOval(rect, fillPaint);
-        c.drawOval(rect, strokePaint);
-      }
-    }
 
-    canvas.save();
-    canvas.translate(sx(leftCx), sy(leftCy));
-    canvas.rotate(leftAngle);
-    drawWing(canvas, lenScreen, widScreen, isLeft: true);
-    canvas.restore();
-    canvas.save();
-    canvas.translate(sx(rightCx), sy(rightCy));
-    canvas.rotate(rightAngle);
-    drawWing(canvas, lenScreen, widScreen, isLeft: false);
-    canvas.restore();
+    final anchors = computeFinAnchors(
+      flareRad: flareRad,
+      halfWidth: halfW,
+      positions: positions,
+      segment: segment,
+      segmentAngles: segmentAngles,
+    );
+
+    drawTransformed(
+      canvas,
+      Offset(sx(leftCx), sy(leftCy)),
+      anchors.leftAngle,
+      () {
+        drawLateralWing(
+          canvas,
+          wingType,
+          lenScreen,
+          widScreen,
+          fillPaintL,
+          strokePaint,
+          isLeft: true,
+        );
+      },
+    );
+
+    drawTransformed(
+      canvas,
+      Offset(sx(rightCx), sy(rightCy)),
+      anchors.rightAngle,
+      () {
+        drawLateralWing(
+          canvas,
+          wingType,
+          lenScreen,
+          widScreen,
+          fillPaintR,
+          strokePaint,
+          isLeft: false,
+        );
+      },
+    );
   }
 
   @override

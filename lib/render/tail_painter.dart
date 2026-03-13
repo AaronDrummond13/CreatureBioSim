@@ -196,7 +196,18 @@ void paintTailFin(
           ? Color(creature.finColor!)
           : Color.lerp(bodyColor, Colors.white, 0.12)!);
   final finPaint = Paint()
-    ..color = finColor
+    ..shader =
+        RadialGradient(
+          center: Alignment.center,
+          radius: 1,
+          colors: [Color(creature.color), finColor],
+        ).createShader(
+          Rect.fromCenter(
+            center: pts.first,
+            width: len * zoom,
+            height: len * zoom,
+          ),
+        )
     ..style = PaintingStyle.fill;
   final strokePaint = Paint()
     ..color = Colors.white

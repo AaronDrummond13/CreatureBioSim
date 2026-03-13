@@ -2286,6 +2286,7 @@ class _EditorPreviewState extends State<EditorPreview>
                           _lateralAddDragLocal!.dy,
                         ),
                       ),
+                      creatureColor: Color(widget.creature.color),
                       finColor: widget.creature.finColor != null
                           ? Color(widget.creature.finColor!)
                           : Color.lerp(
@@ -2358,6 +2359,7 @@ class _EditorPreviewState extends State<EditorPreview>
                             _lastPanY,
                           ).clamp(0, positions.length - 2),
                         ),
+                        creatureColor: Color(widget.creature.color),
                         finColor: widget.creature.finColor != null
                             ? Color(widget.creature.finColor!)
                             : Color.lerp(
@@ -2432,6 +2434,7 @@ class _EditorPreviewState extends State<EditorPreview>
                                     .segment
                               : 0,
                         ),
+                        creatureColor: Color(widget.creature.color),
                         finColor: widget.creature.finColor != null
                             ? Color(widget.creature.finColor!)
                             : Color.lerp(
