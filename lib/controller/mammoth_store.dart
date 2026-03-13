@@ -27,8 +27,8 @@ const double _kParallaxChunkSize = 500;
 const double _kParallaxFactor = 0.25;
 const double _kParallaxZoomScale = 5.0;
 
-const double _kSpawnRadius = 1000.0;
-const double _kCullRadius = 1200.0;
+const double _kSpawnRadius = kChunkLoadRadiusWorld * _kParallaxFactor;
+const double _kCullRadius = kChunkCullRadiusWorld * _kParallaxFactor;
 
 int _chunkIdx(double v) => (v / _kParallaxChunkSize).floor();
 String _chunkKey(int i, int j) => 'p$i,$j';
@@ -122,7 +122,11 @@ class MammothStore {
     final spawnX = x0 + _random.nextDouble() * cell;
     final spawnY = y0 + _random.nextDouble() * cell;
     final mammothAgility = Spine.defaultTurnAgility * Spine.mammothPenalty;
-    final (creature, spine) = spawner.createRandomAt(spawnX, spawnY, turnAgility: mammothAgility);
+    final (creature, spine) = spawner.createRandomAt(
+      spawnX,
+      spawnY,
+      turnAgility: mammothAgility,
+    );
     final pos = spine.positions;
     final homeX = pos.isNotEmpty ? pos.last.x : null;
     final homeY = pos.isNotEmpty ? pos.last.y : null;
@@ -130,21 +134,26 @@ class MammothStore {
       spine: spine,
       wanderRadius: 1400.0 + _random.nextDouble() * 600.0,
       ticksPerNewTarget: 350 + _random.nextInt(140),
-      speed: Spine.defaultMoveSpeed * Spine.mammothPenalty / _kParallaxZoomScale,
+      speed:
+          Spine.defaultMoveSpeed * Spine.mammothPenalty / _kParallaxZoomScale,
       homeX: homeX,
       homeY: homeY,
       allowStandAndSpin: false,
     );
     final layerOpacity = 0.01 + _random.nextDouble() * 0.49;
     final key = _chunkKey(i, j);
-    _byChunk.putIfAbsent(key, () => []).add(StoredMammoth(
-      creature: creature,
-      spine: spine,
-      botController: botController,
-      layerOpacity: layerOpacity,
-      chunkCx: i,
-      chunkCy: j,
-    ));
+    _byChunk
+        .putIfAbsent(key, () => [])
+        .add(
+          StoredMammoth(
+            creature: creature,
+            spine: spine,
+            botController: botController,
+            layerOpacity: layerOpacity,
+            chunkCx: i,
+            chunkCy: j,
+          ),
+        );
   }
 
   List<StoredMammoth> getVisible(
