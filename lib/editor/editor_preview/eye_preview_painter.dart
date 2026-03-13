@@ -1,6 +1,4 @@
 import 'dart:math';
-import 'dart:ui';
-
 import 'package:creature_bio_sim/creature.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
 import 'package:flutter/material.dart';

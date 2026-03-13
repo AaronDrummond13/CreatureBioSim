@@ -264,7 +264,7 @@ class _ColourTabState extends State<_ColourTab> {
             _HSVPicker(
               color: color,
               onChanged: (c) {
-                final value = 0xFF000000 | (c.value & 0xFFFFFF);
+                final value = 0xFF000000 | (c.toARGB32() & 0xFFFFFF);
                 widget.onCreatureChanged(
                   Creature(
                     segmentWidths: creature.segmentWidths,
@@ -318,7 +318,7 @@ class _HSVPickerState extends State<_HSVPicker> {
   @override
   void didUpdateWidget(covariant _HSVPicker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.color.value != widget.color.value) _syncFromColor();
+    if (oldWidget.color.toARGB32() != widget.color.toARGB32()) _syncFromColor();
   }
 
   void _syncFromColor() {

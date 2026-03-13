@@ -330,21 +330,15 @@ class EditorScreenState extends State<EditorScreen> {
       w = w.sublist(-delta);
     }
     // Offset all segment indices so attachments stay at same spine position.
-    List<(List<int>, double?)>? dorsal = _creature.dorsalFins != null
-        ? _creature.dorsalFins!
-              .map((f) => (f.$1.map((s) => s + delta).toList(), f.$2))
-              .toList()
-        : null;
-    List<LateralFinConfig>? lateral = _creature.lateralFins != null
-        ? _creature.lateralFins!
-              .map((c) => c.copyWith(segment: c.segment + delta))
-              .toList()
-        : null;
-    List<EyeConfig>? eyes = _creature.eyes != null
-        ? _creature.eyes!
-              .map((e) => e.copyWith(segment: e.segment + delta))
-              .toList()
-        : null;
+    List<(List<int>, double?)>? dorsal = _creature.dorsalFins
+        ?.map((f) => (f.$1.map((s) => s + delta).toList(), f.$2))
+        .toList();
+    List<LateralFinConfig>? lateral = _creature.lateralFins
+        ?.map((c) => c.copyWith(segment: c.segment + delta))
+        .toList();
+    List<EyeConfig>? eyes = _creature.eyes
+        ?.map((e) => e.copyWith(segment: e.segment + delta))
+        .toList();
     setState(
       () => _creature = _creatureWith(
         _creature,

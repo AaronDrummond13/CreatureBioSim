@@ -7,6 +7,7 @@
 ///   Wraps on a 10×10 grid. Other stable per-region data can be added here.
 ///
 /// All world positions and chunk indices are in the same coordinate system.
+library;
 
 /// Chunk size in world units. One chunk = one square cell of the base grid.
 const double kChunkSizeWorld = 500.0;
@@ -33,8 +34,7 @@ int chunkIndexX(double worldX) => (worldX / kChunkSizeWorld).floor();
 int chunkIndexY(double worldY) => (worldY / kChunkSizeWorld).floor();
 
 /// Chunk index (cx, cy) for world position (x, y).
-(int, int) chunkIndex(double x, double y) =>
-    (chunkIndexX(x), chunkIndexY(y));
+(int, int) chunkIndex(double x, double y) => (chunkIndexX(x), chunkIndexY(y));
 
 /// Wrap a biome region index to 0..kBiomeGridSize-1.
 int wrapBiomeRegion(int value) {
@@ -46,7 +46,14 @@ int wrapBiomeRegion(int value) {
 String chunkKey(int cx, int cy) => '$cx,$cy';
 
 /// Squared distance from point (px, py) to AABB [x0,x1]×[y0,y1]. 0 if point inside.
-double distSqToAabb(double px, double py, double x0, double x1, double y0, double y1) {
+double distSqToAabb(
+  double px,
+  double py,
+  double x0,
+  double x1,
+  double y0,
+  double y1,
+) {
   final dx = px < x0 ? x0 - px : (px > x1 ? px - x1 : 0.0);
   final dy = py < y0 ? y0 - py : (py > y1 ? py - y1 : 0.0);
   return dx * dx + dy * dy;
@@ -54,14 +61,23 @@ double distSqToAabb(double px, double py, double x0, double x1, double y0, doubl
 
 /// True if circle (cx, cy, r) overlaps axis-aligned rect [left, right]×[top, bottom].
 bool circleOverlapsRect(
-  double cx, double cy, double r,
-  double left, double right, double top, double bottom,
-) =>
-    !(cx + r < left || cx - r > right || cy + r < top || cy - r > bottom);
+  double cx,
+  double cy,
+  double r,
+  double left,
+  double right,
+  double top,
+  double bottom,
+) => !(cx + r < left || cx - r > right || cy + r < top || cy - r > bottom);
 
 /// True if AABB [minX, maxX]×[minY, maxY] overlaps rect [left, right]×[top, bottom].
 bool aabbOverlapsRect(
-  double minX, double maxX, double minY, double maxY,
-  double left, double right, double top, double bottom,
-) =>
-    !(maxX < left || minX > right || maxY < top || minY > bottom);
+  double minX,
+  double maxX,
+  double minY,
+  double maxY,
+  double left,
+  double right,
+  double top,
+  double bottom,
+) => !(maxX < left || minX > right || maxY < top || minY > bottom);
