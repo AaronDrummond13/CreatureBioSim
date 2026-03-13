@@ -1387,11 +1387,7 @@ class _EditorPreviewState extends State<EditorPreview>
             intendedTargetY: _dragTargetY,
           );
         } else {
-          _spine.resolve(
-            _dragTargetX,
-            _dragTargetY,
-            speed: _headMoveSpeed,
-          );
+          _spine.resolve(_dragTargetX, _dragTargetY, speed: _headMoveSpeed);
         }
       }
     }
@@ -1435,9 +1431,9 @@ class _EditorPreviewState extends State<EditorPreview>
 
     final editTab = widget.editTabIndex ?? 0;
     final isBodyEdit = editTab == 0 && !widget.panelClosed;
-    final isTailEdit = editTab == 2 && !widget.panelClosed;
+    final isTailEdit = editTab == 1 && !widget.panelClosed;
     final isDorsalEdit =
-        editTab == 2 &&
+        editTab == 1 &&
         widget.selectedDorsalFinIndex != null &&
         !widget.panelClosed;
     final isSpineLocked = !widget.panelClosed;
@@ -2126,7 +2122,7 @@ class _EditorPreviewState extends State<EditorPreview>
                             setState(() => _editorPotentialPan = true);
                           }
                         }
-                      } else if (editTab == 2 && !widget.panelClosed) {
+                      } else if (editTab == 1 && !widget.panelClosed) {
                         // Parts tab: dorsal (body then node) -> lateral -> tail -> target (same one-drag-to-remove as tail)
                         final dorsalIdx = _dorsalFinIndexAtScreen(lx, ly);
                         final dorsalNode = _hitDorsalNode(lx, ly);
@@ -2841,7 +2837,7 @@ class _EditorPreviewState extends State<EditorPreview>
                       }
                       return;
                     }
-                    if (editTab == 2 && widget.onDorsalFinSelected != null) {
+                    if (editTab == 1 && widget.onDorsalFinSelected != null) {
                       final dist2 =
                           (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
                           (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
@@ -3500,7 +3496,7 @@ class _EditorPreviewState extends State<EditorPreview>
           ],
         );
         Widget inner = stackContent;
-        if (editTab == 2 && widget.onTailAdded != null) {
+        if (editTab == 1 && widget.onTailAdded != null) {
           final child = inner;
           inner = DragTarget<TailDragPayload>(
             onWillAcceptWithDetails: (_) => true,
@@ -3537,7 +3533,7 @@ class _EditorPreviewState extends State<EditorPreview>
             builder: (context, candidateData, rejectedData) => child,
           );
         }
-        if (editTab == 2 && widget.onEyeAdded != null) {
+        if (editTab == 1 && widget.onEyeAdded != null) {
           final child = inner;
           inner = DragTarget<EyeDragPayload>(
             onWillAcceptWithDetails: (_) => true,
@@ -3569,7 +3565,7 @@ class _EditorPreviewState extends State<EditorPreview>
             builder: (context, candidateData, rejectedData) => child,
           );
         }
-        if (editTab == 2 && widget.onLateralAdded != null) {
+        if (editTab == 1 && widget.onLateralAdded != null) {
           final child = inner;
           inner = DragTarget<LateralDragPayload>(
             onWillAcceptWithDetails: (_) => true,
@@ -3606,7 +3602,7 @@ class _EditorPreviewState extends State<EditorPreview>
             builder: (context, candidateData, rejectedData) => child,
           );
         }
-        if (editTab == 2 && widget.onMouthAdded != null) {
+        if (editTab == 1 && widget.onMouthAdded != null) {
           final child = inner;
           inner = DragTarget<MouthDragPayload>(
             onWillAcceptWithDetails: (_) => true,
@@ -3643,7 +3639,7 @@ class _EditorPreviewState extends State<EditorPreview>
             builder: (context, candidateData, rejectedData) => child,
           );
         }
-        if (editTab == 2 && widget.onDorsalAdded != null) {
+        if (editTab == 1 && widget.onDorsalAdded != null) {
           final child = inner;
           return DragTarget<DorsalDragPayload>(
             onWillAcceptWithDetails: (_) => true,
