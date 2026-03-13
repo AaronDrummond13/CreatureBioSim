@@ -5,8 +5,8 @@ import 'package:creature_bio_sim/controller/creature_store.dart';
 import 'package:creature_bio_sim/controller/food_store.dart';
 import 'package:creature_bio_sim/controller/mammoth_store.dart';
 import 'package:creature_bio_sim/creature.dart' show Creature, TrophicType;
-import 'package:creature_bio_sim/render/creature_painter.dart';
 import 'package:creature_bio_sim/simulation/bot_consumption.dart';
+import 'package:creature_bio_sim/simulation/creature_collision.dart';
 import 'package:creature_bio_sim/simulation/spine.dart';
 import 'package:creature_bio_sim/simulation_view_state.dart';
 import 'package:creature_bio_sim/world/food.dart' show CellType;
@@ -62,16 +62,12 @@ void runPlayStep(
       if (e.creature.trophicType == TrophicType.herbivore) continue;
       final ep = e.spine.positions;
       if (ep.isEmpty) continue;
-      final ex = ep.last.x;
-      final ey = ep.last.y;
-      final epicHeadSize = e.creature.segmentWidths.isNotEmpty
-          ? e.creature.segmentWidths.last * CreaturePainter.kEpicRenderScale
-          : 30.0;
-      final epicCollision = epicHeadSize * headMouthSizeFrac;
-      final touchRad = headCollision + epicCollision;
-      final ddx = head.x - ex;
-      final ddy = head.y - ey;
-      if (ddx * ddx + ddy * ddy <= touchRad * touchRad) {
+      final epicHeadR = eaterHeadRadius(e.creature, isEpic: true, mouthFrac: headMouthSizeFrac);
+      if (pointHitsCreature(
+        ep.last.x, ep.last.y,
+        spine, creature,
+        attackRadius: epicHeadR,
+      )) {
         output.isDead = true;
         foodStore.addConsumedRemnantAt(
           head.x,
