@@ -129,7 +129,7 @@ class MammothStore {
       spine: spine,
       wanderRadius: 1400.0 + _random.nextDouble() * 600.0,
       ticksPerNewTarget: 350 + _random.nextInt(140),
-      speed: 0.9,
+      speed: Spine.defaultMoveSpeed * Spine.mammothPenalty / _kParallaxZoomScale,
       homeX: homeX,
       homeY: homeY,
       allowStandAndSpin: false,

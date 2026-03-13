@@ -30,7 +30,7 @@ class BotController {
     required this.spine,
     this.wanderRadius = 120.0,
     this.ticksPerNewTarget = 40,
-    this.speed = 4.0,
+    this.speed = Spine.defaultMoveSpeed,
     this.homeX,
     this.homeY,
     this.allowStandAndSpin = true,

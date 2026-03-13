@@ -1269,7 +1269,7 @@ class _EditorPreviewState extends State<EditorPreview>
   static const double _zoomStep = 0.15;
 
   /// Same as SimulationScreen: fixed distance per step so speed is constant.
-  static const double _headMoveSpeed = 4.5;
+  static final double _headMoveSpeed = Spine.defaultMoveSpeed;
   static const double _arrivalThreshold = 20.0;
 
   /// Fixed sim step so editor movement matches play mode speed (60 steps/sec).

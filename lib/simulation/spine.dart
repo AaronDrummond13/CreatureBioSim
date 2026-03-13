@@ -7,6 +7,10 @@ import 'package:creature_bio_sim/simulation/vector.dart';
 /// Spine simulation engine: head-driven kinematic resolve, angle constraints,
 /// curve spread. Pure Dart; no rendering. Driven by segment count (e.g. from Creature).
 class Spine {
+  static const double defaultMoveSpeed = 4.0;
+  static const double botPenalty = 0.9;
+  static const double epicPenalty = 0.7;
+  static const double mammothPenalty = 0.5;
   static const double minSegmentLength = 5.0;
   static const double maxSegmentLength = 30.0;
   static const int maxSegmentCount = 15;

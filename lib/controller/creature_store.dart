@@ -74,6 +74,7 @@ class CreatureStore {
           spine: spine,
           wanderRadius: _botWanderRadius,
           ticksPerNewTarget: _botTicksPerNewTarget,
+          speed: Spine.defaultMoveSpeed * Spine.botPenalty * (isEpic ? Spine.epicPenalty : 1.0),
           homeX: homeX,
           homeY: homeY,
         ),

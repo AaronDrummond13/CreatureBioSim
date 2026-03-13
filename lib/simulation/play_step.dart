@@ -29,7 +29,7 @@ void runPlayStep(
   MammothStore mammothStore,
   ChunkManager chunkManager,
   PlayStepOutput output, {
-  double headMoveSpeed = 4.5,
+  double headMoveSpeed = Spine.defaultMoveSpeed,
   double arrivalThreshold = 20.0,
   double headMouthSizeFrac = 0.8,
   double joystickTargetDistance = 120.0,
