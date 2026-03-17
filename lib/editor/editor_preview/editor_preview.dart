@@ -56,6 +56,15 @@ class EditorPreview extends StatefulWidget {
     this.onLateralLengthChanged,
     this.onLateralWidthChanged,
     this.onLateralAngleChanged,
+    this.onAntennaeToggled,
+    this.onAntennaeMoved,
+    this.onAntennaeAdded,
+    this.selectedAntennaeIndex,
+    this.onAntennaeRemoved,
+    this.onAntennaeSelected,
+    this.onAntennaeLengthChanged,
+    this.onAntennaeWidthChanged,
+    this.onAntennaeAngleChanged,
     this.onMouthAdded,
     this.onMouthRemoved,
     this.onMouthLengthChanged,
@@ -97,6 +106,15 @@ class EditorPreview extends StatefulWidget {
   final void Function(int index, double value)? onLateralLengthChanged;
   final void Function(int index, double value)? onLateralWidthChanged;
   final void Function(int index, double angleDegrees)? onLateralAngleChanged;
+  final void Function(int seg)? onAntennaeToggled;
+  final void Function(int fromIndex, int toSeg)? onAntennaeMoved;
+  final void Function(int seg)? onAntennaeAdded;
+  final int? selectedAntennaeIndex;
+  final void Function(int index)? onAntennaeRemoved;
+  final void Function(int? index)? onAntennaeSelected;
+  final void Function(int index, double value)? onAntennaeLengthChanged;
+  final void Function(int index, double value)? onAntennaeWidthChanged;
+  final void Function(int index, double angleDegrees)? onAntennaeAngleChanged;
   final void Function(MouthType? type, int? mouthCount)? onMouthAdded;
   final void Function()? onMouthRemoved;
   final void Function(double length)? onMouthLengthChanged;
@@ -148,6 +166,10 @@ class _EditorPreviewState extends State<EditorPreview>
   int? _lateralPanStartIndex;
   int?
   _lateralDraggingNode; // 0=lengthLeft, 1=widthLeft, 2=lengthRight, 3=widthRight
+  int? _antennaeDragFromIndex;
+  int? _antennaePanStartIndex;
+  int?
+  _antennaeDraggingNode; // 0=lengthLeft, 1=widthLeft, 2=lengthRight, 3=widthRight
   double _lastPanX = 0;
   double _lastPanY = 0;
   double _panStartX = 0;
@@ -172,6 +194,8 @@ class _EditorPreviewState extends State<EditorPreview>
   int _editorPointerCount = 0;
   Offset? _lateralAddDragLocal;
   LateralDragPayload? _lateralAddDragPayload;
+  Offset? _antennaeAddDragLocal;
+  AntennaeDragPayload? _antennaeAddDragPayload;
   Offset? _dorsalAddDragLocal;
   double _backgroundTimeSeconds = 0.0;
   double? _lastEditorRealTimeSeconds;
@@ -322,6 +346,12 @@ class _EditorPreviewState extends State<EditorPreview>
       _lateralDragFromIndex = null;
       _lateralPanStartIndex = null;
     }
+    final newAntennae = widget.creature.antennae?.length ?? 0;
+    if (_antennaeDragFromIndex != null &&
+        (newAntennae == 0 || _antennaeDragFromIndex! >= newAntennae)) {
+      _antennaeDragFromIndex = null;
+      _antennaePanStartIndex = null;
+    }
     if (widget.editTabIndex != oldWidget.editTabIndex) {
       _tailSelected = false;
       _tailDragFromCreature = false;
@@ -333,6 +363,7 @@ class _EditorPreviewState extends State<EditorPreview>
       _eyeDragFromCreature = false;
       _eyeDraggingNode = null;
       _lateralDraggingNode = null;
+      _antennaeDraggingNode = null;
     }
   }
 
@@ -549,6 +580,64 @@ class _EditorPreviewState extends State<EditorPreview>
 
         int? lateralIndexNearScreen(double px, double py) {
           final laterals = widget.creature.lateralFins ?? [];
+          if (laterals.isEmpty || positions.length < 2) return null;
+          final segAngles = _spine.segmentAngles;
+          if (segAngles.isEmpty) return null;
+          double sx(double wx) => centerX + (wx - cameraX) * _zoom;
+          double sy(double wy) => centerY + (wy - cameraY) * _zoom;
+          for (var i = 0; i < laterals.length; i++) {
+            final config = laterals[i];
+            final seg = config.segment;
+            if (seg < 0 ||
+                seg >= positions.length - 1 ||
+                seg >= segAngles.length)
+              continue;
+            final flareRad = config.angleDegrees * pi / 180.0;
+            final halfW = widthAtVertex(seg);
+            final aAttach = segAngles[seg];
+            final segHead = seg + 1 < segAngles.length ? seg + 1 : seg;
+            final aLock = segAngles[segHead];
+            final leftAngle = aLock + flareRad;
+            final rightAngle = aLock - flareRad;
+            final lenScreen = config.length * _zoom;
+            final widScreen = config.width * _zoom;
+            final aScreen = lenScreen / 2;
+            final bScreen = widScreen / 2;
+            final pxW = positions[seg].x, pyW = positions[seg].y;
+            final leftCx = pxW + sin(aAttach) * halfW;
+            final leftCy = pyW - cos(aAttach) * halfW;
+            final rightCx = pxW - sin(aAttach) * halfW;
+            final rightCy = pyW + cos(aAttach) * halfW;
+            final leftSx = sx(leftCx);
+            final leftSy = sy(leftCy);
+            final rightSx = sx(rightCx);
+            final rightSy = sy(rightCy);
+            if (pointInEllipseScreen(
+              px,
+              py,
+              leftSx,
+              leftSy,
+              leftAngle,
+              aScreen,
+              bScreen,
+            ))
+              return i;
+            if (pointInEllipseScreen(
+              px,
+              py,
+              rightSx,
+              rightSy,
+              rightAngle,
+              aScreen,
+              bScreen,
+            ))
+              return i;
+          }
+          return null;
+        }
+
+        int? antennaeIndexNearScreen(double px, double py) {
+          final laterals = widget.creature.antennae ?? [];
           if (laterals.isEmpty || positions.length < 2) return null;
           final segAngles = _spine.segmentAngles;
           if (segAngles.isEmpty) return null;
@@ -888,6 +977,70 @@ class _EditorPreviewState extends State<EditorPreview>
           return null;
         }
 
+        /// Returns 4 positions: [lengthLeft, widthLeft, lengthRight, widthRight]. Index 0,2 = length; 1,3 = width.
+        List<Offset>? antennaeNodePositions() {
+          final laterals = widget.creature.antennae ?? [];
+          final idx = widget.selectedAntennaeIndex;
+          if (idx == null || idx >= laterals.length || positions.length < 2)
+            return null;
+          final segAngles = _spine.segmentAngles;
+          if (segAngles.isEmpty) return null;
+          final config = laterals[idx];
+          final seg = config.segment;
+          if (seg < 0 || seg >= positions.length - 1 || seg >= segAngles.length)
+            return null;
+          double sx(double wx) => centerX + (wx - cameraX) * _zoom;
+          double sy(double wy) => centerY + (wy - cameraY) * _zoom;
+          final flareRad = config.angleDegrees * pi / 180.0;
+          final halfW = widthAtVertex(seg);
+          final aAttach = segAngles[seg];
+          final segHead = seg + 1 < segAngles.length ? seg + 1 : seg;
+          final aLock = segAngles[segHead];
+          final leftAngle = aLock + flareRad;
+          final rightAngle = aLock - flareRad;
+          final pxW = positions[seg].x, pyW = positions[seg].y;
+          final leftCx = pxW + sin(aAttach) * halfW;
+          final leftCy = pyW - cos(aAttach) * halfW;
+          final rightCx = pxW - sin(aAttach) * halfW;
+          final rightCy = pyW + cos(aAttach) * halfW;
+          // Length node on the outside of each fin; width node perpendicular.
+          final lengthLeftX = leftCx - (config.length / 2) * cos(leftAngle);
+          final lengthLeftY = leftCy - (config.length / 2) * sin(leftAngle);
+          final widthLeftX = leftCx - (config.width / 2) * sin(leftAngle);
+          final widthLeftY = leftCy + (config.width / 2) * cos(leftAngle);
+          final lengthRightX = rightCx - (config.length / 2) * cos(rightAngle);
+          final lengthRightY = rightCy - (config.length / 2) * sin(rightAngle);
+          final widthRightX = rightCx - (config.width / 2) * sin(rightAngle);
+          final widthRightY = rightCy + (config.width / 2) * cos(rightAngle);
+          // Angle node: same direction as length node, further out (next to length node).
+          final angleDist = config.length;
+          final angleLeftX = leftCx - angleDist * cos(leftAngle);
+          final angleLeftY = leftCy - angleDist * sin(leftAngle);
+          final angleRightX = rightCx - angleDist * cos(rightAngle);
+          final angleRightY = rightCy - angleDist * sin(rightAngle);
+          return [
+            Offset(sx(lengthLeftX), sy(lengthLeftY)),
+            Offset(sx(widthLeftX), sy(widthLeftY)),
+            Offset(sx(lengthRightX), sy(lengthRightY)),
+            Offset(sx(widthRightX), sy(widthRightY)),
+            Offset(sx(angleLeftX), sy(angleLeftY)),
+            Offset(sx(angleRightX), sy(angleRightY)),
+          ];
+        }
+
+        /// Returns 0 or 2 = length node (left/right), 1 or 3 = width node (left/right). Caller maps to logical 0=length, 1=width.
+        int? hitAntennaeNode(double px, double py) {
+          final nodes = antennaeNodePositions();
+          if (nodes == null) return null;
+          final r2 = lateralNodeRadius * lateralNodeRadius;
+          for (var i = 0; i < nodes.length; i++) {
+            final o = nodes[i];
+            if ((px - o.dx) * (px - o.dx) + (py - o.dy) * (py - o.dy) <= r2)
+              return i;
+          }
+          return null;
+        }
+
         const double bodyNodeRadius = 24.0;
         int? hitSegmentWidthNode(double px, double py) {
           if (positions.length < 2 || widget.onSegmentWidthDelta == null)
@@ -1121,116 +1274,146 @@ class _EditorPreviewState extends State<EditorPreview>
                         }
                       } else if (editTab == 1 && !widget.panelClosed) {
                         // Parts tab: dorsal (body then node) -> lateral -> tail -> target (same one-drag-to-remove as tail)
-                        final dorsalIdx = dorsalFinIndexAtScreen(lx, ly);
-                        final dorsalNode = hitDorsalNode(lx, ly);
-                        if (dorsalIdx != null && dorsalNode == null) {
-                          setState(() {
-                            _tailSelected = false;
-                            _dorsalDragFromFin = true;
-                          });
-                          widget.onDorsalFinSelected?.call(dorsalIdx);
-                        } else if (widget.selectedDorsalFinIndex != null &&
-                            dorsalNode != null) {
-                          _dorsalDraggingNode = dorsalNode;
+                        final antennaeNodeHit =
+                            widget.selectedAntennaeIndex != null
+                            ? hitAntennaeNode(lx, ly)
+                            : null;
+                        if (antennaeNodeHit != null &&
+                            ((antennaeNodeHit <= 3 &&
+                                    widget.onAntennaeLengthChanged != null &&
+                                    widget.onAntennaeWidthChanged != null) ||
+                                (antennaeNodeHit >= 4 &&
+                                    widget.onAntennaeAngleChanged != null))) {
+                          _antennaeDraggingNode = antennaeNodeHit;
                         } else {
-                          final eyeNodeHit = hitEyeNode(lx, ly);
-                          final eyeIdx = eyeIndexAtScreen(lx, ly);
-                          if (eyeNodeHit != null &&
-                              widget.selectedEyeIndex != null &&
-                              widget.onEyeRadiusChanged != null) {
-                            _eyeDraggingNode = eyeNodeHit;
-                          } else if (eyeIdx != null) {
-                            widget.onDorsalFinSelected?.call(null);
-                            widget.onLateralFinSelected?.call(null);
-                            widget.onEyeSelected?.call(eyeIdx);
-                            setState(() {
-                              _tailSelected = false;
-                              _eyeDragFromCreature = true;
-                            });
+                          final antennaeIdx = antennaeIndexNearScreen(lx, ly);
+                          if (antennaeIdx != null) {
+                            _antennaePanStartIndex = antennaeIdx;
                           } else {
-                            // Prioritise lateral nodes (when a lateral is selected) then lateral fin body over pan.
-                            final lateralNodeHit =
-                                widget.selectedLateralFinIndex != null
-                                ? hitLateralNode(lx, ly)
-                                : null;
-                            if (lateralNodeHit != null &&
-                                ((lateralNodeHit <= 3 &&
-                                        widget.onLateralLengthChanged != null &&
-                                        widget.onLateralWidthChanged != null) ||
-                                    (lateralNodeHit >= 4 &&
-                                        widget.onLateralAngleChanged !=
-                                            null))) {
-                              _lateralDraggingNode = lateralNodeHit;
+                            final dorsalIdx = dorsalFinIndexAtScreen(lx, ly);
+                            final dorsalNode = hitDorsalNode(lx, ly);
+                            if (dorsalIdx != null && dorsalNode == null) {
+                              setState(() {
+                                _tailSelected = false;
+                                _dorsalDragFromFin = true;
+                              });
+                              widget.onDorsalFinSelected?.call(dorsalIdx);
+                            } else if (widget.selectedDorsalFinIndex != null &&
+                                dorsalNode != null) {
+                              _dorsalDraggingNode = dorsalNode;
                             } else {
-                              final lateralIdx = lateralIndexNearScreen(lx, ly);
-                              if (lateralIdx != null) {
-                                _lateralPanStartIndex = lateralIdx;
+                              final eyeNodeHit = hitEyeNode(lx, ly);
+                              final eyeIdx = eyeIndexAtScreen(lx, ly);
+                              if (eyeNodeHit != null &&
+                                  widget.selectedEyeIndex != null &&
+                                  widget.onEyeRadiusChanged != null) {
+                                _eyeDraggingNode = eyeNodeHit;
+                              } else if (eyeIdx != null) {
+                                widget.onDorsalFinSelected?.call(null);
+                                widget.onLateralFinSelected?.call(null);
+                                widget.onAntennaeSelected?.call(null);
+                                widget.onEyeSelected?.call(eyeIdx);
+                                setState(() {
+                                  _tailSelected = false;
+                                  _eyeDragFromCreature = true;
+                                });
                               } else {
-                                final mouthNodeHit = widget.selectedMouth
-                                    ? hitMouthNode(lx, ly)
+                                // Prioritise lateral nodes (when a lateral is selected) then lateral fin body over pan.
+                                final lateralNodeHit =
+                                    widget.selectedLateralFinIndex != null
+                                    ? hitLateralNode(lx, ly)
                                     : null;
-                                if (mouthNodeHit != null &&
-                                    (mouthNodeHit == 0 &&
-                                            widget.onMouthLengthChanged !=
-                                                null ||
-                                        mouthNodeHit == 1 &&
-                                            (widget.onMouthCurveChanged !=
-                                                    null ||
-                                                widget.onMouthWobbleAmplitudeChanged !=
-                                                    null))) {
-                                  setState(
-                                    () => _mouthDraggingNode = mouthNodeHit,
-                                  );
-                                } else if (isPointOnMouth(lx, ly) &&
-                                    widget.creature.mouth != null &&
-                                    widget.onMouthRemoved != null) {
-                                  widget.onDorsalFinSelected?.call(null);
-                                  widget.onLateralFinSelected?.call(null);
-                                  widget.onEyeSelected?.call(null);
-                                  widget.onMouthSelected?.call(true);
-                                  setState(() {
-                                    _tailSelected = false;
-                                    _mouthDragFromCreature = true;
-                                  });
+                                if (lateralNodeHit != null &&
+                                    ((lateralNodeHit <= 3 &&
+                                            widget.onLateralLengthChanged !=
+                                                null &&
+                                            widget.onLateralWidthChanged !=
+                                                null) ||
+                                        (lateralNodeHit >= 4 &&
+                                            widget.onLateralAngleChanged !=
+                                                null))) {
+                                  _lateralDraggingNode = lateralNodeHit;
                                 } else {
-                                  final tailNode = hitTailNode(lx, ly);
-                                  if (tailNode != null &&
-                                      _tailSelected &&
-                                      (widget.onTailRootWidthChanged != null ||
-                                          widget.onTailMaxWidthChanged !=
-                                              null ||
-                                          widget.onTailLengthChanged != null)) {
-                                    _tailDraggingNode = tailNode;
-                                    _tailDragStartValue = tailNode == 0
-                                        ? effectiveTailRoot()
-                                        : (tailNode == 1
-                                              ? effectiveTailMax()
-                                              : effectiveTailLen());
-                                  } else if (tailNode == null &&
-                                      isPointOnTail(lx, ly) &&
-                                      widget.creature.tail != null &&
-                                      widget.onTailRemoved != null) {
-                                    widget.onDorsalFinSelected?.call(null);
-                                    widget.onLateralFinSelected?.call(null);
-                                    widget.onEyeSelected?.call(null);
-                                    widget.onMouthSelected?.call(false);
-                                    setState(() {
-                                      _tailSelected = true;
-                                      _tailDragFromCreature = true;
-                                    });
-                                  } else if (widget.panelClosed) {
-                                    final worldX =
-                                        (lx - centerX) / _zoom + cameraX;
-                                    final worldY =
-                                        (ly - centerY) / _zoom + cameraY;
-                                    widget.onMouthSelected?.call(false);
-                                    setState(() {
-                                      _dragTargetX = worldX;
-                                      _dragTargetY = worldY;
-                                    });
+                                  final lateralIdx = lateralIndexNearScreen(
+                                    lx,
+                                    ly,
+                                  );
+                                  if (lateralIdx != null) {
+                                    _lateralPanStartIndex = lateralIdx;
                                   } else {
-                                    widget.onMouthSelected?.call(false);
-                                    setState(() => _editorPotentialPan = true);
+                                    final mouthNodeHit = widget.selectedMouth
+                                        ? hitMouthNode(lx, ly)
+                                        : null;
+                                    if (mouthNodeHit != null &&
+                                        (mouthNodeHit == 0 &&
+                                                widget.onMouthLengthChanged !=
+                                                    null ||
+                                            mouthNodeHit == 1 &&
+                                                (widget.onMouthCurveChanged !=
+                                                        null ||
+                                                    widget.onMouthWobbleAmplitudeChanged !=
+                                                        null))) {
+                                      setState(
+                                        () => _mouthDraggingNode = mouthNodeHit,
+                                      );
+                                    } else if (isPointOnMouth(lx, ly) &&
+                                        widget.creature.mouth != null &&
+                                        widget.onMouthRemoved != null) {
+                                      widget.onDorsalFinSelected?.call(null);
+                                      widget.onLateralFinSelected?.call(null);
+                                      widget.onAntennaeSelected?.call(null);
+                                      widget.onEyeSelected?.call(null);
+                                      widget.onMouthSelected?.call(true);
+                                      setState(() {
+                                        _tailSelected = false;
+                                        _mouthDragFromCreature = true;
+                                      });
+                                    } else {
+                                      final tailNode = hitTailNode(lx, ly);
+                                      if (tailNode != null &&
+                                          _tailSelected &&
+                                          (widget.onTailRootWidthChanged !=
+                                                  null ||
+                                              widget.onTailMaxWidthChanged !=
+                                                  null ||
+                                              widget.onTailLengthChanged !=
+                                                  null)) {
+                                        _tailDraggingNode = tailNode;
+                                        _tailDragStartValue = tailNode == 0
+                                            ? effectiveTailRoot()
+                                            : (tailNode == 1
+                                                  ? effectiveTailMax()
+                                                  : effectiveTailLen());
+                                      } else if (tailNode == null &&
+                                          isPointOnTail(lx, ly) &&
+                                          widget.creature.tail != null &&
+                                          widget.onTailRemoved != null) {
+                                        widget.onDorsalFinSelected?.call(null);
+                                        widget.onLateralFinSelected?.call(null);
+                                        widget.onAntennaeSelected?.call(null);
+                                        widget.onEyeSelected?.call(null);
+                                        widget.onMouthSelected?.call(false);
+                                        setState(() {
+                                          _tailSelected = true;
+                                          _tailDragFromCreature = true;
+                                        });
+                                      } else if (widget.panelClosed) {
+                                        final worldX =
+                                            (lx - centerX) / _zoom + cameraX;
+                                        final worldY =
+                                            (ly - centerY) / _zoom + cameraY;
+                                        widget.onMouthSelected?.call(false);
+                                        setState(() {
+                                          _dragTargetX = worldX;
+                                          _dragTargetY = worldY;
+                                        });
+                                      } else {
+                                        widget.onMouthSelected?.call(false);
+                                        setState(
+                                          () => _editorPotentialPan = true,
+                                        );
+                                      }
+                                    }
                                   }
                                 }
                               }
@@ -1383,6 +1566,100 @@ class _EditorPreviewState extends State<EditorPreview>
                       setState(() {});
                       return;
                     }
+
+                    if (_antennaePanStartIndex != null &&
+                        _antennaeDragFromIndex == null) {
+                      final dx = lx - _panStartX;
+                      final dy = ly - _panStartY;
+                      if (dx * dx + dy * dy >
+                          _EditorPreviewState._panDragSlop *
+                              _EditorPreviewState._panDragSlop) {
+                        setState(
+                          () => _antennaeDragFromIndex = _antennaePanStartIndex,
+                        );
+                      }
+                    }
+                    if (_antennaeDraggingNode != null &&
+                        widget.selectedAntennaeIndex != null) {
+                      const scale = 0.2;
+                      final idx = widget.selectedAntennaeIndex!;
+                      final rawDelta = (ly - _lastPanY) * scale;
+                      // Only left length node (0) has inverted drag; negate delta for that node only.
+                      final delta = _antennaeDraggingNode! == 0
+                          ? -rawDelta
+                          : rawDelta;
+                      final laterals = widget.creature.antennae!;
+                      if (idx < laterals.length) {
+                        if ((_antennaeDraggingNode == 0 ||
+                                _antennaeDraggingNode == 2) &&
+                            widget.onAntennaeLengthChanged != null) {
+                          final v = (laterals[idx].length + delta).clamp(
+                            AntennaeConfig.lengthMin,
+                            AntennaeConfig.lengthMax,
+                          );
+                          widget.onAntennaeLengthChanged!(idx, v);
+                        } else if ((_antennaeDraggingNode == 1 ||
+                                _antennaeDraggingNode == 3) &&
+                            widget.onAntennaeWidthChanged != null) {
+                          final v = (laterals[idx].width + delta).clamp(
+                            AntennaeConfig.widthMin,
+                            AntennaeConfig.widthMax,
+                          );
+                          widget.onAntennaeWidthChanged!(idx, v);
+                        } else if ((_antennaeDraggingNode == 4 ||
+                                _antennaeDraggingNode == 5) &&
+                            widget.onAntennaeAngleChanged != null) {
+                          final config = laterals[idx];
+                          final seg = config.segment.clamp(
+                            0,
+                            positions.length - 1,
+                          );
+                          if (seg < _spine.segmentAngles.length) {
+                            final aAttach = _spine.segmentAngles[seg];
+                            final segHead =
+                                seg + 1 < _spine.segmentAngles.length
+                                ? seg + 1
+                                : seg;
+                            final aLock = _spine.segmentAngles[segHead];
+                            final halfW = widthAtVertex(seg);
+                            final pxW = positions[seg].x;
+                            final pyW = positions[seg].y;
+                            final leftCx = pxW + sin(aAttach) * halfW;
+                            final leftCy = pyW - cos(aAttach) * halfW;
+                            final rightCx = pxW - sin(aAttach) * halfW;
+                            final rightCy = pyW + cos(aAttach) * halfW;
+                            final wx = (lx - centerX) / _zoom + cameraX;
+                            final wy = (ly - centerY) / _zoom + cameraY;
+                            final cx = _antennaeDraggingNode == 4
+                                ? leftCx
+                                : rightCx;
+                            final cy = _antennaeDraggingNode == 4
+                                ? leftCy
+                                : rightCy;
+                            final ptrAngle = atan2(wy - cy, wx - cx);
+                            // Mirror across spine + 180° so drag sensor is in same quadrant as fin (was 180° off).
+                            final effectivePtr = 2.0 * aLock - ptrAngle + pi;
+                            var flareRad = _antennaeDraggingNode == 4
+                                ? -effectivePtr -
+                                      aLock // left: aLock + flare = -ptr
+                                : effectivePtr +
+                                      aLock; // right: aLock - flare = -ptr
+                            while (flareRad > pi) flareRad -= 2 * pi;
+                            while (flareRad < -pi) flareRad += 2 * pi;
+                            final flareDeg = (flareRad * 180.0 / pi).clamp(
+                              AntennaeConfig.angleDegreesMin,
+                              AntennaeConfig.angleDegreesMax,
+                            );
+                            widget.onAntennaeAngleChanged!(idx, flareDeg);
+                          }
+                        }
+                      }
+                      _lastPanX = lx;
+                      _lastPanY = ly;
+                      setState(() {});
+                      return;
+                    }
+
                     if (_mouthDraggingNode != null) {
                       final head = positions.last;
                       if (_mouthDraggingNode == 0 &&
@@ -1556,6 +1833,9 @@ class _EditorPreviewState extends State<EditorPreview>
                         _lateralDragFromIndex != null ||
                         _lateralDraggingNode != null ||
                         _lateralPanStartIndex != null ||
+                        _antennaeDragFromIndex != null ||
+                        _antennaeDraggingNode != null ||
+                        _antennaePanStartIndex != null ||
                         _mouthDragFromCreature ||
                         _eyeDragFromCreature)
                       return;
@@ -1682,6 +1962,7 @@ class _EditorPreviewState extends State<EditorPreview>
                       });
                       widget.onDorsalFinSelected?.call(null);
                       widget.onLateralFinSelected?.call(null);
+                      widget.onAntennaeSelected?.call(null);
                       widget.onEyeSelected?.call(null);
                       return;
                     }
@@ -1831,6 +2112,45 @@ class _EditorPreviewState extends State<EditorPreview>
                       }
                       return;
                     }
+
+                    if (_antennaeDragFromIndex != null) {
+                      final releaseInBounds = finRemoveBounds().contains(
+                        Offset(_lastPanX, _lastPanY),
+                      );
+                      if (!releaseInBounds &&
+                          widget.onAntennaeRemoved != null) {
+                        widget.onAntennaeRemoved!(_antennaeDragFromIndex!);
+                      } else if (releaseInBounds &&
+                          widget.onAntennaeMoved != null) {
+                        final seg = segmentAtScreen(_lastPanX, _lastPanY);
+                        widget.onAntennaeMoved!(_antennaeDragFromIndex!, seg);
+                      }
+                      setState(() {
+                        _antennaeDragFromIndex = null;
+                        _antennaePanStartIndex = null;
+                      });
+                      return;
+                    }
+                    if (_antennaeDraggingNode != null) {
+                      setState(() => _antennaeDraggingNode = null);
+                      return;
+                    }
+                    if (_antennaePanStartIndex != null) {
+                      final dist2 =
+                          (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
+                          (_lastPanY - _panStartY) * (_lastPanY - _panStartY);
+                      if (dist2 < 100) {
+                        widget.onAntennaeSelected?.call(_antennaePanStartIndex);
+                        setState(() {
+                          _tailSelected = false;
+                          _antennaePanStartIndex = null;
+                        });
+                      } else {
+                        setState(() => _antennaePanStartIndex = null);
+                      }
+                      return;
+                    }
+
                     if (editTab == 1 && widget.onDorsalFinSelected != null) {
                       final dist2 =
                           (_lastPanX - _panStartX) * (_lastPanX - _panStartX) +
@@ -1927,6 +2247,19 @@ class _EditorPreviewState extends State<EditorPreview>
                     painter: PecFinNodePainter(
                       positions: lateralNodePositions()!,
                       activeNode: _lateralDraggingNode,
+                    ),
+                    size: Size(w, h),
+                  ),
+                ),
+              ),
+            if (widget.selectedAntennaeIndex != null &&
+                antennaeNodePositions() != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: PecFinNodePainter(
+                      positions: antennaeNodePositions()!,
+                      activeNode: _antennaeDraggingNode,
                     ),
                     size: Size(w, h),
                   ),
@@ -2450,6 +2783,179 @@ class _EditorPreviewState extends State<EditorPreview>
                   ),
                 ),
             ],
+
+            if (_antennaeAddDragLocal != null) ...[
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    //TODO: antennae segment painter
+                    painter: PecFinSegmentPainter(
+                      segment: segmentAtScreen(
+                        _antennaeAddDragLocal!.dx,
+                        _antennaeAddDragLocal!.dy,
+                      ),
+                      length: AntennaeConfig.lengthDefault,
+                      width: AntennaeConfig.widthDefault,
+                      positions: positions,
+                      segmentAngles: _spine.segmentAngles,
+                      centerX: centerX,
+                      centerY: centerY,
+                      cameraX: cameraX,
+                      cameraY: cameraY,
+                      zoom: _zoom,
+                      segWidth: widthAtVertex(
+                        segmentAtScreen(
+                          _antennaeAddDragLocal!.dx,
+                          _antennaeAddDragLocal!.dy,
+                        ),
+                      ),
+                      creatureColor: Color(widget.creature.color),
+                      finColor: widget.creature.finColor != null
+                          ? Color(widget.creature.finColor!)
+                          : Color.lerp(
+                              Color(widget.creature.color),
+                              Colors.white,
+                              0.15,
+                            )!,
+                      highlight: false,
+                    ),
+                    size: Size(w, h),
+                  ),
+                ),
+              ),
+            ],
+            if (_antennaeDragFromIndex != null &&
+                widget.creature.antennae != null &&
+                _antennaeDragFromIndex! < widget.creature.antennae!.length) ...[
+              if (finRemoveBounds().contains(Offset(_lastPanX, _lastPanY)))
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: PecFinSegmentPainter(
+                        segment: segmentAtScreen(
+                          _lastPanX,
+                          _lastPanY,
+                        ).clamp(0, positions.length - 2),
+                        length:
+                            _antennaeDragFromIndex! <
+                                (widget.creature.antennae?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .antennae![_antennaeDragFromIndex!]
+                                  .length
+                            : AntennaeConfig.lengthDefault,
+                        width:
+                            _antennaeDragFromIndex! <
+                                (widget.creature.antennae?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .antennae![_antennaeDragFromIndex!]
+                                  .width
+                            : AntennaeConfig.widthDefault,
+                        angleDegrees:
+                            _antennaeDragFromIndex! <
+                                (widget.creature.antennae?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .antennae![_antennaeDragFromIndex!]
+                                  .angleDegrees
+                            : AntennaeConfig.angleDegreesDefault,
+                        positions: positions,
+                        segmentAngles: _spine.segmentAngles,
+                        centerX: centerX,
+                        centerY: centerY,
+                        cameraX: cameraX,
+                        cameraY: cameraY,
+                        zoom: _zoom,
+                        segWidth: widthAtVertex(
+                          segmentAtScreen(
+                            _lastPanX,
+                            _lastPanY,
+                          ).clamp(0, positions.length - 2),
+                        ),
+                        creatureColor: Color(widget.creature.color),
+                        finColor: widget.creature.finColor != null
+                            ? Color(widget.creature.finColor!)
+                            : Color.lerp(
+                                Color(widget.creature.color),
+                                Colors.white,
+                                0.15,
+                              )!,
+                        highlight: false,
+                      ),
+                      size: Size(w, h),
+                    ),
+                  ),
+                ),
+              if (!finRemoveBounds().contains(Offset(_lastPanX, _lastPanY)))
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: PecFinSegmentPainter(
+                        segment:
+                            _antennaeDragFromIndex! <
+                                (widget.creature.antennae?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .antennae![_antennaeDragFromIndex!]
+                                  .segment
+                            : 0,
+                        length:
+                            _antennaeDragFromIndex! <
+                                (widget.creature.antennae?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .antennae![_antennaeDragFromIndex!]
+                                  .length
+                            : AntennaeConfig.lengthDefault,
+                        width:
+                            _antennaeDragFromIndex! <
+                                (widget.creature.antennae?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .antennae![_antennaeDragFromIndex!]
+                                  .width
+                            : AntennaeConfig.widthDefault,
+                        angleDegrees:
+                            _antennaeDragFromIndex! <
+                                (widget.creature.antennae?.length ?? 0)
+                            ? widget
+                                  .creature
+                                  .antennae![_antennaeDragFromIndex!]
+                                  .angleDegrees
+                            : AntennaeConfig.angleDegreesDefault,
+                        positions: positions,
+                        segmentAngles: _spine.segmentAngles,
+                        centerX: centerX,
+                        centerY: centerY,
+                        cameraX: cameraX,
+                        cameraY: cameraY,
+                        zoom: _zoom,
+                        segWidth: widthAtVertex(
+                          _antennaeDragFromIndex! <
+                                  (widget.creature.antennae?.length ?? 0)
+                              ? widget
+                                    .creature
+                                    .antennae![_antennaeDragFromIndex!]
+                                    .segment
+                              : 0,
+                        ),
+                        creatureColor: Color(widget.creature.color),
+                        finColor: widget.creature.finColor != null
+                            ? Color(widget.creature.finColor!)
+                            : Color.lerp(
+                                Color(widget.creature.color),
+                                Colors.white,
+                                0.15,
+                              )!,
+                        highlight: false,
+                        highlightForRemove: true,
+                      ),
+                      size: Size(w, h),
+                    ),
+                  ),
+                ),
+            ],
             Positioned(
               left: 12,
               bottom: 12,
@@ -2595,6 +3101,42 @@ class _EditorPreviewState extends State<EditorPreview>
             onLeave: (_) => setState(() {
               _lateralAddDragLocal = null;
               _lateralAddDragPayload = null;
+            }),
+            builder: (context, candidateData, rejectedData) => child,
+          );
+        }
+        if (editTab == 1 && widget.onAntennaeAdded != null) {
+          final child = inner;
+          inner = DragTarget<AntennaeDragPayload>(
+            onWillAcceptWithDetails: (_) => true,
+            onAcceptWithDetails: (d) {
+              final box =
+                  _previewContentKey.currentContext?.findRenderObject()
+                      as RenderBox?;
+              if (box != null && box.hasSize) {
+                final local = box.globalToLocal(d.offset);
+                final seg = _segmentAtLocal(local.dx, local.dy);
+                widget.onAntennaeAdded!(seg);
+              }
+              setState(() {
+                _antennaeAddDragLocal = null;
+                _antennaeAddDragPayload = null;
+              });
+            },
+            onMove: (d) {
+              final box =
+                  _previewContentKey.currentContext?.findRenderObject()
+                      as RenderBox?;
+              if (box != null && box.hasSize) {
+                setState(() {
+                  _antennaeAddDragLocal = box.globalToLocal(d.offset);
+                  _antennaeAddDragPayload = d.data;
+                });
+              }
+            },
+            onLeave: (_) => setState(() {
+              _antennaeAddDragLocal = null;
+              _antennaeAddDragPayload = null;
             }),
             builder: (context, candidateData, rejectedData) => child,
           );

@@ -17,7 +17,9 @@ class FeaturesTab extends StatelessWidget {
     required this.selectedDorsalFinIndex,
     required this.onDorsalFinSelected,
     this.selectedLateralFinIndex,
+    this.selectedAntennaeIndex,
     this.onLateralRemoved,
+    this.onAntennaeRemoved,
   });
 
   final Creature creature;
@@ -26,6 +28,8 @@ class FeaturesTab extends StatelessWidget {
   final void Function(int?)? onDorsalFinSelected;
   final int? selectedLateralFinIndex;
   final void Function(int index)? onLateralRemoved;
+  final int? selectedAntennaeIndex;
+  final void Function(int index)? onAntennaeRemoved;
 
   static const double _boxW = 52;
   static const double _boxH = 36;
@@ -248,6 +252,50 @@ class FeaturesTab extends StatelessWidget {
               ),
           ],
         ),
+        Text(
+          'Antennae',
+          style: TextStyle(color: EditorStyle.text, fontSize: 11),
+        ),
+        Text(
+          'Drag to add or replace. Tap in view to select; drag off to remove.',
+          style: TextStyle(fontSize: 11, color: EditorStyle.textMuted),
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            Draggable<AntennaeDragPayload>(
+              data: AntennaeDragPayload(),
+              dragAnchorStrategy: pointerDragAnchorStrategy,
+              feedbackOffset: const Offset(-16, -16),
+              feedback: Material(
+                elevation: 0,
+                color: Colors.transparent,
+                child: SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: Center(
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        border: Border.all(color: EditorStyle.stroke, width: 1),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              childWhenDragging: Opacity(
+                opacity: 0.5,
+                child: _antennaeBox(creature),
+              ),
+              child: _antennaeBox(creature),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -442,6 +490,32 @@ class FeaturesTab extends StatelessWidget {
       ),
       childWhenDragging: Opacity(opacity: 0.5, child: _lateralBox(wingType)),
       child: _lateralBox(wingType),
+    );
+  }
+
+  Widget _antennaeBox(Creature creature) {
+    return Container(
+      width: _boxW,
+      height: _boxH,
+      decoration: BoxDecoration(
+        color: EditorStyle.fill,
+        borderRadius: BorderRadius.circular(EditorStyle.radius),
+        border: Border.all(
+          color: EditorStyle.stroke,
+          width: EditorStyle.strokeWidth,
+        ),
+      ),
+      child: Center(
+        child: Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            border: Border.all(color: EditorStyle.stroke, width: 1),
+          ),
+        ),
+      ),
     );
   }
 }

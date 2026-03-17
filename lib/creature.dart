@@ -133,6 +133,51 @@ class LateralFinConfig {
   );
 }
 
+/// antennae
+class AntennaeConfig {
+  static const double lengthMin = 12.0;
+  static const double lengthMax = 60.0;
+  static const double lengthDefault = 30.0;
+  static const double widthMin = 6.0;
+  static const double widthMax = 20.0;
+  static const double widthDefault = 10.0;
+  static const double angleDegreesMin = 10.0;
+  static const double angleDegreesMax = 80.0;
+  static const double angleDegreesDefault = 45.0;
+
+  AntennaeConfig(
+    this.segment, {
+    double? length,
+    double? width,
+    double? angleDegrees,
+  }) : length = (length ?? lengthDefault).clamp(lengthMin, lengthMax),
+       width = (width ?? widthDefault).clamp(widthMin, widthMax),
+       angleDegrees = (angleDegrees ?? angleDegreesDefault).clamp(
+         angleDegreesMin,
+         angleDegreesMax,
+       );
+
+  final int segment;
+  final double length;
+  final double width;
+
+  /// Flare angle in degrees (10–80). Left fin: spineAngle + this; right: spineAngle - this.
+  final double angleDegrees;
+
+  AntennaeConfig copyWith({
+    int? segment,
+    double? length,
+    double? width,
+    double? angleDegrees,
+    LateralWingType? wingType,
+  }) => AntennaeConfig(
+    segment ?? this.segment,
+    length: length ?? this.length,
+    width: width ?? this.width,
+    angleDegrees: angleDegrees ?? this.angleDegrees,
+  );
+}
+
 /// Tail (caudal) fin config: type and optional dimensions. Null dimension = derive in renderer.
 class TailConfig {
   static const double rootWidthMin = 1.0;
@@ -216,6 +261,9 @@ class Creature {
   /// Lateral (pectoral) fins: segment and size per fin. Rendered under the body as rotated ellipses.
   final List<LateralFinConfig>? lateralFins;
 
+  /// Antennae, Render under body as curved stroke
+  final List<AntennaeConfig>? antennae;
+
   /// Diet: herbivore (plant only), carnivore (animal + babies), omnivore (all).
   final TrophicType trophicType;
 
@@ -262,6 +310,7 @@ class Creature {
     this.finColor,
     this.tail,
     this.lateralFins,
+    this.antennae,
     this.trophicType = TrophicType.herbivore,
     this.mouth,
     this.mouthCount,

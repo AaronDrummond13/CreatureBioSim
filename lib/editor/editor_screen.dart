@@ -65,6 +65,7 @@ class EditorScreenState extends State<EditorScreen> {
         _tabIndex = i;
         _selectedDorsalFinIndex = null;
         _selectedLateralFinIndex = null;
+        _selectedAntennaeIndex = null;
         _selectedEyeIndex = null;
         _selectedMouth = false;
       }),
@@ -72,6 +73,8 @@ class EditorScreenState extends State<EditorScreen> {
       onDorsalFinSelected: (i) => setState(() => _selectedDorsalFinIndex = i),
       selectedLateralFinIndex: _selectedLateralFinIndex,
       onLateralRemoved: _onLateralRemovedFromViewport,
+      selectedAntennaeIndex: _selectedAntennaeIndex,
+      onAntennaeRemoved: _onAntennaeRemovedFromViewport,
     );
 
     Widget preview = EditorPreview(
@@ -86,10 +89,15 @@ class EditorScreenState extends State<EditorScreen> {
         if (i != null) _selectedMouth = false;
       }),
       selectedLateralFinIndex: _selectedLateralFinIndex,
+      selectedAntennaeIndex: _selectedAntennaeIndex,
       onLateralFinSelected: _onLateralFinSelectedFromViewport,
       onLateralLengthChanged: _onLateralLengthChangedFromViewport,
       onLateralWidthChanged: _onLateralWidthChangedFromViewport,
       onLateralAngleChanged: _onLateralAngleChangedFromViewport,
+      onAntennaeSelected: _onAntennaeSelectedFromViewport,
+      onAntennaeLengthChanged: _onAntennaeLengthChangedFromViewport,
+      onAntennaeWidthChanged: _onAntennaeWidthChangedFromViewport,
+      onAntennaeAngleChanged: _onAntennaeAngleChangedFromViewport,
       onDorsalRangeChanged: _onDorsalRangeFromViewport,
       onDorsalHeightChanged: _onDorsalHeightFromViewport,
       onDorsalAdded: _onDorsalAddedFromViewport,
@@ -105,6 +113,10 @@ class EditorScreenState extends State<EditorScreen> {
       onLateralMoved: _onLateralMovedFromViewport,
       onLateralAdded: _onLateralAddedFromViewport,
       onLateralRemoved: _onLateralRemovedFromViewport,
+      onAntennaeToggled: _onAntennaeToggledFromViewport,
+      onAntennaeMoved: _onAntennaeMovedFromViewport,
+      onAntennaeAdded: _onAntennaeAddedFromViewport,
+      onAntennaeRemoved: _onAntennaeRemovedFromViewport,
       onMouthAdded: _onMouthAddedFromViewport,
       onMouthRemoved: _onMouthRemovedFromViewport,
       onMouthLengthChanged: _onMouthLengthChangedFromViewport,
@@ -220,6 +232,7 @@ class EditorScreenState extends State<EditorScreen> {
   int _editorTabIndex = 0;
   int? _selectedDorsalFinIndex;
   int? _selectedLateralFinIndex;
+  int? _selectedAntennaeIndex;
   int? _selectedEyeIndex;
   bool _selectedMouth = false;
 
@@ -247,6 +260,7 @@ class EditorScreenState extends State<EditorScreen> {
         finColor: _creature.finColor,
         tail: _creature.tail,
         lateralFins: _creature.lateralFins,
+        antennae: _creature.antennae,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
         mouthCount: _creature.mouthCount,
@@ -270,6 +284,7 @@ class EditorScreenState extends State<EditorScreen> {
         segmentWidths: _creature.segmentWidths,
         color: _creature.color,
         dorsalFins: fins,
+        antennae: _creature.antennae,
         finColor: _creature.finColor,
         tail: _creature.tail,
         lateralFins: _creature.lateralFins,
@@ -304,6 +319,7 @@ class EditorScreenState extends State<EditorScreen> {
         finColor: _creature.finColor,
         tail: _creature.tail,
         lateralFins: _creature.lateralFins,
+        antennae: _creature.antennae,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
         eyes: _creature.eyes,
@@ -336,6 +352,9 @@ class EditorScreenState extends State<EditorScreen> {
     List<LateralFinConfig>? lateral = _creature.lateralFins
         ?.map((c) => c.copyWith(segment: c.segment + delta))
         .toList();
+    List<AntennaeConfig>? antennae = _creature.antennae
+        ?.map((c) => c.copyWith(segment: c.segment + delta))
+        .toList();
     List<EyeConfig>? eyes = _creature.eyes
         ?.map((e) => e.copyWith(segment: e.segment + delta))
         .toList();
@@ -346,6 +365,7 @@ class EditorScreenState extends State<EditorScreen> {
         newSegmentCount: newCount,
         dorsalFins: dorsal,
         lateralFins: lateral,
+        antennae: antennae,
         eyes: eyes,
         filterDorsalLateral: true,
       ),
@@ -373,6 +393,7 @@ class EditorScreenState extends State<EditorScreen> {
         finColor: _creature.finColor,
         tail: _creature.tail,
         lateralFins: _creature.lateralFins,
+        antennae: _creature.antennae,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
         mouthCount: _creature.mouthCount,
@@ -395,6 +416,7 @@ class EditorScreenState extends State<EditorScreen> {
         finColor: _creature.finColor,
         tail: _creature.tail?.copyWith(rootWidth: v),
         lateralFins: _creature.lateralFins,
+        antennae: _creature.antennae,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
         mouthCount: _creature.mouthCount,
@@ -416,6 +438,7 @@ class EditorScreenState extends State<EditorScreen> {
         finColor: _creature.finColor,
         tail: _creature.tail?.copyWith(maxWidth: v),
         lateralFins: _creature.lateralFins,
+        antennae: _creature.antennae,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
         mouthCount: _creature.mouthCount,
@@ -437,6 +460,7 @@ class EditorScreenState extends State<EditorScreen> {
         finColor: _creature.finColor,
         tail: _creature.tail?.copyWith(length: v),
         lateralFins: _creature.lateralFins,
+        antennae: _creature.antennae,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
         mouthCount: _creature.mouthCount,
@@ -464,6 +488,7 @@ class EditorScreenState extends State<EditorScreen> {
               )
             : null,
         lateralFins: _creature.lateralFins,
+        antennae: _creature.antennae,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
         mouthCount: _creature.mouthCount,
@@ -484,6 +509,7 @@ class EditorScreenState extends State<EditorScreen> {
         finColor: _creature.finColor,
         tail: null,
         lateralFins: _creature.lateralFins,
+        antennae: _creature.antennae,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
         mouthCount: _creature.mouthCount,
@@ -584,6 +610,96 @@ class EditorScreenState extends State<EditorScreen> {
     setState(() => _creature = _creatureWith(_creature, lateralFins: list));
   }
 
+  //////////////////////////////////////////
+
+  void _onAntennaeToggledFromViewport(int seg) {
+    final list = List<AntennaeConfig>.from(_creature.antennae ?? []);
+    final idx = list.indexWhere((c) => c.segment == seg);
+    if (idx >= 0)
+      list.removeAt(idx);
+    else
+      list.add(AntennaeConfig(seg));
+    list.sort((a, b) => a.segment.compareTo(b.segment));
+    setState(
+      () => _creature = _creatureWith(
+        _creature,
+        antennae: list.isEmpty ? null : list,
+      ),
+    );
+  }
+
+  void _onAntennaeMovedFromViewport(int fromIndex, int toSeg) {
+    final list = List<AntennaeConfig>.from(_creature.antennae ?? []);
+    if (fromIndex < 0 || fromIndex >= list.length) return;
+    final config = list[fromIndex];
+    list[fromIndex] = config.copyWith(segment: toSeg);
+    list.sort((a, b) => a.segment.compareTo(b.segment));
+    setState(() => _creature = _creatureWith(_creature, antennae: list));
+  }
+
+  void _onAntennaeAddedFromViewport(int seg) {
+    final list = List<AntennaeConfig>.from(_creature.antennae ?? []);
+
+    list.add(AntennaeConfig(seg));
+    list.sort((a, b) => a.segment.compareTo(b.segment));
+
+    setState(() => _creature = _creatureWith(_creature, antennae: list));
+  }
+
+  void _onAntennaeRemovedFromViewport(int index) {
+    final list = List<AntennaeConfig>.from(_creature.antennae ?? []);
+    if (index < 0 || index >= list.length) return;
+    list.removeAt(index);
+    setState(() {
+      _creature = _creatureWith(
+        _creature,
+        antennae: list.isEmpty ? <AntennaeConfig>[] : list,
+      );
+      if (list.isEmpty) {
+        _selectedAntennaeIndex = null;
+      } else if (_selectedAntennaeIndex != null) {
+        if (_selectedAntennaeIndex == index) {
+          _selectedAntennaeIndex = null;
+        } else if (_selectedAntennaeIndex! > index) {
+          _selectedAntennaeIndex = _selectedAntennaeIndex! - 1;
+        }
+      }
+    });
+  }
+
+  void _onAntennaeSelectedFromViewport(int? index) {
+    setState(() {
+      _selectedAntennaeIndex = index;
+      if (index != null) {
+        _selectedDorsalFinIndex = null;
+        _selectedMouth = false;
+      }
+    });
+  }
+
+  void _onAntennaeLengthChangedFromViewport(int index, double value) {
+    final list = List<AntennaeConfig>.from(_creature.antennae ?? []);
+    if (index < 0 || index >= list.length) return;
+    list[index] = list[index].copyWith(length: value);
+    setState(() => _creature = _creatureWith(_creature, antennae: list));
+  }
+
+  void _onAntennaeWidthChangedFromViewport(int index, double value) {
+    final list = List<AntennaeConfig>.from(_creature.antennae ?? []);
+    if (index < 0 || index >= list.length) return;
+    list[index] = list[index].copyWith(width: value);
+    setState(() => _creature = _creatureWith(_creature, antennae: list));
+  }
+
+  void _onAntennaeAngleChangedFromViewport(int index, double angleDegrees) {
+    final list = List<AntennaeConfig>.from(_creature.antennae ?? []);
+    if (index < 0 || index >= list.length) return;
+    list[index] = list[index].copyWith(angleDegrees: angleDegrees);
+    setState(() => _creature = _creatureWith(_creature, antennae: list));
+  }
+
+  /////////////////////////////////////////
+
   void _onMouthAddedFromViewport(MouthType? type, int? mouthCount) {
     final trophicType = type == MouthType.teeth
         ? TrophicType.carnivore
@@ -603,6 +719,7 @@ class EditorScreenState extends State<EditorScreen> {
         finColor: _creature.finColor,
         tail: _creature.tail,
         lateralFins: _creature.lateralFins,
+        antennae: _creature.antennae,
         trophicType: trophicType,
         mouth: type,
         mouthCount: count,
@@ -627,6 +744,7 @@ class EditorScreenState extends State<EditorScreen> {
         finColor: _creature.finColor,
         tail: _creature.tail,
         lateralFins: _creature.lateralFins,
+        antennae: _creature.antennae,
         trophicType: TrophicType.none,
         mouth: null,
         mouthCount: null,
@@ -670,6 +788,7 @@ class EditorScreenState extends State<EditorScreen> {
         finColor: _creature.finColor,
         tail: _creature.tail,
         lateralFins: _creature.lateralFins,
+        antennae: _creature.antennae,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
         mouthCount: _creature.mouthCount,
@@ -694,6 +813,7 @@ class EditorScreenState extends State<EditorScreen> {
         finColor: _creature.finColor,
         tail: _creature.tail,
         lateralFins: _creature.lateralFins,
+        antennae: _creature.antennae,
         trophicType: _creature.trophicType,
         mouth: _creature.mouth,
         mouthCount: _creature.mouthCount,
@@ -748,6 +868,7 @@ Creature _creatureWith(
   int? color,
   List<(List<int>, double?)>? dorsalFins,
   List<LateralFinConfig>? lateralFins,
+  List<AntennaeConfig>? antennae,
   List<EyeConfig>? eyes,
   MouthType? mouth,
   int? mouthCount,
@@ -762,10 +883,12 @@ Creature _creatureWith(
       (segmentWidths?.length ?? creature.segmentWidths.length);
   List<(List<int>, double?)>? dorsal = dorsalFins ?? creature.dorsalFins;
   List<LateralFinConfig>? lateral = lateralFins ?? creature.lateralFins;
+  List<AntennaeConfig>? antennaeList = antennae ?? creature.antennae;
   List<EyeConfig>? eyeList = eyes ?? creature.eyes;
   if (filterDorsalLateral && seg >= 1) {
     dorsal = _filterDorsalForSegmentCount(dorsal, seg);
     lateral = _filterLateralForSegmentCount(lateral, seg);
+    antennaeList = _filterAntennaeForSegmentCount(antennae, seg);
     eyeList = _filterEyesForSegmentCount(eyeList, seg);
   }
   return Creature(
@@ -775,6 +898,7 @@ Creature _creatureWith(
     finColor: creature.finColor,
     tail: creature.tail,
     lateralFins: lateral,
+    antennae: antennaeList,
     trophicType: creature.trophicType,
     mouth: mouth ?? creature.mouth,
     mouthCount: mouthCount ?? creature.mouthCount,
@@ -800,6 +924,17 @@ List<(List<int>, double?)>? _filterDorsalForSegmentCount(
 
 List<LateralFinConfig>? _filterLateralForSegmentCount(
   List<LateralFinConfig>? configs,
+  int segCount,
+) {
+  if (configs == null) return null;
+  final out = configs
+      .where((c) => c.segment >= 0 && c.segment < segCount)
+      .toList();
+  return out.isEmpty ? null : out;
+}
+
+List<AntennaeConfig>? _filterAntennaeForSegmentCount(
+  List<AntennaeConfig>? configs,
   int segCount,
 ) {
   if (configs == null) return null;

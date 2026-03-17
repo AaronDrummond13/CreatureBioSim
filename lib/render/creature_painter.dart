@@ -1,5 +1,6 @@
 import 'dart:math' show cos, pi, sin, sqrt;
 import 'dart:ui' show ImageFilter;
+import 'package:creature_bio_sim/render/antenna_painter.dart' show drawAntenna;
 import 'package:creature_bio_sim/render/eye_painter.dart';
 import 'package:creature_bio_sim/render/pec_painter.dart';
 import 'package:flutter/material.dart';
@@ -431,6 +432,7 @@ class CreaturePainter extends CustomPainter {
   /// Draw order (matches player creature levels 1–3 + eyes): tail fin → lateral fins → mouth → body [→ dorsal fins → eyes when !skipDorsalAndEyes and drawEyes].
   void _drawCreature(Canvas canvas) {
     _drawTailFin(canvas);
+    _drawAntennae(canvas);
     _drawLateralFins(canvas);
     _drawMouth(canvas);
     _drawBody(canvas);
@@ -804,6 +806,65 @@ class CreaturePainter extends CustomPainter {
             strokePaint,
             isLeft: false,
           );
+        },
+      );
+    }
+  }
+
+  void _drawAntennae(Canvas canvas) {
+    final antennae = creature.antennae;
+    if (antennae == null || antennae.isEmpty) return;
+    final positions = _paintPositions;
+    final segmentAngles = _paintSegmentAngles;
+    final n = _paintN;
+    double sx(double wx) => _paintCenterX + (wx - view.cameraX) * _paintZ;
+    double sy(double wy) => _paintCenterY + (wy - view.cameraY) * _paintZ;
+
+    final strokePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = (3.0 * _paintZ).clamp(1.0, 3.0);
+    for (final config in antennae) {
+      final seg = config.segment;
+      if (seg < 0 || seg >= n) continue;
+      final len = config.length;
+      final wid = config.width;
+      final flareRad = config.angleDegrees * pi / 180.0;
+      final lenScreen = len * _paintZ;
+      final widScreen = wid * _paintZ;
+      final aAttach = segmentAngles[seg < segmentAngles.length ? seg : seg - 1];
+      final segW = _widthAt(seg);
+      final halfW = segW;
+      final px = positions[seg].x;
+      final py = positions[seg].y;
+      final leftCx = px + sin(aAttach) * halfW;
+      final leftCy = py - cos(aAttach) * halfW;
+      final rightCx = px - sin(aAttach) * halfW;
+      final rightCy = py + cos(aAttach) * halfW;
+
+      final anchors = computeFinAnchors(
+        flareRad: flareRad,
+        halfWidth: halfW,
+        positions: positions,
+        segment: seg,
+        segmentAngles: segmentAngles,
+      );
+
+      drawTransformed(
+        canvas,
+        Offset(sx(leftCx), sy(leftCy)),
+        anchors.leftAngle,
+        () {
+          drawAntenna(canvas, lenScreen, widScreen, strokePaint, isLeft: true);
+        },
+      );
+
+      drawTransformed(
+        canvas,
+        Offset(sx(rightCx), sy(rightCy)),
+        anchors.rightAngle,
+        () {
+          drawAntenna(canvas, lenScreen, widScreen, strokePaint, isLeft: false);
         },
       );
     }

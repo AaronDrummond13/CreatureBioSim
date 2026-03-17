@@ -98,6 +98,7 @@ class Spawner {
     final dorsalFins = _randomDorsalFins(segmentCount);
     final tailFin = _randomTailFin();
     final lateralFins = _randomLateralFins(segmentCount);
+    final antennae = _randomAntennae(segmentCount);
     final tail = tailFin != null
         ? TailConfig(
             tailFin,
@@ -143,6 +144,7 @@ class Spawner {
       lateralFins: (lateralFins == null || lateralFins.isEmpty)
           ? null
           : lateralFins,
+      antennae: (antennae == null || antennae.isEmpty) ? null : antennae,
       trophicType: trophicType,
       mouth: mouth,
       mouthCount: mouthCount,
@@ -207,6 +209,28 @@ class Spawner {
             wingType: wingType,
           ),
         );
+      }
+    }
+    return list.isEmpty ? null : list;
+  }
+
+  /// ~1/6 chance per segment (excluding head) to get a lateral fin with random size and wing type.
+  List<AntennaeConfig>? _randomAntennae(int segmentCount) {
+    final n = segmentCount;
+    if (n < 1) return null;
+    final list = <AntennaeConfig>[];
+    for (var seg = 0; seg < n; seg++) {
+      if (_rng.nextDouble() < 1 / 6) {
+        final length = _inRange(
+          AntennaeConfig.lengthMin,
+          AntennaeConfig.lengthMax,
+        );
+        final width = _inRange(
+          AntennaeConfig.widthMin,
+          AntennaeConfig.widthMax,
+        );
+
+        list.add(AntennaeConfig(seg, length: length, width: width));
       }
     }
     return list.isEmpty ? null : list;

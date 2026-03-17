@@ -16,6 +16,8 @@ class EditorPanel extends StatelessWidget {
     required this.onDorsalFinSelected,
     this.selectedLateralFinIndex,
     this.onLateralRemoved,
+    this.selectedAntennaeIndex,
+    this.onAntennaeRemoved,
   });
 
   final Creature creature;
@@ -26,6 +28,8 @@ class EditorPanel extends StatelessWidget {
   final void Function(int?) onDorsalFinSelected;
   final int? selectedLateralFinIndex;
   final void Function(int index)? onLateralRemoved;
+  final int? selectedAntennaeIndex;
+  final void Function(int index)? onAntennaeRemoved;
 
   static const List<String> _tabs = ['Body', 'Parts', 'Colour'];
 
@@ -119,7 +123,9 @@ class EditorPanel extends StatelessWidget {
           selectedDorsalFinIndex: selectedDorsalFinIndex,
           onDorsalFinSelected: onDorsalFinSelected,
           selectedLateralFinIndex: selectedLateralFinIndex,
+          selectedAntennaeIndex: selectedAntennaeIndex,
           onLateralRemoved: onLateralRemoved,
+          onAntennaeRemoved: onAntennaeRemoved,
         );
       case 2:
         return _ColourTab(
@@ -232,6 +238,7 @@ class _ColourTabState extends State<_ColourTab> {
                     finColor: creature.color,
                     tail: creature.tail,
                     lateralFins: creature.lateralFins,
+                    antennae: creature.antennae,
                     trophicType: creature.trophicType,
                     mouth: creature.mouth,
                     mouthCount: creature.mouthCount,
@@ -273,6 +280,7 @@ class _ColourTabState extends State<_ColourTab> {
                     finColor: _editingFin ? value : creature.finColor,
                     tail: creature.tail,
                     lateralFins: creature.lateralFins,
+                    antennae: creature.antennae,
                     trophicType: creature.trophicType,
                     mouth: creature.mouth,
                     mouthCount: creature.mouthCount,

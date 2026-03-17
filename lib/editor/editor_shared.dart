@@ -6,8 +6,11 @@ class LateralDragPayload {
   final LateralWingType wingType;
 }
 
-/// Marker for dorsal fin drag from panel to viewport.
+/// Marker for antennae fin drag from panel to viewport.
 class DorsalDragPayload {}
+
+/// Marker for dorsal fin drag from panel to viewport.
+class AntennaeDragPayload {}
 
 /// Marker for eye drag from panel to viewport (add eye at drop position).
 class EyeDragPayload {}
