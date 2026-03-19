@@ -1,6 +1,6 @@
 import 'dart:math' show cos, pi, sin, sqrt;
 import 'dart:ui' show ImageFilter;
-import 'package:creature_bio_sim/render/antenna_painter.dart' show drawAntenna;
+import 'package:creature_bio_sim/render/antenna_painter.dart' show drawAntennaAtSegment;
 import 'package:creature_bio_sim/render/eye_painter.dart';
 import 'package:creature_bio_sim/render/pec_painter.dart';
 import 'package:flutter/material.dart';
@@ -827,45 +827,19 @@ class CreaturePainter extends CustomPainter {
     for (final config in antennae) {
       final seg = config.segment;
       if (seg < 0 || seg >= n) continue;
-      final len = config.length;
-      final wid = config.width;
-      final flareRad = config.angleDegrees * pi / 180.0;
-      final lenScreen = len * _paintZ;
-      final widScreen = wid * _paintZ;
-      final aAttach = segmentAngles[seg < segmentAngles.length ? seg : seg - 1];
-      final segW = _widthAt(seg);
-      final halfW = segW;
-      final px = positions[seg].x;
-      final py = positions[seg].y;
-      final leftCx = px + sin(aAttach) * halfW;
-      final leftCy = py - cos(aAttach) * halfW;
-      final rightCx = px - sin(aAttach) * halfW;
-      final rightCy = py + cos(aAttach) * halfW;
-
-      final anchors = computeFinAnchors(
-        flareRad: flareRad,
-        halfWidth: halfW,
-        positions: positions,
-        segment: seg,
-        segmentAngles: segmentAngles,
-      );
-
-      drawTransformed(
+      drawAntennaAtSegment(
         canvas,
-        Offset(sx(leftCx), sy(leftCy)),
-        anchors.leftAngle,
-        () {
-          drawAntenna(canvas, lenScreen, widScreen, strokePaint, isLeft: true);
-        },
-      );
-
-      drawTransformed(
-        canvas,
-        Offset(sx(rightCx), sy(rightCy)),
-        anchors.rightAngle,
-        () {
-          drawAntenna(canvas, lenScreen, widScreen, strokePaint, isLeft: false);
-        },
+        seg,
+        config.length,
+        config.width,
+        config.angleDegrees,
+        positions,
+        segmentAngles,
+        _widthAt(seg),
+        sx,
+        sy,
+        _paintZ,
+        strokePaint,
       );
     }
   }

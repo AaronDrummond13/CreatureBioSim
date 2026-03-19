@@ -7,6 +7,7 @@ import 'package:creature_bio_sim/editor/editor_preview/eye_preview_painter.dart'
 import 'package:creature_bio_sim/editor/editor_preview/mouth_node_painter.dart';
 import 'package:creature_bio_sim/editor/editor_preview/mouth_preview_painter.dart';
 import 'package:creature_bio_sim/editor/editor_preview/pec_fin_node_painter.dart';
+import 'package:creature_bio_sim/editor/editor_preview/antenna_segment_painter.dart';
 import 'package:creature_bio_sim/editor/editor_preview/pec_fin_segment_painter.dart';
 import 'package:creature_bio_sim/editor/editor_preview/remove_dorsal_painter.dart';
 import 'package:creature_bio_sim/editor/editor_preview/remove_mouth_painter.dart';
@@ -2788,8 +2789,7 @@ class _EditorPreviewState extends State<EditorPreview>
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    //TODO: antennae segment painter
-                    painter: PecFinSegmentPainter(
+                    painter: AntennaSegmentPainter(
                       segment: segmentAtScreen(
                         _antennaeAddDragLocal!.dx,
                         _antennaeAddDragLocal!.dy,
@@ -2809,14 +2809,6 @@ class _EditorPreviewState extends State<EditorPreview>
                           _antennaeAddDragLocal!.dy,
                         ),
                       ),
-                      creatureColor: Color(widget.creature.color),
-                      finColor: widget.creature.finColor != null
-                          ? Color(widget.creature.finColor!)
-                          : Color.lerp(
-                              Color(widget.creature.color),
-                              Colors.white,
-                              0.15,
-                            )!,
                       highlight: false,
                     ),
                     size: Size(w, h),
@@ -2831,7 +2823,7 @@ class _EditorPreviewState extends State<EditorPreview>
                 Positioned.fill(
                   child: IgnorePointer(
                     child: CustomPaint(
-                      painter: PecFinSegmentPainter(
+                      painter: AntennaSegmentPainter(
                         segment: segmentAtScreen(
                           _lastPanX,
                           _lastPanY,
@@ -2873,14 +2865,6 @@ class _EditorPreviewState extends State<EditorPreview>
                             _lastPanY,
                           ).clamp(0, positions.length - 2),
                         ),
-                        creatureColor: Color(widget.creature.color),
-                        finColor: widget.creature.finColor != null
-                            ? Color(widget.creature.finColor!)
-                            : Color.lerp(
-                                Color(widget.creature.color),
-                                Colors.white,
-                                0.15,
-                              )!,
                         highlight: false,
                       ),
                       size: Size(w, h),
@@ -2891,7 +2875,7 @@ class _EditorPreviewState extends State<EditorPreview>
                 Positioned.fill(
                   child: IgnorePointer(
                     child: CustomPaint(
-                      painter: PecFinSegmentPainter(
+                      painter: AntennaSegmentPainter(
                         segment:
                             _antennaeDragFromIndex! <
                                 (widget.creature.antennae?.length ?? 0)
@@ -2940,14 +2924,6 @@ class _EditorPreviewState extends State<EditorPreview>
                                     .segment
                               : 0,
                         ),
-                        creatureColor: Color(widget.creature.color),
-                        finColor: widget.creature.finColor != null
-                            ? Color(widget.creature.finColor!)
-                            : Color.lerp(
-                                Color(widget.creature.color),
-                                Colors.white,
-                                0.15,
-                              )!,
                         highlight: false,
                         highlightForRemove: true,
                       ),

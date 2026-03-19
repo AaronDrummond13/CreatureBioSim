@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:creature_bio_sim/creature.dart';
 import 'package:creature_bio_sim/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
@@ -82,4 +81,60 @@ void drawTransformed(
   canvas.rotate(angle);
   draw();
   canvas.restore();
+}
+
+/// Draws one antenna (left + right curves) at the given segment. Shared by
+/// [CreaturePainter] and editor overlay so they stay identical.
+void drawAntennaAtSegment(
+  Canvas canvas,
+  int segment,
+  double length,
+  double width,
+  double angleDegrees,
+  List<Vector2> positions,
+  List<double> segmentAngles,
+  double segWidth,
+  double Function(double) sx,
+  double Function(double) sy,
+  double zoom,
+  Paint strokePaint,
+) {
+  if (positions.length < 2 ||
+      segment < 0 ||
+      segment >= positions.length ||
+      segment >= segmentAngles.length) {
+    return;
+  }
+  final flareRad = angleDegrees * pi / 180.0;
+  final lenScreen = length * zoom;
+  final widScreen = width * zoom;
+  final aAttach = segmentAngles[segment];
+  final halfW = segWidth;
+  final px = positions[segment].x;
+  final py = positions[segment].y;
+  final leftCx = px + sin(aAttach) * halfW;
+  final leftCy = py - cos(aAttach) * halfW;
+  final rightCx = px - sin(aAttach) * halfW;
+  final rightCy = py + cos(aAttach) * halfW;
+
+  final anchors = computeFinAnchors(
+    flareRad: flareRad,
+    halfWidth: halfW,
+    positions: positions,
+    segment: segment,
+    segmentAngles: segmentAngles,
+  );
+
+  drawTransformed(
+    canvas,
+    Offset(sx(leftCx), sy(leftCy)),
+    anchors.leftAngle,
+    () => drawAntenna(canvas, lenScreen, widScreen, strokePaint, isLeft: true),
+  );
+  drawTransformed(
+    canvas,
+    Offset(sx(rightCx), sy(rightCy)),
+    anchors.rightAngle,
+    () => drawAntenna(canvas, lenScreen, widScreen, strokePaint, isLeft: false),
+  );
 }

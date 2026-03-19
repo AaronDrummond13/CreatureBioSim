@@ -5,6 +5,7 @@ import 'package:creature_bio_sim/editor/editor_panel/tail_box.dart';
 import 'package:creature_bio_sim/editor/editor_panel/tail_preview_painter.dart';
 import 'package:creature_bio_sim/editor/editor_shared.dart';
 import 'package:creature_bio_sim/editor/editor_style.dart';
+import 'package:creature_bio_sim/render/antenna_painter.dart';
 import 'package:creature_bio_sim/render/render_utils.dart';
 import 'package:flutter/material.dart';
 
@@ -506,18 +507,43 @@ class FeaturesTab extends StatelessWidget {
         ),
       ),
       child: Center(
-        child: Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            border: Border.all(color: EditorStyle.stroke, width: 1),
-          ),
+        child: CustomPaint(
+          painter: _AntennaBoxPainter(),
+          size: const Size(24, 20),
         ),
       ),
     );
   }
+}
+
+/// Paints a simple curve-stroke antenna icon (two curved strokes) for the features panel.
+class _AntennaBoxPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final stroke = Paint()
+      ..color = EditorStyle.stroke
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    const len = 8.0;
+    const wid = 3.0;
+    drawTransformed(
+      canvas,
+      Offset(cx - 5, cy),
+      -0.5,
+      () => drawAntenna(canvas, len, wid, stroke, isLeft: true),
+    );
+    drawTransformed(
+      canvas,
+      Offset(cx + 5, cy),
+      0.5,
+      () => drawAntenna(canvas, len, wid, stroke, isLeft: false),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
 /// Paints a single mouth type in a small box (head at center, mouth forward).
