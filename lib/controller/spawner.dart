@@ -125,19 +125,26 @@ class Spawner {
   /// Random eye count (0–3), segment, offset and radius per eye. Babies still get no eyes at render time.
   List<EyeConfig>? _randomEyes(int segmentCount) {
     if (segmentCount < 1) return null;
-    final n = _rng.nextInt(4); // 0 to 3 eyes
+    final n = _rng.nextBool()
+        ? 1
+        : _rng.nextBool()
+        ? 2
+        : _rng.nextBool()
+        ? 3
+        : 0;
     if (n == 0) return null;
     final list = <EyeConfig>[];
+    final pupilFraction = _inRange(
+      EyeConfig.pupilFractionMin,
+      EyeConfig.pupilFractionMax,
+    );
     for (var i = 0; i < n; i++) {
       list.add(
         EyeConfig(
           _rng.nextInt(segmentCount),
           offset: _rng.nextDouble() * EyeConfig.offsetMax,
           radius: _inRange(EyeConfig.radiusMin, EyeConfig.radiusMax),
-          pupilFraction: _inRange(
-            EyeConfig.pupilFractionMin,
-            EyeConfig.pupilFractionMax,
-          ),
+          pupilFraction: pupilFraction,
         ),
       );
     }

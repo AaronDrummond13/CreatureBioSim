@@ -72,7 +72,10 @@ class PecFinSegmentPainter extends CustomPainter {
           LinearGradient(
             transform: GradientRotation(pi / 2 - flareRad),
             colors: highlightForRemove
-                ? [Colors.red.withValues(alpha: 0.5)]
+                ? [
+                    Colors.red.withValues(alpha: 0.5),
+                    Colors.red.withValues(alpha: 0.2),
+                  ]
                 : [finColor, creatureColor, creatureColor],
           ).createShader(
             Rect.fromCenter(
@@ -87,7 +90,10 @@ class PecFinSegmentPainter extends CustomPainter {
           LinearGradient(
             transform: GradientRotation(-pi / 2 + flareRad),
             colors: highlightForRemove
-                ? [Colors.red.withValues(alpha: 0.5)]
+                ? [
+                    Colors.red.withValues(alpha: 0.5),
+                    Colors.red.withValues(alpha: 0.2),
+                  ]
                 : [finColor, creatureColor, creatureColor],
           ).createShader(
             Rect.fromCenter(
