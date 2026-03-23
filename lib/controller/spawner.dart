@@ -56,30 +56,6 @@ class Spawner {
     return (creature, list);
   }
 
-  /// 1/8 chance for each tail type including none.
-  CaudalFinType? _randomTailFin() {
-    switch (_rng.nextInt(8)) {
-      case 0:
-        return null;
-      case 1:
-        return CaudalFinType.truncate;
-      case 2:
-        return CaudalFinType.rounded;
-      case 3:
-        return CaudalFinType.emarginate;
-      case 4:
-        return CaudalFinType.lunate;
-      case 5:
-        return CaudalFinType.forked;
-      case 6:
-        return CaudalFinType.pointed;
-      case 7:
-        return CaudalFinType.rhomboid;
-      default:
-        return null;
-    }
-  }
-
   Creature _randomCreature() {
     final segmentCount = 1 + _rng.nextInt(Creature.maxSegmentCount);
     final widths = _smoothSegmentWidths(segmentCount);
@@ -96,20 +72,15 @@ class Spawner {
     final finColor = fin.toColor().toARGB32();
 
     final dorsalFins = _randomDorsalFins(segmentCount);
-    final tailFin = _randomTailFin();
+    final tailFin = CaudalFinType.values.random(_rng);
     final lateralFins = _randomLateralFins(segmentCount);
     final antennae = _randomAntennae(segmentCount);
-    final tail = tailFin != null
-        ? TailConfig(
-            tailFin,
-            rootWidth: _inRange(
-              TailConfig.rootWidthMin,
-              TailConfig.rootWidthMax,
-            ),
-            maxWidth: _inRange(TailConfig.maxWidthMin, TailConfig.maxWidthMax),
-            length: _inRange(TailConfig.lengthMin, TailConfig.lengthMax),
-          )
-        : null;
+    final tail = TailConfig(
+      tailFin,
+      rootWidth: _inRange(TailConfig.rootWidthMin, TailConfig.rootWidthMax),
+      maxWidth: _inRange(TailConfig.maxWidthMin, TailConfig.maxWidthMax),
+      length: _inRange(TailConfig.lengthMin, TailConfig.lengthMax),
+    );
     final trophicType =
         _spawnableTrophic[_rng.nextInt(_spawnableTrophic.length)];
     final mouth = trophicType == TrophicType.herbivore
@@ -137,14 +108,10 @@ class Spawner {
       segmentWidths: widths,
       color: color,
       finColor: finColor,
-      dorsalFins: (dorsalFins == null || dorsalFins.isEmpty)
-          ? null
-          : dorsalFins,
+      dorsalFins: (dorsalFins?.isEmpty ?? true) ? null : dorsalFins,
       tail: tail,
-      lateralFins: (lateralFins == null || lateralFins.isEmpty)
-          ? null
-          : lateralFins,
-      antennae: (antennae == null || antennae.isEmpty) ? null : antennae,
+      lateralFins: (lateralFins?.isEmpty ?? true) ? null : lateralFins,
+      antennae: (antennae?.isEmpty ?? true) ? null : antennae,
       trophicType: trophicType,
       mouth: mouth,
       mouthCount: mouthCount,
@@ -162,14 +129,11 @@ class Spawner {
     if (n == 0) return null;
     final list = <EyeConfig>[];
     for (var i = 0; i < n; i++) {
-      final seg = _rng.nextInt(segmentCount);
-      final offset = _rng.nextDouble() * EyeConfig.offsetMax;
-      final radius = _inRange(EyeConfig.radiusMin, EyeConfig.radiusMax);
       list.add(
         EyeConfig(
-          seg,
-          offsetFromCenter: offset,
-          radius: radius,
+          _rng.nextInt(segmentCount),
+          offset: _rng.nextDouble() * EyeConfig.offsetMax,
+          radius: _inRange(EyeConfig.radiusMin, EyeConfig.radiusMax),
           pupilFraction: _inRange(
             EyeConfig.pupilFractionMin,
             EyeConfig.pupilFractionMax,
@@ -177,8 +141,11 @@ class Spawner {
         ),
       );
     }
-    list.sort((a, b) => a.segment.compareTo(b.segment));
-    return list;
+
+    final uniqList = {for (var e in list) e.segment: e}.values.toList()
+      ..sort((a, b) => a.segment.compareTo(b.segment));
+
+    return uniqList;
   }
 
   double _inRange(double min, double max) =>
@@ -191,7 +158,7 @@ class Spawner {
     final types = LateralWingType.values;
     final list = <LateralFinConfig>[];
     for (var seg = 0; seg < n; seg++) {
-      if (_rng.nextDouble() < 1 / 6) {
+      if (_rng.nextDouble() < 1 / 8) {
         final length = _inRange(
           LateralFinConfig.lengthMin,
           LateralFinConfig.lengthMax,
@@ -220,7 +187,7 @@ class Spawner {
     if (n < 1) return null;
     final list = <AntennaeConfig>[];
     for (var seg = 0; seg < n; seg++) {
-      if (_rng.nextDouble() < 1 / 6) {
+      if (_rng.nextDouble() < 1 / 10) {
         final length = _inRange(
           AntennaeConfig.lengthMin,
           AntennaeConfig.lengthMax,
@@ -233,7 +200,10 @@ class Spawner {
         list.add(AntennaeConfig(seg, length: length, width: width));
       }
     }
-    return list.isEmpty ? null : list;
+    final uniqList = {for (var e in list) e.segment: e}.values.toList()
+      ..sort((a, b) => a.segment.compareTo(b.segment));
+
+    return uniqList;
   }
 
   /// Interpolate between a few random control points so segment widths vary smoothly.

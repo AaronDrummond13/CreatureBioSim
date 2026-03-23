@@ -778,7 +778,7 @@ class EditorScreenState extends State<EditorScreen> {
 
   void _onEyeAddedFromViewport(int segment, double offsetFromCenter) {
     final list = List<EyeConfig>.from(_creature.eyes ?? []);
-    list.add(EyeConfig(segment, offsetFromCenter: offsetFromCenter));
+    list.add(EyeConfig(segment, offset: offsetFromCenter));
     list.sort((a, b) => a.segment.compareTo(b.segment));
     setState(() {
       _creature = Creature(

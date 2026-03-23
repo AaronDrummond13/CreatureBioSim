@@ -1,3 +1,5 @@
+import 'dart:math';
+
 /// Tail (caudal) fin shape. Rendered under the body, flaring out behind the tail.
 enum CaudalFinType {
   /// Straight trailing edge, paddle-like (tip at ~80% length).
@@ -22,14 +24,21 @@ enum CaudalFinType {
   rhomboid,
 }
 
+extension EnumX<T extends Enum> on List<T> {
+  T random([Random? rng]) {
+    rng ??= Random();
+    return this[rng.nextInt(length)];
+  }
+}
+
 /// Eye placement: segment index, offset from spine (0 = single centre eye, (0,1] = symmetric pair at that fraction of half-width), radius in world units.
 class EyeConfig {
   static const double offsetMin = 0.0;
   static const double offsetMax = 0.8;
-  static const double radiusMin = 3.0;
-  static const double radiusMax = 17.0;
+  static const double radiusMin = 5.0;
+  static const double radiusMax = 15.0;
   static const double radiusDefault = 10.0;
-  static const double pupilFractionMin = 0.2;
+  static const double pupilFractionMin = 0.3;
   static const double pupilFractionMax = 0.7;
   static const double pupilFractionDefault = 0.5;
 
@@ -38,10 +47,10 @@ class EyeConfig {
 
   EyeConfig(
     this.segment, {
-    double? offsetFromCenter,
+    double? offset,
     double? radius,
     double? pupilFraction,
-  }) : offsetFromCenter = (offsetFromCenter ?? 0.0).clamp(offsetMin, offsetMax),
+  }) : offsetFromCenter = (offset ?? 0.0).clamp(offsetMin, offsetMax),
        radius = (radius ?? radiusDefault).clamp(radiusMin, radiusMax),
        pupilFraction = (pupilFraction ?? pupilFractionDefault).clamp(
          pupilFractionMin,
@@ -60,7 +69,7 @@ class EyeConfig {
     double? pupilFraction,
   }) => EyeConfig(
     segment ?? this.segment,
-    offsetFromCenter: offsetFromCenter ?? this.offsetFromCenter,
+    offset: offsetFromCenter ?? this.offsetFromCenter,
     radius: radius ?? this.radius,
     pupilFraction: pupilFraction ?? this.pupilFraction,
   );

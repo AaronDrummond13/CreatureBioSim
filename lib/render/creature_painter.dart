@@ -1,6 +1,7 @@
 import 'dart:math' show cos, pi, sin, sqrt;
 import 'dart:ui' show ImageFilter;
-import 'package:creature_bio_sim/render/antenna_painter.dart' show drawAntennaAtSegment;
+import 'package:creature_bio_sim/render/antenna_painter.dart'
+    show drawAntennaAtSegment;
 import 'package:creature_bio_sim/render/eye_painter.dart';
 import 'package:creature_bio_sim/render/pec_painter.dart';
 import 'package:flutter/material.dart';
@@ -437,13 +438,13 @@ class CreaturePainter extends CustomPainter {
     _drawMouth(canvas);
     _drawBody(canvas);
     if (!skipDorsalAndEyes) {
-      _drawDorsalFins(canvas);
       if (drawEyes && !isBaby) {
         final configEyes = creature.eyes;
         if (configEyes != null && configEyes.isNotEmpty)
           _drawConfigEyes(canvas);
         // No fallback head eyes: only config eyes are drawn, so editor selection/remove works.
       }
+      _drawDorsalFins(canvas);
     }
   }
 
