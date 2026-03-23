@@ -27,8 +27,11 @@ class SimulationScreen extends StatefulWidget {
   final VoidCallback? onEdit;
 
   /// Default creature when [initialCreature] is null (e.g. first run).
-  static Creature defaultCreature() =>
-      Creature(segmentWidths: [20], color: 0xFF987987, finColor: 0xFF987987);
+  static Creature defaultCreature() => Creature(
+    segmentWidths: [16, 22, 20],
+    color: 0xFF987987,
+    finColor: 0xFF987987,
+  );
 
   @override
   State<SimulationScreen> createState() => _SimulationScreenState();
@@ -60,6 +63,11 @@ class _SimulationScreenState extends State<SimulationScreen>
   static const double _kSimFixedDt = 1 / 60.0;
   static const int _kMaxSimStepsPerFrame = 5;
   static const double _kJoystickPadding = 24.0;
+
+  static const Color _kEditBtnStroke = Color(0xFF6b8a9e);
+  static const Color _kEditBtnFill = Color(0xFF2e3d4d);
+  static const Color _kEditBtnText = Color(0xFFe8eef2);
+  static const double _kEditBtnRadius = 8.0;
 
   double _simTimeSeconds = 0;
   double? _lastRealTimeSeconds;
@@ -212,9 +220,4 @@ class _SimulationScreenState extends State<SimulationScreen>
       ],
     );
   }
-
-  static const Color _kEditBtnStroke = Color(0xFF6b8a9e);
-  static const Color _kEditBtnFill = Color(0xFF2e3d4d);
-  static const Color _kEditBtnText = Color(0xFFe8eef2);
-  static const double _kEditBtnRadius = 8.0;
 }
