@@ -2,6 +2,7 @@ import 'dart:math' show Random;
 
 import 'package:bioism/creature.dart';
 import 'package:bioism/dorsal_fin_rules.dart';
+import 'package:bioism/enum.dart';
 import 'package:bioism/simulation/spine.dart';
 import 'package:flutter/material.dart';
 

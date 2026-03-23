@@ -1,5 +1,3 @@
-import 'dart:math';
-
 /// Tail (caudal) fin shape. Rendered under the body, flaring out behind the tail.
 enum CaudalFinType {
   /// Straight trailing edge, paddle-like (tip at ~80% length).
@@ -22,13 +20,6 @@ enum CaudalFinType {
 
   /// Diamond-shaped; pointed tip at full length with angled sides.
   rhomboid,
-}
-
-extension EnumX<T extends Enum> on List<T> {
-  T random([Random? rng]) {
-    rng ??= Random();
-    return this[rng.nextInt(length)];
-  }
 }
 
 /// Eye placement: segment index, offset from spine (0 = single centre eye, (0,1] = symmetric pair at that fraction of half-width), radius in world units.
