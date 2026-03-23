@@ -1,8 +1,8 @@
 import 'dart:math' show sqrt;
 
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/render/creature_painter.dart' show CreaturePainter;
-import 'package:creature_bio_sim/simulation/spine.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/render/creature_painter.dart' show CreaturePainter;
+import 'package:bioism/simulation/spine.dart';
 
 double _scaleForEntity({bool isEpic = false, bool isBaby = false}) {
   if (isEpic) return CreaturePainter.kEpicRenderScale;
@@ -18,7 +18,9 @@ double eaterHeadRadius(
   double mouthFrac = 0.8,
 }) {
   final scale = _scaleForEntity(isEpic: isEpic, isBaby: isBaby);
-  final raw = creature.segmentWidths.isNotEmpty ? creature.segmentWidths.last : 15.0;
+  final raw = creature.segmentWidths.isNotEmpty
+      ? creature.segmentWidths.last
+      : 15.0;
   return raw * scale * mouthFrac;
 }
 
@@ -106,4 +108,3 @@ bool pointHitsCreature(
   }
   return (bestD2, bestSeg);
 }
-

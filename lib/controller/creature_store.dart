@@ -1,13 +1,13 @@
 import 'dart:math' show Random;
 
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/simulation/spine.dart';
-import 'package:creature_bio_sim/world/biome.dart';
-import 'package:creature_bio_sim/world/biome_creature_config.dart';
-import 'package:creature_bio_sim/world/biome_map.dart';
-import 'package:creature_bio_sim/world/world.dart';
-import 'package:creature_bio_sim/controller/bot_controller.dart';
-import 'package:creature_bio_sim/controller/spawner.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/simulation/spine.dart';
+import 'package:bioism/world/biome.dart';
+import 'package:bioism/world/biome_creature_config.dart';
+import 'package:bioism/world/biome_map.dart';
+import 'package:bioism/world/world.dart';
+import 'package:bioism/controller/bot_controller.dart';
+import 'package:bioism/controller/spawner.dart';
 
 /// A creature plus spine and bot controller, tied to a chunk for culling.
 /// [chunkCx]/[chunkCy] track current position chunk so culling only removes creatures actually in that chunk.
@@ -74,7 +74,10 @@ class CreatureStore {
           spine: spine,
           wanderRadius: _botWanderRadius,
           ticksPerNewTarget: _botTicksPerNewTarget,
-          speed: Spine.defaultMoveSpeed * Spine.botPenalty * (isEpic ? Spine.epicPenalty : 1.0),
+          speed:
+              Spine.defaultMoveSpeed *
+              Spine.botPenalty *
+              (isEpic ? Spine.epicPenalty : 1.0),
           homeX: homeX,
           homeY: homeY,
         ),
@@ -149,13 +152,21 @@ class CreatureStore {
     for (var s = 0; s < numSingles; s++) {
       final cx = x0 + _random.nextDouble() * cellSize;
       final cy = y0 + _random.nextDouble() * cellSize;
-      final (creature, spine) = spawner.createRandomAt(cx, cy, turnAgility: botAgility);
+      final (creature, spine) = spawner.createRandomAt(
+        cx,
+        cy,
+        turnAgility: botAgility,
+      );
       _addCreature(list, i, j, creature, spine);
     }
     for (var e = 0; e < numEpics; e++) {
       final cx = x0 + _random.nextDouble() * cellSize;
       final cy = y0 + _random.nextDouble() * cellSize;
-      final (creature, spine) = spawner.createRandomAt(cx, cy, turnAgility: epicAgility);
+      final (creature, spine) = spawner.createRandomAt(
+        cx,
+        cy,
+        turnAgility: epicAgility,
+      );
       _addCreature(list, i, j, creature, spine, isEpic: true);
     }
 

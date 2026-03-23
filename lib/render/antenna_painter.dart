@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:bioism/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
 class FinAnchors {

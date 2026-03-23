@@ -1,18 +1,17 @@
 import 'dart:math' show cos, pi, sin, sqrt;
 import 'dart:ui' show ImageFilter;
-import 'package:creature_bio_sim/render/antenna_painter.dart'
-    show drawAntennaAtSegment;
-import 'package:creature_bio_sim/render/eye_painter.dart';
-import 'package:creature_bio_sim/render/pec_painter.dart';
+import 'package:bioism/render/antenna_painter.dart' show drawAntennaAtSegment;
+import 'package:bioism/render/eye_painter.dart';
+import 'package:bioism/render/pec_painter.dart';
 import 'package:flutter/material.dart';
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/simulation/angle_util.dart';
-import 'package:creature_bio_sim/simulation/spine.dart';
-import 'package:creature_bio_sim/simulation/vector.dart';
-import 'package:creature_bio_sim/render/mouth_painter.dart';
-import 'package:creature_bio_sim/render/render_utils.dart';
-import 'package:creature_bio_sim/render/tail_painter.dart';
-import 'package:creature_bio_sim/render/view.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/simulation/angle_util.dart';
+import 'package:bioism/simulation/spine.dart';
+import 'package:bioism/simulation/vector.dart';
+import 'package:bioism/render/mouth_painter.dart';
+import 'package:bioism/render/render_utils.dart';
+import 'package:bioism/render/tail_painter.dart';
+import 'package:bioism/render/view.dart';
 
 /// Contour line style: [schematic] = uniform line weight (clean schematic look);
 /// [tubular] = thinner at body edges, thicker toward spine (true tubular form).

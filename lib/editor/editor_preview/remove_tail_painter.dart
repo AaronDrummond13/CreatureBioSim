@@ -1,6 +1,6 @@
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/render/tail_painter.dart';
-import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/render/tail_painter.dart';
+import 'package:bioism/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
 /// Draws the tail fin in red when dragging to remove (outside bounds).

@@ -2,10 +2,10 @@ import 'dart:math' show cos, pi, sin, sqrt;
 
 import 'package:flutter/material.dart';
 
-import 'package:creature_bio_sim/simulation/spine.dart';
-import 'package:creature_bio_sim/world/consumed_remnant.dart';
-import 'package:creature_bio_sim/world/food.dart' show CellType;
-import 'package:creature_bio_sim/render/view.dart';
+import 'package:bioism/simulation/spine.dart';
+import 'package:bioism/world/consumed_remnant.dart';
+import 'package:bioism/world/food.dart' show CellType;
+import 'package:bioism/render/view.dart';
 
 /// Gas flow from head to tail along the spine, drawn inside the creature body (clipped).
 /// Driven by spine/creature location only; consumption only triggers the effect.
@@ -71,12 +71,8 @@ class InnerBodyCloudPainter extends CustomPainter {
       final dy = head.y - neck.y;
       final len = sqrt(dx * dx + dy * dy);
       final halfHead = spine.segmentLength * 0.5;
-      final tipX = len >= 1e-6
-          ? head.x + (dx / len) * halfHead
-          : head.x;
-      final tipY = len >= 1e-6
-          ? head.y + (dy / len) * halfHead
-          : head.y;
+      final tipX = len >= 1e-6 ? head.x + (dx / len) * halfHead : head.x;
+      final tipY = len >= 1e-6 ? head.y + (dy / len) * halfHead : head.y;
 
       for (var p = 0; p < numPuffs; p++) {
         final useLight = (sin(p * 2.7 + r.consumedAt) * 0.5 + 0.5) > 0.5;

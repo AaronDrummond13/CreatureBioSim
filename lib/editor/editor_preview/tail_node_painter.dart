@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:creature_bio_sim/editor/node_painter.dart';
+import 'package:bioism/editor/node_painter.dart';
 import 'package:flutter/material.dart';
 
 /// Three nodes for tail sizing: root width, max width, length (when creature has tail).

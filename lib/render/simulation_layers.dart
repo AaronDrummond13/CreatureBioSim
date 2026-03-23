@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 
-import 'package:creature_bio_sim/controller/creature_store.dart';
-import 'package:creature_bio_sim/controller/food_store.dart';
-import 'package:creature_bio_sim/controller/mammoth_store.dart';
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/render/background_painter.dart'
+import 'package:bioism/controller/creature_store.dart';
+import 'package:bioism/controller/food_store.dart';
+import 'package:bioism/controller/mammoth_store.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/render/background_painter.dart'
     show BackgroundPainter, SolidBackgroundPainter;
-import 'package:creature_bio_sim/render/creature_painter.dart';
-import 'package:creature_bio_sim/render/food_painter.dart';
-import 'package:creature_bio_sim/render/inner_body_cloud_painter.dart';
-import 'package:creature_bio_sim/render/mammoth_painter.dart';
-import 'package:creature_bio_sim/simulation/spine.dart';
-import 'package:creature_bio_sim/simulation_view_state.dart';
-import 'package:creature_bio_sim/world/biome_map.dart';
-import 'package:creature_bio_sim/world/world.dart'
+import 'package:bioism/render/creature_painter.dart';
+import 'package:bioism/render/food_painter.dart';
+import 'package:bioism/render/inner_body_cloud_painter.dart';
+import 'package:bioism/render/mammoth_painter.dart';
+import 'package:bioism/simulation/spine.dart';
+import 'package:bioism/simulation_view_state.dart';
+import 'package:bioism/world/biome_map.dart';
+import 'package:bioism/world/world.dart'
     show aabbOverlapsRect, circleOverlapsRect;
 
 /// Player creature render levels (back-to-front). Used to order painter layers.
@@ -107,7 +107,9 @@ List<Widget> buildSimulationLayers({
     );
   }).toList();
   final babyEntities = visibleEntities.where((e) => e.isBaby).toList();
-  final normalEntities = visibleEntities.where((e) => !e.isBaby && !e.isEpic).toList();
+  final normalEntities = visibleEntities
+      .where((e) => !e.isBaby && !e.isEpic)
+      .toList();
   final epicEntities = visibleEntities.where((e) => e.isEpic).toList();
   final visibleMammoths = mammothStore.getVisible(
     viewState.cameraX,

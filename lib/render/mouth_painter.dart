@@ -2,9 +2,9 @@ import 'dart:math' show atan2, cos, pi, sin, sqrt;
 
 import 'package:flutter/material.dart';
 
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/simulation/vector.dart';
-import 'package:creature_bio_sim/render/render_utils.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/simulation/vector.dart';
+import 'package:bioism/render/render_utils.dart';
 
 /// Tentacle mouth: tentacles with multiple joints, bases on a curved arc across the head.
 /// [timeSeconds] drives wobble at each joint for soft-bodied motion.
@@ -75,8 +75,11 @@ void paintMouth(
   if (creature.mouth == MouthType.tentacle) {
     final count = creature.mouthCount ?? 5;
     final length = creature.mouthLength ?? MouthParams.lengthDefault;
-    final wobbleAmplitude = (creature.mouthWobbleAmplitude ?? MouthParams.wobbleDefault)
-        .clamp(MouthParams.wobbleMin, MouthParams.wobbleMax);
+    final wobbleAmplitude =
+        (creature.mouthWobbleAmplitude ?? MouthParams.wobbleDefault).clamp(
+          MouthParams.wobbleMin,
+          MouthParams.wobbleMax,
+        );
     _paintTentacleMouth(
       canvas,
       mouthTime,
@@ -106,8 +109,10 @@ void paintMouth(
   if (creature.mouth == MouthType.teeth) {
     final count = creature.mouthCount ?? 4;
     final length = creature.mouthLength ?? MouthParams.lengthDefault;
-    final curve = (creature.mouthCurve ?? MouthParams.curveDefault)
-        .clamp(MouthParams.curveMin, MouthParams.curveMax);
+    final curve = (creature.mouthCurve ?? MouthParams.curveDefault).clamp(
+      MouthParams.curveMin,
+      MouthParams.curveMax,
+    );
     _paintTeethMouth(
       canvas,
       mouthTime,

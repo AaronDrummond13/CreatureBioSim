@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:creature_bio_sim/world/biome.dart';
-import 'package:creature_bio_sim/world/world.dart';
+import 'package:bioism/world/biome.dart';
+import 'package:bioism/world/world.dart';
 
 /// Stable biome layer. One biome per region; regions are 10×10 chunks (5000×5000 world units).
 /// 10×10 grid of regions that wraps. Never culled; same region always returns same biome.

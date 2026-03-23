@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/dorsal_fin_rules.dart';
-import 'package:creature_bio_sim/editor/editor_panel/editor_panel.dart';
-import 'package:creature_bio_sim/editor/editor_preview/editor_preview.dart';
-import 'package:creature_bio_sim/editor/editor_style.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/dorsal_fin_rules.dart';
+import 'package:bioism/editor/editor_panel/editor_panel.dart';
+import 'package:bioism/editor/editor_preview/editor_preview.dart';
+import 'package:bioism/editor/editor_style.dart';
 
 /// Full-screen creature editor: left (or bottom) panel for properties, right (or top) for live preview.
 /// Play and Test/Edit buttons are drawn inside the editor (top-right).

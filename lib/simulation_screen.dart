@@ -1,16 +1,17 @@
-import 'package:creature_bio_sim/controller/chunk_manager.dart';
-import 'package:creature_bio_sim/controller/creature_store.dart';
-import 'package:creature_bio_sim/controller/food_store.dart';
-import 'package:creature_bio_sim/controller/mammoth_store.dart';
-import 'package:creature_bio_sim/controller/spawner.dart';
-import 'package:creature_bio_sim/creature.dart' show Creature;
-import 'package:creature_bio_sim/input/simulation_input_layer.dart';
-import 'package:creature_bio_sim/render/simulation_layers.dart';
-import 'package:creature_bio_sim/simulation/play_step.dart';
-import 'package:creature_bio_sim/simulation/spine.dart';
-import 'package:creature_bio_sim/simulation_view_state.dart';
-import 'package:creature_bio_sim/world/biome_map.dart';
-import 'package:creature_bio_sim/world/world.dart' show kChunkLoadRadiusWorld, kChunkCullRadiusWorld;
+import 'package:bioism/controller/chunk_manager.dart';
+import 'package:bioism/controller/creature_store.dart';
+import 'package:bioism/controller/food_store.dart';
+import 'package:bioism/controller/mammoth_store.dart';
+import 'package:bioism/controller/spawner.dart';
+import 'package:bioism/creature.dart' show Creature;
+import 'package:bioism/input/simulation_input_layer.dart';
+import 'package:bioism/render/simulation_layers.dart';
+import 'package:bioism/simulation/play_step.dart';
+import 'package:bioism/simulation/spine.dart';
+import 'package:bioism/simulation_view_state.dart';
+import 'package:bioism/world/biome_map.dart';
+import 'package:bioism/world/world.dart'
+    show kChunkLoadRadiusWorld, kChunkCullRadiusWorld;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -100,8 +101,10 @@ class _SimulationScreenState extends State<SimulationScreen>
     final realDt = realTimeSeconds - _lastRealTimeSeconds!;
     _lastRealTimeSeconds = realTimeSeconds;
 
-    final steps =
-        (realDt / _kSimFixedDt).round().clamp(0, _kMaxSimStepsPerFrame);
+    final steps = (realDt / _kSimFixedDt).round().clamp(
+      0,
+      _kMaxSimStepsPerFrame,
+    );
     for (var i = 0; i < steps; i++) {
       _simTimeSeconds += _kSimFixedDt;
       _viewState.timeSeconds = _simTimeSeconds;

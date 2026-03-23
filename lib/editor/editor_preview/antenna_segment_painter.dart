@@ -1,5 +1,5 @@
-import 'package:creature_bio_sim/render/antenna_painter.dart';
-import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:bioism/render/antenna_painter.dart';
+import 'package:bioism/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
 /// Draws one antenna (left + right curves) at the given segment. Uses the same

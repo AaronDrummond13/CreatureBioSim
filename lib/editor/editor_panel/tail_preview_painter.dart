@@ -1,8 +1,8 @@
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/editor/editor_panel/tail_box.dart';
-import 'package:creature_bio_sim/editor/editor_style.dart';
-import 'package:creature_bio_sim/render/tail_painter.dart';
-import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/editor/editor_panel/tail_box.dart';
+import 'package:bioism/editor/editor_style.dart';
+import 'package:bioism/render/tail_painter.dart';
+import 'package:bioism/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
 /// Paints tail using shared [paintTailFin]; horizontal in box, centered.

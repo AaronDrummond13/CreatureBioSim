@@ -1,6 +1,6 @@
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/render/mouth_painter.dart';
-import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/render/mouth_painter.dart';
+import 'package:bioism/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
 /// Draws the mouth only as preview when dragging a mouth type onto the creature.

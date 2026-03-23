@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:creature_bio_sim/render/view.dart';
+import 'package:bioism/render/view.dart';
 
 /// Holds view/camera and touch state for the simulation screen.
 /// Camera = world position at screen center; zoom; touch target; time for drift/parallax.
@@ -55,8 +55,14 @@ class SimulationViewState extends ChangeNotifier {
   void initWithScreenSize(double screenWidth) {
     if (_screenInitialized) return;
     _screenInitialized = true;
-    _effectiveMinZoom = (screenWidth / targetMaxWorldWidth).clamp(minZoom, maxZoom);
-    zoom = (screenWidth / targetDefaultWorldWidth).clamp(_effectiveMinZoom, maxZoom);
+    _effectiveMinZoom = (screenWidth / targetMaxWorldWidth).clamp(
+      minZoom,
+      maxZoom,
+    );
+    zoom = (screenWidth / targetDefaultWorldWidth).clamp(
+      _effectiveMinZoom,
+      maxZoom,
+    );
   }
 
   CameraView get cameraView =>

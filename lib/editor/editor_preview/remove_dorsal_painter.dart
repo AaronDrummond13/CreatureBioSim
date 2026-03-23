@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:bioism/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
 /// Draws a dorsal fin range with highlight (e.g. when dragging to delete).

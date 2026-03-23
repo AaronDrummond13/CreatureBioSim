@@ -1,8 +1,8 @@
-import 'package:creature_bio_sim/editor/editor_panel/body_tab.dart';
-import 'package:creature_bio_sim/editor/editor_panel/features_tab.dart';
+import 'package:bioism/editor/editor_panel/body_tab.dart';
+import 'package:bioism/editor/editor_panel/features_tab.dart';
 import 'package:flutter/material.dart';
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/editor/editor_style.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/editor/editor_style.dart';
 
 /// Left/bottom panel: custom tab row + content (no Material). Play is top-right only.
 class EditorPanel extends StatelessWidget {

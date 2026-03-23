@@ -2,10 +2,10 @@ import 'dart:math' show cos, pi, sin;
 
 import 'package:flutter/material.dart';
 
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/simulation/angle_util.dart';
-import 'package:creature_bio_sim/simulation/vector.dart';
-import 'package:creature_bio_sim/render/render_utils.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/simulation/angle_util.dart';
+import 'package:bioism/simulation/vector.dart';
+import 'package:bioism/render/render_utils.dart';
 
 /// Shared tail (caudal) fin rendering. Use for full creature paint or editor thumbnails.
 /// [positions] and [segmentAngles] from spine (world space). [centerX], [centerY], [zoom], [cameraX], [cameraY] define view transform.

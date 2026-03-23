@@ -1,16 +1,13 @@
-import 'package:creature_bio_sim/world/world.dart';
+import 'package:bioism/world/world.dart';
 
-import 'package:creature_bio_sim/controller/food_store.dart';
-import 'package:creature_bio_sim/controller/creature_store.dart';
+import 'package:bioism/controller/food_store.dart';
+import 'package:bioism/controller/creature_store.dart';
 
 /// Chunk lifecycle for main world only (food + creatures). One center, two radii:
 /// spawn radius (inner) for generation, cull radius (outer) for removal.
 /// Mammoths use their own parallax universe and are not managed here.
 class ChunkManager {
-  ChunkManager({
-    required this.foodStore,
-    required this.creatureStore,
-  });
+  ChunkManager({required this.foodStore, required this.creatureStore});
 
   final FoodStore foodStore;
   final CreatureStore creatureStore;

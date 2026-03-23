@@ -1,6 +1,6 @@
 import 'dart:math';
-import 'package:creature_bio_sim/editor/node_painter.dart';
-import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:bioism/editor/node_painter.dart';
+import 'package:bioism/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
 /// Tail node OUTSIDE creature (after tail) for extend/contract.

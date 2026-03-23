@@ -1,4 +1,4 @@
-import 'package:creature_bio_sim/creature.dart';
+import 'package:bioism/creature.dart';
 
 /// Marker for lateral fin drag from panel to viewport. [wingType] = which shape to add.
 class LateralDragPayload {

@@ -1,6 +1,6 @@
-name: creature_bio_sim
-description: "A new Flutter project."
-publish_to: 'none'
+name: bioism
+description: "bioism"
+publish_to: "none"
 version: 0.1.0+1
 
 environment:

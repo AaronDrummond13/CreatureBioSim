@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'package:creature_bio_sim/input/simulation_gesture_region.dart';
-import 'package:creature_bio_sim/render/joystick_overlay_painter.dart';
-import 'package:creature_bio_sim/simulation/spine.dart';
-import 'package:creature_bio_sim/simulation_view_state.dart';
+import 'package:bioism/input/simulation_gesture_region.dart';
+import 'package:bioism/render/joystick_overlay_painter.dart';
+import 'package:bioism/simulation/spine.dart';
+import 'package:bioism/simulation_view_state.dart';
 
 /// Gesture region and joystick overlay for the simulation (play) screen.
 class SimulationInputLayer extends StatelessWidget {
@@ -35,9 +35,9 @@ class SimulationInputLayer extends StatelessWidget {
     bool isInJoystickZone(Offset local) {
       final dx = local.dx - joystickCenter.dx;
       final dy = local.dy - joystickCenter.dy;
-      return dx * dx + dy * dy <=
-          joystickZoneRadius * joystickZoneRadius;
+      return dx * dx + dy * dy <= joystickZoneRadius * joystickZoneRadius;
     }
+
     return Stack(
       children: [
         SimulationGestureRegion(
@@ -64,10 +64,7 @@ class SimulationInputLayer extends StatelessWidget {
               if (head != null) {
                 viewState.endJoystick(head.x, head.y);
               } else {
-                viewState.endJoystick(
-                  viewState.cameraX,
-                  viewState.cameraY,
-                );
+                viewState.endJoystick(viewState.cameraX, viewState.cameraY);
               }
             } else {
               viewState.clearLastTouch();

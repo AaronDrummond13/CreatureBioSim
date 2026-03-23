@@ -1,5 +1,5 @@
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/editor/editor_style.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/editor/editor_style.dart';
 import 'package:flutter/material.dart';
 
 class BodyTab extends StatelessWidget {

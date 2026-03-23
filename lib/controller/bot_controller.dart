@@ -1,6 +1,6 @@
 import 'dart:math' show atan2, cos, pi, Random, sin, sqrt;
 
-import 'package:creature_bio_sim/simulation/spine.dart';
+import 'package:bioism/simulation/spine.dart';
 
 /// Bot behavior mode: each runs for a duration then we switch.
 enum BotBehavior {
@@ -251,11 +251,7 @@ class BotController {
         intendedTargetY: useTargetY,
       );
     } else {
-      spine.resolve(
-        useTargetX,
-        useTargetY,
-        speed: useSpeed,
-      );
+      spine.resolve(useTargetX, useTargetY, speed: useSpeed);
     }
   }
 }

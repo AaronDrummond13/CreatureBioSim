@@ -1,8 +1,8 @@
-import 'package:creature_bio_sim/controller/creature_store.dart';
-import 'package:creature_bio_sim/controller/food_store.dart';
-import 'package:creature_bio_sim/creature.dart' show TrophicType;
-import 'package:creature_bio_sim/simulation/creature_collision.dart';
-import 'package:creature_bio_sim/world/food.dart' show CellType;
+import 'package:bioism/controller/creature_store.dart';
+import 'package:bioism/controller/food_store.dart';
+import 'package:bioism/creature.dart' show TrophicType;
+import 'package:bioism/simulation/creature_collision.dart';
+import 'package:bioism/world/food.dart' show CellType;
 
 /// Bot consumption rules: bots eat food (by trophic type), non-herbivore bots eat
 /// babies, epic carnivore/omnivore bots eat non-epic creatures.
@@ -16,14 +16,18 @@ void runBotConsumption(
   for (final e in creatureStore.entities) {
     if (e.isBaby || e.spine.positions.isEmpty) continue;
     final head = e.spine.positions.last;
-    final headR = eaterHeadRadius(e.creature, isEpic: e.isEpic, mouthFrac: headMouthSizeFrac);
+    final headR = eaterHeadRadius(
+      e.creature,
+      isEpic: e.isEpic,
+      mouthFrac: headMouthSizeFrac,
+    );
     final consumeRadius = foodRadius + headR;
     final allowedFood =
         e.creature.mouth == null || e.creature.trophicType == TrophicType.none
-            ? {CellType.bubble}
-            : (e.creature.trophicType == TrophicType.herbivore
-                ? {CellType.plant, CellType.bubble}
-                : (e.creature.trophicType == TrophicType.carnivore
+        ? {CellType.bubble}
+        : (e.creature.trophicType == TrophicType.herbivore
+              ? {CellType.plant, CellType.bubble}
+              : (e.creature.trophicType == TrophicType.carnivore
                     ? {CellType.animal, CellType.bubble}
                     : null));
     foodStore.consumeNear(
@@ -41,16 +45,23 @@ void runBotConsumption(
   for (final e in creatureStore.entities) {
     if (e.isBaby ||
         e.creature.trophicType == TrophicType.herbivore ||
-        e.creature.trophicType == TrophicType.none) continue;
+        e.creature.trophicType == TrophicType.none)
+      continue;
     final pos = e.spine.positions;
     if (pos.isEmpty) continue;
     final head = pos.last;
-    final headR = eaterHeadRadius(e.creature, isEpic: e.isEpic, mouthFrac: headMouthSizeFrac);
+    final headR = eaterHeadRadius(
+      e.creature,
+      isEpic: e.isEpic,
+      mouthFrac: headMouthSizeFrac,
+    );
     for (final other in creatureStore.entities) {
       if (!other.isBaby || identical(e, other)) continue;
       if (pointHitsCreature(
-        head.x, head.y,
-        other.spine, other.creature,
+        head.x,
+        head.y,
+        other.spine,
+        other.creature,
         attackRadius: headR,
         targetIsBaby: true,
       )) {
@@ -65,7 +76,11 @@ void runBotConsumption(
     final bx = pos.last.x;
     final by = pos.last.y;
     foodStore.addConsumedRemnantAt(
-      bx, by, timeSeconds, bx, by,
+      bx,
+      by,
+      timeSeconds,
+      bx,
+      by,
       cellType: CellType.animal,
     );
     creatureStore.removeCreature(b);
@@ -75,14 +90,21 @@ void runBotConsumption(
   for (final e in creatureStore.entities) {
     if (!e.isEpic || e.isBaby || e.spine.positions.isEmpty) continue;
     if (e.creature.trophicType != TrophicType.carnivore &&
-        e.creature.trophicType != TrophicType.omnivore) continue;
+        e.creature.trophicType != TrophicType.omnivore)
+      continue;
     final head = e.spine.positions.last;
-    final headR = eaterHeadRadius(e.creature, isEpic: true, mouthFrac: headMouthSizeFrac);
+    final headR = eaterHeadRadius(
+      e.creature,
+      isEpic: true,
+      mouthFrac: headMouthSizeFrac,
+    );
     for (final other in creatureStore.entities) {
       if (other.isEpic || identical(e, other)) continue;
       if (pointHitsCreature(
-        head.x, head.y,
-        other.spine, other.creature,
+        head.x,
+        head.y,
+        other.spine,
+        other.creature,
         attackRadius: headR,
       )) {
         nonEpicsToRemove.add(other);
@@ -95,7 +117,11 @@ void runBotConsumption(
     final bx = pos.last.x;
     final by = pos.last.y;
     foodStore.addConsumedRemnantAt(
-      bx, by, timeSeconds, bx, by,
+      bx,
+      by,
+      timeSeconds,
+      bx,
+      by,
       cellType: CellType.animal,
     );
     creatureStore.removeCreature(b);

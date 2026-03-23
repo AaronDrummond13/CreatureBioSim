@@ -1,7 +1,7 @@
 import 'dart:math';
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/render/eye_painter.dart';
-import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/render/eye_painter.dart';
+import 'package:bioism/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
 /// Preview when dragging + eye onto creature. Same render as CreaturePainter._drawConfigEyes.

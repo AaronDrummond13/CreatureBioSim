@@ -1,9 +1,9 @@
 import 'dart:math' show Random;
-import 'package:creature_bio_sim/controller/bot_controller.dart';
-import 'package:creature_bio_sim/controller/spawner.dart';
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/simulation/spine.dart';
-import 'package:creature_bio_sim/world/world.dart';
+import 'package:bioism/controller/bot_controller.dart';
+import 'package:bioism/controller/spawner.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/simulation/spine.dart';
+import 'package:bioism/world/world.dart';
 
 class StoredMammoth {
   StoredMammoth({

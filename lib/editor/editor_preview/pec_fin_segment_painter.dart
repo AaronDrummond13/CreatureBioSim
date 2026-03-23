@@ -1,7 +1,7 @@
 import 'dart:math';
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/render/pec_painter.dart';
-import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/render/pec_painter.dart';
+import 'package:bioism/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
 /// Draws one lateral fin on the creature at the given segment (for add/move preview). [highlight] = draw in highlight color; [highlightForRemove] = red (will be removed).

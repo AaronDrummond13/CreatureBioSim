@@ -1,4 +1,4 @@
-package com.example.creature_bio_sim
+package com.example.bioism
 
 import io.flutter.embedding.android.FlutterActivity
 

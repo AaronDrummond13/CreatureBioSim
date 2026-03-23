@@ -1,4 +1,4 @@
-import 'package:creature_bio_sim/world/biome.dart';
+import 'package:bioism/world/biome.dart';
 
 /// Per-chunk creature spawn targets per biome. Edit values to tune (fractional = chance, e.g. 0.3 = 30% of 1).
 class BiomeCreatureConfig {

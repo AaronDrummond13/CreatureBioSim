@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:creature_bio_sim/simulation_view_state.dart';
+import 'package:bioism/simulation_view_state.dart';
 
 /// Faint white joystick circles: outer always visible (hint when inactive, slightly more when active). Knob when active.
 class JoystickOverlayPainter extends CustomPainter {
@@ -22,14 +22,18 @@ class JoystickOverlayPainter extends CustomPainter {
   static const double _hintStrokeOpacity = 0.08;
 
   Offset get _zoneCenter => Offset(
-        _joystickPadding + viewState.joystickMaxRadius,
-        layerSize.height - _joystickPadding - viewState.joystickMaxRadius,
-      );
+    _joystickPadding + viewState.joystickMaxRadius,
+    layerSize.height - _joystickPadding - viewState.joystickMaxRadius,
+  );
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = viewState.isJoystickActive ? viewState.joystickCenter : _zoneCenter;
-    final outerOpacity = viewState.isJoystickActive ? _outerActiveStrokeOpacity : _hintStrokeOpacity;
+    final center = viewState.isJoystickActive
+        ? viewState.joystickCenter
+        : _zoneCenter;
+    final outerOpacity = viewState.isJoystickActive
+        ? _outerActiveStrokeOpacity
+        : _hintStrokeOpacity;
     final outerPaint = Paint()
       ..color = Colors.white.withValues(alpha: outerOpacity)
       ..style = PaintingStyle.stroke

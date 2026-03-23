@@ -1,16 +1,17 @@
 import 'dart:math' show atan2, cos, sin, sqrt;
 
-import 'package:creature_bio_sim/controller/chunk_manager.dart';
-import 'package:creature_bio_sim/controller/creature_store.dart';
-import 'package:creature_bio_sim/controller/food_store.dart';
-import 'package:creature_bio_sim/controller/mammoth_store.dart';
-import 'package:creature_bio_sim/creature.dart' show Creature, TrophicType;
-import 'package:creature_bio_sim/simulation/bot_consumption.dart';
-import 'package:creature_bio_sim/simulation/creature_collision.dart';
-import 'package:creature_bio_sim/simulation/spine.dart';
-import 'package:creature_bio_sim/simulation_view_state.dart';
-import 'package:creature_bio_sim/world/food.dart' show CellType;
-import 'package:creature_bio_sim/world/world.dart' show kChunkLoadRadiusWorld, kChunkCullRadiusWorld;
+import 'package:bioism/controller/chunk_manager.dart';
+import 'package:bioism/controller/creature_store.dart';
+import 'package:bioism/controller/food_store.dart';
+import 'package:bioism/controller/mammoth_store.dart';
+import 'package:bioism/creature.dart' show Creature, TrophicType;
+import 'package:bioism/simulation/bot_consumption.dart';
+import 'package:bioism/simulation/creature_collision.dart';
+import 'package:bioism/simulation/spine.dart';
+import 'package:bioism/simulation_view_state.dart';
+import 'package:bioism/world/food.dart' show CellType;
+import 'package:bioism/world/world.dart'
+    show kChunkLoadRadiusWorld, kChunkCullRadiusWorld;
 
 /// Mutable output from [runPlayStep]: death flag and last ate time.
 class PlayStepOutput {
@@ -62,10 +63,16 @@ void runPlayStep(
       if (e.creature.trophicType == TrophicType.herbivore) continue;
       final ep = e.spine.positions;
       if (ep.isEmpty) continue;
-      final epicHeadR = eaterHeadRadius(e.creature, isEpic: true, mouthFrac: headMouthSizeFrac);
+      final epicHeadR = eaterHeadRadius(
+        e.creature,
+        isEpic: true,
+        mouthFrac: headMouthSizeFrac,
+      );
       if (pointHitsCreature(
-        ep.last.x, ep.last.y,
-        spine, creature,
+        ep.last.x,
+        ep.last.y,
+        spine,
+        creature,
         attackRadius: epicHeadR,
       )) {
         output.isDead = true;
@@ -93,20 +100,16 @@ void runPlayStep(
           intendedTargetY: viewState.touchY,
         );
       } else {
-        spine.resolve(
-          viewState.touchX,
-          viewState.touchY,
-          speed: headMoveSpeed,
-        );
+        spine.resolve(viewState.touchX, viewState.touchY, speed: headMoveSpeed);
       }
       final headAfter = spine.positions.last;
       final consumeRadius = foodStore.radiusWorld + headCollision;
       final allowedFood =
           creature.mouth == null || creature.trophicType == TrophicType.none
-              ? {CellType.bubble}
-              : (creature.trophicType == TrophicType.herbivore
-                  ? {CellType.plant, CellType.bubble}
-                  : (creature.trophicType == TrophicType.carnivore
+          ? {CellType.bubble}
+          : (creature.trophicType == TrophicType.herbivore
+                ? {CellType.plant, CellType.bubble}
+                : (creature.trophicType == TrophicType.carnivore
                       ? {CellType.animal, CellType.bubble}
                       : null));
       final consumed = foodStore.consumeNear(

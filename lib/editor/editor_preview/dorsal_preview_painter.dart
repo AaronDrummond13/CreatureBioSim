@@ -1,7 +1,7 @@
 import 'dart:math';
 
-import 'package:creature_bio_sim/dorsal_fin_rules.dart';
-import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:bioism/dorsal_fin_rules.dart';
+import 'package:bioism/simulation/vector.dart';
 import 'package:flutter/material.dart';
 
 /// Highlights a [dorsalFinMinSegments]-segment dorsal fin on the creature when dragging + dorsal over the viewport.

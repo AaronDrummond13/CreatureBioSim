@@ -1,4 +1,4 @@
-import 'package:creature_bio_sim/world/food.dart';
+import 'package:bioism/world/food.dart';
 
 /// Remnant after consumption: nucleus stays, drifts away from [headX, headY], and fades over 5s; body "burst" drawn for ~0.3s. See [FoodPainter].
 /// When [consumedByPlayer] is true, the inner-body cloud (InnerBodyCloudPainter) is drawn for this remnant; otherwise only the top-layer burst/nucleus is drawn.

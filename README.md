@@ -1,3 +1,3 @@
-# creature_bio_sim
+# bioism
 
 A new Flutter project.

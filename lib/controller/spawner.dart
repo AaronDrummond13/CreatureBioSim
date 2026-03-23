@@ -1,8 +1,8 @@
 import 'dart:math' show Random;
 
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/dorsal_fin_rules.dart';
-import 'package:creature_bio_sim/simulation/spine.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/dorsal_fin_rules.dart';
+import 'package:bioism/simulation/spine.dart';
 import 'package:flutter/material.dart';
 
 /// Factory for random creatures and spines. Use with [CreatureStore] for chunk-based spawning.

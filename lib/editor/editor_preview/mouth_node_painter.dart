@@ -1,4 +1,4 @@
-import 'package:creature_bio_sim/editor/node_painter.dart';
+import 'package:bioism/editor/node_painter.dart';
 import 'package:flutter/material.dart';
 
 class MouthNodePainter extends CustomPainter {

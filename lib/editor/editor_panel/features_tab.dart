@@ -1,12 +1,12 @@
 import 'dart:math';
 
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/editor/editor_panel/tail_box.dart';
-import 'package:creature_bio_sim/editor/editor_panel/tail_preview_painter.dart';
-import 'package:creature_bio_sim/editor/editor_shared.dart';
-import 'package:creature_bio_sim/editor/editor_style.dart';
-import 'package:creature_bio_sim/render/antenna_painter.dart';
-import 'package:creature_bio_sim/render/render_utils.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/editor/editor_panel/tail_box.dart';
+import 'package:bioism/editor/editor_panel/tail_preview_painter.dart';
+import 'package:bioism/editor/editor_shared.dart';
+import 'package:bioism/editor/editor_style.dart';
+import 'package:bioism/render/antenna_painter.dart';
+import 'package:bioism/render/render_utils.dart';
 import 'package:flutter/material.dart';
 
 /// Parts tab: Head (mouth types) and Fins (tail, dorsal, pectoral). Drag to add; tap in view to select or edit.

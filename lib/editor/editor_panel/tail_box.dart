@@ -1,6 +1,6 @@
-import 'package:creature_bio_sim/creature.dart';
-import 'package:creature_bio_sim/editor/editor_panel/tail_preview_painter.dart';
-import 'package:creature_bio_sim/editor/editor_style.dart';
+import 'package:bioism/creature.dart';
+import 'package:bioism/editor/editor_panel/tail_preview_painter.dart';
+import 'package:bioism/editor/editor_style.dart';
 import 'package:flutter/material.dart';
 
 /// One tail option: real tail via [paintTailFin] with creature colours and minimal spine. Wrapped in Draggable by caller.

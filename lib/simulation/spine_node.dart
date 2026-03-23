@@ -1,4 +1,4 @@
-import 'package:creature_bio_sim/simulation/vector.dart';
+import 'package:bioism/simulation/vector.dart';
 
 /// A point on the spine (base, joint, or head). Position is updated by [Spine] via head-driven kinematic resolve.
 class SpineNode {

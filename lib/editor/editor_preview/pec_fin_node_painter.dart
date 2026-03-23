@@ -1,4 +1,4 @@
-import 'package:creature_bio_sim/editor/node_painter.dart';
+import 'package:bioism/editor/node_painter.dart';
 import 'package:flutter/material.dart';
 
 /// Four nodes for selected lateral fin (mirrored left/right): 0,2 = length; 1,3 = width. activeNode = raw index 0..3.

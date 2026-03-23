@@ -2,9 +2,9 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
-import 'package:creature_bio_sim/controller/mammoth_store.dart';
-import 'package:creature_bio_sim/render/creature_painter.dart';
-import 'package:creature_bio_sim/render/view.dart';
+import 'package:bioism/controller/mammoth_store.dart';
+import 'package:bioism/render/creature_painter.dart';
+import 'package:bioism/render/view.dart';
 
 /// Paints all mammoths (parallax layer). Each mammoth has its own blur and layer opacity (0.01–0.5).
 class MammothPainter extends CustomPainter {

@@ -2,11 +2,11 @@ import 'dart:math' show cos, pi, sin, sqrt;
 
 import 'package:flutter/material.dart';
 
-import 'package:creature_bio_sim/world/consumed_remnant.dart';
-import 'package:creature_bio_sim/world/food.dart' show CellType, FoodItem;
-import 'package:creature_bio_sim/render/render_utils.dart'
+import 'package:bioism/world/consumed_remnant.dart';
+import 'package:bioism/world/food.dart' show CellType, FoodItem;
+import 'package:bioism/render/render_utils.dart'
     show drawBubble, drawBubbleShape;
-import 'package:creature_bio_sim/render/view.dart';
+import 'package:bioism/render/view.dart';
 
 /// Paints plant cells (green hollow hexagon) and animal cells (red hollow circle).
 /// Also draws consumed remnants: burst (radial lines ~0.3s) and nucleus fading over 5s.
