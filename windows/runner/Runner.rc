@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "creature_bio_sim" "\0"
+            VALUE "FileDescription", "bioism" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "creature_bio_sim" "\0"
+            VALUE "InternalName", "bioism" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "creature_bio_sim.exe" "\0"
-            VALUE "ProductName", "creature_bio_sim" "\0"
+            VALUE "OriginalFilename", "bioism.exe" "\0"
+            VALUE "ProductName", "bioism" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
