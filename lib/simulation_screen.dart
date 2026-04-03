@@ -9,6 +9,7 @@ import 'package:bioism/render/simulation_layers.dart';
 import 'package:bioism/simulation/play_step.dart';
 import 'package:bioism/simulation/spine.dart';
 import 'package:bioism/simulation_view_state.dart';
+import 'package:bioism/ui/edit_button.dart';
 import 'package:bioism/world/biome_map.dart';
 import 'package:bioism/world/world.dart'
     show kChunkLoadRadiusWorld, kChunkCullRadiusWorld;
@@ -191,30 +192,11 @@ class _SimulationScreenState extends State<SimulationScreen>
         ),
         if (widget.onEdit != null)
           Positioned(
-            top: MediaQuery.paddingOf(context).top + 10,
-            right: MediaQuery.paddingOf(context).right + 10,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
+            top: MediaQuery.paddingOf(context).top + 20,
+            right: MediaQuery.paddingOf(context).right + 20,
+            child: EditButton(
               onTap: widget.onEdit,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: _kEditBtnFill,
-                  borderRadius: BorderRadius.circular(_kEditBtnRadius),
-                  border: Border.all(color: _kEditBtnStroke, width: 1.5),
-                ),
-                child: const Text(
-                  'Edit',
-                  style: TextStyle(
-                    color: _kEditBtnText,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
+              detailOption: CreatureIconDetail.rna,
             ),
           ),
       ],

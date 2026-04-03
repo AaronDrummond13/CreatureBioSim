@@ -1,3 +1,4 @@
+import 'package:bioism/ui/edit_button.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bioism/creature.dart';
@@ -166,17 +167,14 @@ class EditorScreenState extends State<EditorScreen> {
         children: [
           content,
           Positioned(
-            top: 10,
-            right: 10,
+            top: 20,
+            right: 20,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _editorTopButton(
-                  label: 'Play',
-                  onTap: () => widget.onPlay(_creature),
-                ),
-                const SizedBox(height: 8),
+                EditButton(onTap: () => widget.onPlay(_creature)),
+                const SizedBox(height: 16),
                 _editorTopButton(
                   label: _panelClosed ? 'Edit' : 'Test',
                   onTap: () => setState(() {

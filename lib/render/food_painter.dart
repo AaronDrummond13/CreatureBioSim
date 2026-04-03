@@ -98,6 +98,24 @@ class FoodPainter extends CustomPainter {
       final cx = sx(food.x);
       final cy = sy(food.y);
       final rInner = rScreen * innerRadiusFrac.clamp(0.01, 0.99);
+      final worldRadiusZ = foodRadiusWorld * z;
+      final baseStroke = (2.0 * z).clamp(1.0, 2.0);
+      final giantScale = (rScreen / worldRadiusZ).clamp(1.0, 3.0);
+      final center = Offset(cx, cy);
+
+      void applyGiantStroke() {
+        if (!food.isGiant) return;
+        final width = (baseStroke * giantScale).clamp(1.5, 6.0);
+        strokePaint.strokeWidth = width;
+        innerStrokePaint.strokeWidth = width;
+      }
+
+      void resetStroke() {
+        if (!food.isGiant) return;
+        strokePaint.strokeWidth = baseStroke;
+        innerStrokePaint.strokeWidth = baseStroke;
+      }
+
       if (food.cellType == CellType.plant || food.cellType == CellType.animal) {
         canvas.save();
         canvas.translate(cx, cy);
@@ -107,28 +125,18 @@ class FoodPainter extends CustomPainter {
       if (food.cellType == CellType.bubble) {
         drawBubbleShape(
           canvas,
-          Offset(cx, cy),
+          center,
           rScreen,
           bubbleFillPaint,
           bubbleRimPaint,
           bubblePrimaryPaint,
           bubbleSecondaryPaint,
         );
-        final baseStroke = (2.0 * z).clamp(1.0, 2.0);
-        if (food.isGiant) {
-          final scale = (rScreen / (foodRadiusWorld * z)).clamp(1.0, 3.0);
-          strokePaint.strokeWidth = (baseStroke * scale).clamp(2.0, 6.0);
-        }
-        canvas.drawCircle(Offset(cx, cy), rScreen, strokePaint);
-        if (food.isGiant) strokePaint.strokeWidth = baseStroke;
+        applyGiantStroke();
+        canvas.drawCircle(center, rScreen, strokePaint);
+        resetStroke();
       } else if (food.cellType == CellType.animal) {
-        final center = Offset(cx, cy);
-        final baseStroke = (2.0 * z).clamp(1.0, 2.0);
-        if (food.isGiant) {
-          final scale = (rScreen / (foodRadiusWorld * z)).clamp(1.0, 3.0);
-          strokePaint.strokeWidth = (baseStroke * scale).clamp(2.0, 6.0);
-          innerStrokePaint.strokeWidth = strokePaint.strokeWidth;
-        }
+        applyGiantStroke();
         canvas.saveLayer(
           Rect.fromCircle(
             center: center,
@@ -142,10 +150,7 @@ class FoodPainter extends CustomPainter {
         canvas.drawCircle(center, rScreen, strokePaint);
         canvas.drawCircle(center, rInner, innerStrokePaint);
         canvas.restore();
-        if (food.isGiant) {
-          strokePaint.strokeWidth = baseStroke;
-          innerStrokePaint.strokeWidth = baseStroke;
-        }
+        resetStroke();
       } else {
         if (food.isGiant && food.attachedOffsets != null)
           _drawGiantPlantAttachedCells(
@@ -165,12 +170,7 @@ class FoodPainter extends CustomPainter {
             nucleusPaint,
             nucleusStrokePaint,
           );
-        final baseStroke = (2.0 * z).clamp(1.0, 2.0);
-        if (food.isGiant) {
-          final scale = (rScreen / (foodRadiusWorld * z)).clamp(1.0, 3.0);
-          strokePaint.strokeWidth = (baseStroke * scale).clamp(2.0, 6.0);
-          innerStrokePaint.strokeWidth = strokePaint.strokeWidth;
-        }
+        applyGiantStroke();
         final outer = _smoothHexagonPath(cx, cy, rScreen);
         final inner = _smoothHexagonPath(cx, cy, rInner);
         final ring = Path.combine(PathOperation.difference, outer, inner);
@@ -178,10 +178,7 @@ class FoodPainter extends CustomPainter {
         canvas.drawPath(ring, fillPaint);
         canvas.drawPath(outer, strokePaint);
         canvas.drawPath(inner, innerStrokePaint);
-        if (food.isGiant) {
-          strokePaint.strokeWidth = baseStroke;
-          innerStrokePaint.strokeWidth = baseStroke;
-        }
+        resetStroke();
       }
       if (food.cellType != CellType.bubble) {
         final nx = sx(food.x + food.nucleusOffsetX);
